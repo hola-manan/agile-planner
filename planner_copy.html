@@ -1,0 +1,2666 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#090612">
+    <title>Agile Planner</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --ui-bg: #090612;
+            --ui-bg-soft: #140f23;
+            --ui-card: #1a1330;
+            --ui-card-2: #221945;
+            --ui-border: #322754;
+            --ui-border-strong: #4f3b85;
+            --ui-text: #efe9ff;
+            --ui-text-soft: #b8abd8;
+            --ui-text-dim: #7d6ba8;
+            --ui-accent: #8a63ff;
+            --ui-accent-2: #bb79ff;
+            --ui-success: #6dffb1;
+            --ui-warning: #ffc24a;
+            --ui-danger: #ff73a6;
+            --ui-info: #79c4ff;
+            --font-sans: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            --border-radius-lg: 14px;
+            --border-radius-md: 10px;
+            --border-radius-sm: 6px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0 }
+
+        html, body {
+            background: var(--ui-bg);
+            color: var(--ui-text);
+            font-family: var(--font-sans);
+            -webkit-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+
+        .sr-only {
+            position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0, 0, 0, 0); border: 0
+        }
+
+        .app {
+            padding: 0.4rem 0.4rem 4rem;
+            max-width: none;
+            width: 100%;
+            margin: 0;
+            background: var(--ui-bg);
+            color: var(--ui-text);
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            gap: 8px; margin-bottom: 8px; padding: 6px 4px;
+            flex-wrap: wrap;
+        }
+        .header-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto }
+        .header h1 {
+            font-size: 19px; font-weight: 700; letter-spacing: -0.01em;
+            background: linear-gradient(120deg, var(--ui-accent), var(--ui-accent-2));
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            flex-shrink: 0;
+        }
+        .header .right {
+            display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+        }
+        .sync-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--ui-text-dim);
+            transition: background 0.3s;
+        }
+        .sync-dot.ok { background: var(--ui-success); box-shadow: 0 0 8px rgba(109,255,177,0.5); }
+        .sync-dot.busy { background: var(--ui-warning); animation: pulse 1s infinite; }
+        .sync-dot.err { background: var(--ui-danger); }
+        @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.3 } }
+        .header-link {
+            font-size: 11px; color: var(--ui-accent); text-decoration: none;
+            border: 1px solid var(--ui-accent); padding: 4px 9px; border-radius: 12px;
+            font-weight: 600; white-space: nowrap;
+        }
+
+        .project-picker {
+            background: var(--ui-bg-soft);
+            border: 0.5px solid var(--ui-border-strong);
+            color: var(--ui-text);
+            font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+            padding: 6px 10px;
+            border-radius: var(--border-radius-md);
+            cursor: pointer; min-width: 0; max-width: 220px;
+            outline: none;
+        }
+
+        .tabs {
+            display: flex; gap: 5px; margin-bottom: 0.9rem; padding: 6px;
+            background: var(--ui-bg-soft);
+            border: 0.5px solid var(--ui-border);
+            border-radius: var(--border-radius-lg);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .tabs::-webkit-scrollbar { display: none }
+        .tab {
+            flex: 1 0 auto; white-space: nowrap; padding: 11px 14px;
+            background: transparent; border: 0.5px solid transparent;
+            border-radius: var(--border-radius-md);
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            color: var(--ui-text-soft); font-family: var(--font-sans);
+            transition: all .15s ease;
+        }
+        .tab:hover { color: var(--ui-text) }
+        .tab.active {
+            background: linear-gradient(135deg, rgba(138,99,255,0.18), rgba(187,121,255,0.08));
+            color: var(--ui-text);
+            border-color: var(--ui-border-strong);
+            box-shadow: 0 1px 0 rgba(138,99,255,0.2) inset;
+        }
+
+        .card {
+            background: var(--ui-card);
+            border: 0.5px solid var(--ui-border);
+            border-radius: var(--border-radius-lg);
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .section-head {
+            font-size: 12px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--ui-text-soft);
+            margin-bottom: 10px;
+        }
+        .section-head .count {
+            background: var(--ui-bg-soft); border: 0.5px solid var(--ui-border);
+            padding: 1px 7px; border-radius: 8px; font-size: 11px;
+            color: var(--ui-text-dim); margin-left: 6px;
+            font-weight: 600;
+        }
+
+        .empty {
+            text-align: center; padding: 24px 12px; color: var(--ui-text-dim);
+            font-size: 13px; font-style: italic;
+        }
+
+        .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+        .row-tight { display: flex; gap: 6px; align-items: center }
+        .grow { flex: 1 1 auto; min-width: 0 }
+
+        input[type=text], input[type=number], input[type=date], select, textarea {
+            background: var(--ui-bg-soft);
+            border: 0.5px solid var(--ui-border);
+            color: var(--ui-text);
+            font-family: var(--font-sans); font-size: 15px;
+            padding: 9px 11px;
+            border-radius: var(--border-radius-md);
+            width: 100%;
+            outline: none;
+            transition: border-color .15s;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--ui-accent) }
+        textarea { resize: vertical; min-height: 60px; font-family: var(--font-sans) }
+        label {
+            display: block; font-size: 11px; font-weight: 600;
+            color: var(--ui-text-soft); margin-bottom: 4px;
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .field { margin-bottom: 10px }
+
+        .btn {
+            background: var(--ui-bg-soft);
+            border: 0.5px solid var(--ui-border);
+            color: var(--ui-text);
+            font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+            padding: 9px 14px;
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+        .btn:hover { border-color: var(--ui-border-strong) }
+        .btn.primary {
+            background: linear-gradient(135deg, var(--ui-accent), var(--ui-accent-2));
+            border-color: transparent; color: white;
+        }
+        .btn.primary:hover { filter: brightness(1.1) }
+        .btn.danger { color: var(--ui-danger); border-color: rgba(255,115,166,0.4) }
+        .btn.danger:hover { background: rgba(255,115,166,0.1) }
+        .btn.ghost { background: transparent; border-color: transparent; color: var(--ui-text-soft); padding: 6px 8px }
+        .btn.ghost:hover { color: var(--ui-text); background: var(--ui-bg-soft) }
+        .btn.sm { padding: 5px 10px; font-size: 12px }
+        .btn.icon { padding: 6px 9px; font-size: 15px; line-height: 1 }
+
+        .pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 11px; font-weight: 600;
+            padding: 3px 8px; border-radius: 10px;
+            background: var(--ui-bg-soft);
+            border: 0.5px solid var(--ui-border);
+            color: var(--ui-text-soft);
+        }
+        .pill.points { color: var(--ui-accent-2); border-color: rgba(187,121,255,0.4) }
+        .pill.feature { color: var(--ui-info); border-color: rgba(121,196,255,0.4) }
+        .pill.prio-1 { color: var(--ui-danger); border-color: rgba(255,115,166,0.4) }
+        .pill.prio-2 { color: var(--ui-warning); border-color: rgba(255,194,74,0.4) }
+        .pill.prio-3 { color: var(--ui-text-soft) }
+        .pill.prio-4 { color: var(--ui-text-dim) }
+        .pill.status-todo { color: var(--ui-text-dim) }
+        .pill.status-in-progress { color: var(--ui-warning); border-color: rgba(255,194,74,0.4) }
+        .pill.status-review { color: var(--ui-info); border-color: rgba(121,196,255,0.4) }
+        .pill.status-done { color: var(--ui-success); border-color: rgba(109,255,177,0.4) }
+        .pill.sprint-active { color: var(--ui-success); border-color: rgba(109,255,177,0.4) }
+        .pill.sprint-planning { color: var(--ui-warning); border-color: rgba(255,194,74,0.4) }
+        .pill.sprint-completed { color: var(--ui-text-dim) }
+        .pill.time { color: var(--ui-text-soft) }
+        .pill.type-bug { color: var(--ui-danger); border-color: rgba(255,115,166,0.4) }
+        .pill.type-chore { color: var(--ui-text-dim) }
+        .pill.type-story { color: var(--ui-info); border-color: rgba(121,196,255,0.4) }
+
+        .choice-row {
+            display: flex; gap: 5px; flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .choice-btn {
+            font-family: var(--font-sans); font-size: 12px; font-weight: 600;
+            padding: 6px 11px;
+            background: var(--ui-bg-soft); border: 0.5px solid var(--ui-border);
+            color: var(--ui-text-soft);
+            border-radius: var(--border-radius-md); cursor: pointer;
+            transition: all .15s;
+        }
+        .choice-btn:hover { color: var(--ui-text) }
+        .choice-btn.active {
+            background: linear-gradient(135deg, rgba(138,99,255,0.25), rgba(187,121,255,0.12));
+            color: var(--ui-text);
+            border-color: var(--ui-border-strong);
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background: linear-gradient(135deg, var(--ui-accent), var(--ui-accent-2));
+            color: white;
+            font-size: 32px;
+            font-weight: 300;
+            border: none;
+            box-shadow: 0 6px 16px rgba(138, 99, 255, 0.4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        /* Issue card */
+        .issue-card {
+            background: var(--ui-card);
+            border: 0.5px solid var(--ui-border);
+            border-radius: var(--border-radius-md);
+            margin-bottom: 8px;
+            overflow: hidden;
+            transition: border-color .15s;
+        }
+        .issue-card:hover { border-color: var(--ui-border-strong) }
+        .issue-card.status-done { opacity: 0.7 }
+        .issue-card.status-done .issue-title { text-decoration: line-through; color: var(--ui-text-dim) }
+        .issue-card .head {
+            padding: 11px 12px;
+            cursor: pointer;
+            display: flex; gap: 10px; align-items: flex-start;
+        }
+        .issue-card .head:hover { background: var(--ui-card-2) }
+        .issue-card .head .body { flex: 1; min-width: 0 }
+        .issue-card .head .toggle {
+            color: var(--ui-text-dim); font-size: 14px;
+            transition: transform .15s;
+        }
+        .issue-card.expanded .head .toggle { transform: rotate(90deg) }
+        .issue-title {
+            font-size: 14px; font-weight: 600;
+            color: var(--ui-text); line-height: 1.35;
+            margin-bottom: 4px; word-break: break-word;
+        }
+        .issue-meta {
+            display: flex; gap: 5px; flex-wrap: wrap; align-items: center;
+            font-size: 11px; color: var(--ui-text-soft);
+        }
+        .issue-body {
+            display: none; padding: 4px 12px 14px;
+            border-top: 0.5px solid var(--ui-border);
+        }
+        .issue-card.expanded .issue-body { display: block }
+        .issue-body .field-label {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--ui-text-dim);
+            margin-top: 12px; margin-bottom: 4px;
+        }
+        .issue-body .desc-text {
+            font-size: 14px; color: var(--ui-text-soft);
+            line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+        }
+
+        .task-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 0;
+            border-bottom: 0.5px solid var(--ui-border);
+        }
+        .task-row:last-child { border-bottom: none }
+        .task-check {
+            width: 18px; height: 18px;
+            border: 1.5px solid var(--ui-border-strong);
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+            color: transparent;
+            font-size: 12px; font-weight: 700;
+            flex-shrink: 0;
+            transition: all .15s;
+        }
+        .task-row.done .task-check {
+            background: var(--ui-accent);
+            border-color: var(--ui-accent);
+            color: white;
+        }
+        .task-input {
+            flex: 1; font-size: 13px;
+            color: var(--ui-text);
+            background: transparent; border: none; outline: none;
+            font-family: var(--font-sans);
+            min-width: 0;
+        }
+        .task-row.done .task-input { text-decoration: line-through; color: var(--ui-text-dim) }
+
+        .progress-bar {
+            height: 4px; background: var(--ui-bg-soft); border-radius: 2px;
+            overflow: hidden; margin-top: 4px;
+        }
+        .progress-bar > div {
+            height: 100%; background: linear-gradient(90deg, var(--ui-accent), var(--ui-accent-2));
+            transition: width .3s;
+        }
+
+        /* Sprint hero */
+        .sprint-hero {
+            background: linear-gradient(135deg, rgba(138,99,255,0.12), rgba(187,121,255,0.05));
+            border: 0.5px solid var(--ui-border-strong);
+        }
+        .sprint-hero .name {
+            font-size: 18px; font-weight: 700; color: var(--ui-text);
+            margin-bottom: 4px;
+        }
+        .sprint-hero .goal {
+            font-size: 13px; color: var(--ui-text-soft);
+            font-style: italic; margin-bottom: 10px;
+        }
+        .sprint-hero .stats {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+            margin-bottom: 10px;
+        }
+        .stat-tile {
+            background: var(--ui-bg-soft);
+            border: 0.5px solid var(--ui-border);
+            border-radius: var(--border-radius-md);
+            padding: 8px 10px; text-align: center;
+        }
+        .stat-tile .v {
+            font-size: 18px; font-weight: 700; color: var(--ui-text);
+            line-height: 1.1;
+        }
+        .stat-tile .l {
+            font-size: 10px; font-weight: 600; color: var(--ui-text-dim);
+            text-transform: uppercase; letter-spacing: 0.06em;
+            margin-top: 2px;
+        }
+
+        .status-group { margin-bottom: 14px }
+        .status-group-head {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 6px; padding: 0 2px;
+        }
+        .status-group-head .label {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--ui-text-soft);
+        }
+        .status-group-head .pts {
+            font-size: 11px; color: var(--ui-text-dim);
+        }
+
+        /* Feature card */
+        .feature-card {
+            background: var(--ui-card);
+            border: 0.5px solid var(--ui-border);
+            border-radius: var(--border-radius-md);
+            padding: 12px; margin-bottom: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        .feature-card::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+            width: 3px; background: var(--feature-color, var(--ui-accent));
+        }
+        .feature-card .name {
+            font-size: 14px; font-weight: 700; color: var(--ui-text);
+            margin-bottom: 4px;
+        }
+        .feature-card .desc {
+            font-size: 12px; color: var(--ui-text-soft); margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        /* Sprint list card */
+        .sprint-list-card {
+            background: var(--ui-card);
+            border: 0.5px solid var(--ui-border);
+            border-radius: var(--border-radius-md);
+            padding: 11px 12px; margin-bottom: 8px;
+            cursor: pointer;
+            transition: border-color .15s;
+        }
+        .sprint-list-card:hover { border-color: var(--ui-border-strong) }
+        .sprint-list-card.active {
+            border-color: var(--ui-accent);
+            box-shadow: 0 0 0 1px rgba(138,99,255,0.3) inset;
+        }
+        .sprint-list-card .row1 {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+        }
+        .sprint-list-card .name {
+            font-size: 14px; font-weight: 700; color: var(--ui-text);
+            flex: 1; min-width: 0; word-break: break-word;
+        }
+        .sprint-list-card .row2 {
+            font-size: 11px; color: var(--ui-text-soft);
+            display: flex; gap: 10px; flex-wrap: wrap;
+        }
+
+        /* Project card (in Settings) */
+        .project-card {
+            background: var(--ui-card);
+            border: 0.5px solid var(--ui-border);
+            border-radius: var(--border-radius-md);
+            padding: 12px; margin-bottom: 8px;
+            position: relative; overflow: hidden;
+        }
+        .project-card::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+            width: 4px; background: var(--proj-color, var(--ui-accent));
+        }
+        .project-card .name {
+            font-size: 15px; font-weight: 700; color: var(--ui-text);
+            margin-bottom: 4px;
+        }
+        .project-card .desc {
+            font-size: 12px; color: var(--ui-text-soft); line-height: 1.4;
+            margin-bottom: 6px;
+        }
+
+        /* Modal */
+        .modal-bg {
+            position: fixed; inset: 0;
+            background: rgba(9,6,18,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: none;
+            align-items: flex-start; justify-content: center;
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .modal-bg.show { display: flex }
+        .modal {
+            background: var(--ui-card);
+            border: 0.5px solid var(--ui-border-strong);
+            border-radius: var(--border-radius-lg);
+            padding: 18px;
+            max-width: 520px; width: 100%;
+            margin: auto;
+        }
+        .modal h2 {
+            font-size: 16px; font-weight: 700; margin-bottom: 14px;
+            color: var(--ui-text);
+        }
+        .modal .modal-actions {
+            display: flex; gap: 8px; justify-content: flex-end;
+            margin-top: 16px; flex-wrap: wrap;
+        }
+
+        /* Quick-add bar */
+        .quick-add {
+            display: flex; gap: 6px; margin-bottom: 12px;
+            background: var(--ui-bg-soft);
+            border: 0.5px solid var(--ui-border);
+            border-radius: var(--border-radius-md);
+            padding: 6px;
+        }
+        .quick-add input {
+            flex: 1; border: none; background: transparent;
+            padding: 7px 8px;
+        }
+        .quick-add input:focus { border: none }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 20px; left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--ui-card);
+            border: 0.5px solid var(--ui-border-strong);
+            color: var(--ui-text);
+            padding: 10px 16px;
+            border-radius: var(--border-radius-md);
+            font-size: 13px; font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            transition: transform .25s ease, opacity .25s;
+            opacity: 0; pointer-events: none;
+            z-index: 200; max-width: 90vw;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1 }
+
+        canvas { max-width: 100%; height: auto !important }
+        .chart-wrap { position: relative; height: 180px; margin-top: 6px }
+
+        .swatch-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px }
+        .swatch {
+            width: 26px; height: 26px; border-radius: 6px;
+            cursor: pointer; border: 2px solid transparent;
+        }
+        .swatch.active { border-color: var(--ui-text) }
+
+        .help-text {
+            font-size: 11px; color: var(--ui-text-dim);
+            margin-top: 3px; line-height: 1.4;
+        }
+
+        .divider { height: 0.5px; background: var(--ui-border); margin: 14px 0 }
+
+        @media (min-width: 640px) {
+            .app { padding: 1.25rem 0.9rem 1.6rem; max-width: 760px; margin: 0 auto; border-radius: 14px; min-height: auto; }
+            .sprint-hero .stats { grid-template-columns: repeat(5, 1fr) }
+        }
+
+        .block-picker { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border: 0.5px solid var(--ui-border); border-radius: var(--border-radius-md); background: var(--ui-bg-soft); }
+        .block-picker button { width: 32px; height: 32px; border: 0.5px solid var(--ui-border-strong); border-radius: 6px; background: var(--ui-bg); font-size: 16px; cursor: pointer; color: var(--ui-text); display: flex; align-items: center; justify-content: center; }
+        .block-picker button:hover { background: var(--ui-accent); color: #fff; border-color: var(--ui-accent); }
+        .block-picker button:active { transform: scale(0.95); }
+        .block-val { font-size: 16px; font-weight: 700; color: var(--ui-text); min-width: 24px; text-align: center; }
+
+        .task-item { display: flex; align-items: flex-start; gap: 10px; padding: 11px 0; border-bottom: 0.5px solid var(--ui-border); }
+        .task-item:last-child { border-bottom: none; }
+        .task-check { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--ui-border-strong); background: var(--ui-bg-soft); cursor: pointer; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: transparent; transition: all .15s ease; touch-action: manipulation; }
+        .task-check.done { background: linear-gradient(135deg, var(--ui-accent), var(--ui-accent-2)); border-color: transparent; color: #fff; }
+        .task-info { flex: 1; min-width: 0; }
+        .task-title { font-size: 15px; font-weight: 500; color: var(--ui-text); word-break: break-word; }
+        .task-title.done { text-decoration: line-through; opacity: 0.5; }
+        .task-map { font-size: 12px; color: var(--ui-text-soft); margin-top: 3px; }
+        .s-notes { margin-top:4px; font-style:italic; word-break:break-word; color: var(--ui-text-soft); font-size:12px; }
+        .task-actions { display: flex; gap: 4px; opacity: 0.5; transition: opacity 0.2s; }
+        .task-item:hover .task-actions { opacity: 1; }
+        .task-actions button { background: none; border: none; font-size: 14px; cursor: pointer; color: var(--ui-text); padding: 4px; }
+        .task-actions button:hover { color: var(--ui-accent); }
+    </style>
+</head>
+
+<body>
+    <div class="app" id="app">
+        <div class="header">
+            <div class="header-left">
+                <h1>Agile Planner</h1>
+                <select class="project-picker" id="project-picker" onchange="onProjectPickerChange(this.value)"></select>
+            </div>
+            <div class="right">
+                <div id="sync-dot" class="sync-dot" title="Sync status"></div>
+                <a href="#" id="link-tracker" class="header-link">&#x2197; Tracker</a>
+            </div>
+        </div>
+
+        <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="sprint" onclick="setTab('sprint')">Sprint</button>
+            <button class="tab" data-tab="backlog" onclick="setTab('backlog')">Backlog</button>
+            <button class="tab" data-tab="features" onclick="setTab('features')">Features</button>
+            <button class="tab" data-tab="sprints" onclick="setTab('sprints')">Sprints</button>
+            <button class="tab" data-tab="settings" onclick="setTab('settings')">Settings</button>
+        </div>
+
+        <div id="tab-sprint" class="tab-panel"></div>
+        <div id="tab-backlog" class="tab-panel" style="display:none"></div>
+        <div id="tab-features" class="tab-panel" style="display:none"></div>
+        <div id="tab-sprints" class="tab-panel" style="display:none"></div>
+        <div id="tab-settings" class="tab-panel" style="display:none"></div>
+    </div>
+
+    <div class="modal-bg" id="modal"></div>
+    <div class="toast" id="toast"></div>
+    <button class="fab" onclick="openIssueEditor(null)" title="Add Issue">+</button>
+
+    <script>
+        // ============================================================
+        // STATE
+        // ============================================================
+        var projects = [];
+        var features = [];
+        var issues = [];
+        var sprints = [];
+
+        var currentProjectId = null;
+        var activeSprintByProject = {}; // projectId -> sprintId
+        var plannerUpdatedAt = 0;
+
+        var currentTaskModalIssueId = null;
+        var currentTaskModalTaskId = null;
+        var currentTaskModalBlocks = 1;
+
+        var wt = {
+            sessions: [], tasks: [], sublists: {}, categoryOrder: [], categoryMeta: {},
+            deletedIds: [], updatedAt: 0
+        };
+
+        var plannerDeleted = { projects: [], features: [], issues: [], sprints: [] };
+        var wtDirty = false; // set when planner added wt categories/sublists
+
+        // Hardcoded defaults — work standalone, overridable via URL params or Settings.
+        // Worktracker writes to /work_tracker/personal-main, so we point there too.
+        var FIREBASE_DB_URL = 'https://work-tracker-10960-default-rtdb.asia-southeast1.firebasedatabase.app/work_tracker';
+        var FIREBASE_SYNC_ID = 'personal-main';
+        var STALE_DB_URL = 'https://work-tracker-10960-default-rtdb.asia-southeast1.firebasedatabase.app';
+        var DEFAULT_TRACKER_URL = 'https://hola-manan.github.io/session-logger/';
+        var SETTINGS_KEY = 'plnr_settings';
+        var LOCAL_KEY = 'plnr_v2';
+
+        var currentTab = 'sprint';
+        var expandedIssueIds = {};
+        var backlogFilterFeature = '';
+        var sprintFilterStatus = '';
+        var sprintsTabFilter = 'active';
+
+        var syncTimer = null;
+        var autoSyncTimer = null;
+        var burndownChart = null;
+        var velocityChart = null;
+
+        // ============================================================
+        // INIT
+        // ============================================================
+        function init() {
+            loadSettings();
+            applyUrlParams();
+            loadLocal();
+            wireLinks();
+            renderProjectPicker();
+            renderAll();
+            if (FIREBASE_DB_URL && FIREBASE_SYNC_ID) syncNow(true);
+            startAutoSync();
+            attachKeyHandlers();
+        }
+
+        function loadSettings() {
+            var urlMigrated = false;
+            try {
+                var s = localStorage.getItem(SETTINGS_KEY);
+                if (s) {
+                    var p = JSON.parse(s);
+                    if (p.dbUrl) {
+                        // Migrate stale URL that pointed at the wrong Firebase node (/personal-main
+                        // instead of /work_tracker/personal-main).
+                        if (p.dbUrl === STALE_DB_URL) {
+                            p.dbUrl = FIREBASE_DB_URL;
+                            localStorage.setItem(SETTINGS_KEY, JSON.stringify(p));
+                            urlMigrated = true;
+                        }
+                        FIREBASE_DB_URL = p.dbUrl;
+                    }
+                    if (p.syncId) FIREBASE_SYNC_ID = p.syncId;
+                }
+            } catch (e) {}
+            // After URL migration, drop local cache so we don't carry the seed-agtech created
+            // against the wrong path. Real data will arrive via sync.
+            if (urlMigrated) {
+                try { localStorage.removeItem(LOCAL_KEY); } catch (e) {}
+            }
+        }
+        function saveSettings() {
+            try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ dbUrl: FIREBASE_DB_URL, syncId: FIREBASE_SYNC_ID })); } catch (e) {}
+        }
+        function applyUrlParams() {
+            try {
+                var p = new URLSearchParams(window.location.search);
+                var u = p.get('dbUrl'); var s = p.get('syncId');
+                if (u) FIREBASE_DB_URL = u;
+                if (s) FIREBASE_SYNC_ID = s;
+                if (u || s) saveSettings();
+            } catch (e) {}
+        }
+
+        function loadLocal() {
+            try {
+                var s = localStorage.getItem(LOCAL_KEY);
+                if (s) {
+                    var p = JSON.parse(s);
+                    projects = Array.isArray(p.projects) ? p.projects : [];
+                    features = Array.isArray(p.features) ? p.features : [];
+                    issues = Array.isArray(p.issues) ? p.issues : [];
+                    sprints = Array.isArray(p.sprints) ? p.sprints : [];
+                    currentProjectId = p.currentProjectId || null;
+                    activeSprintByProject = p.activeSprintByProject || {};
+                    plannerUpdatedAt = p.plannerUpdatedAt || 0;
+                    plannerDeleted = p.plannerDeleted || { projects: [], features: [], issues: [], sprints: [] };
+                    if (p.wt) wt = p.wt;
+                }
+            } catch (e) {}
+        }
+        function saveLocal() {
+            try {
+                localStorage.setItem(LOCAL_KEY, JSON.stringify({
+                    projects: projects, features: features, issues: issues, sprints: sprints,
+                    currentProjectId: currentProjectId,
+                    activeSprintByProject: activeSprintByProject,
+                    plannerUpdatedAt: plannerUpdatedAt,
+                    plannerDeleted: plannerDeleted,
+                    wt: wt
+                }));
+            } catch (e) {}
+        }
+        function markUpdated() {
+            plannerUpdatedAt = Date.now();
+            saveLocal();
+            scheduleSync();
+        }
+
+        function wireLinks() {
+            var link = document.getElementById('link-tracker');
+            var stored = '';
+            try { stored = localStorage.getItem('plnr_tracker_url') || ''; } catch (e) {}
+            if (stored === 'https://hola-manan.github.io/work-tracker/') {
+                stored = ''; try { localStorage.removeItem('plnr_tracker_url'); } catch (e) {}
+            }
+            var ref = document.referrer || '';
+            var base = stored ||
+                (ref && /github\.io|localhost|127\.0\.0\.1/i.test(ref) ? ref.replace(/\?.*$/, '') : '') ||
+                DEFAULT_TRACKER_URL;
+            link.href = base;
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                if (FIREBASE_DB_URL && FIREBASE_SYNC_ID) {
+                    window.location.href = base + (base.indexOf('?') === -1 ? '?' : '&') +
+                        'dbUrl=' + encodeURIComponent(FIREBASE_DB_URL) +
+                        '&syncId=' + encodeURIComponent(FIREBASE_SYNC_ID);
+                } else {
+                    window.location.href = base;
+                }
+            });
+        }
+
+        function attachKeyHandlers() {
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeModal();
+            });
+        }
+
+        // ============================================================
+        // HELPERS
+        // ============================================================
+        function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+        function escHtml(s) {
+            if (s == null) return '';
+            return String(s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+        function todayISO() { return new Date().toISOString().slice(0, 10) }
+        function isoToDate(iso) {
+            if (!iso) return null;
+            var p = iso.split('-');
+            return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+        }
+        function dateToISO(d) {
+            if (!d) return '';
+            var m = String(d.getMonth() + 1).padStart(2, '0');
+            var dd = String(d.getDate()).padStart(2, '0');
+            return d.getFullYear() + '-' + m + '-' + dd;
+        }
+        function daysBetween(a, b) {
+            var msDay = 86400000;
+            var da = isoToDate(a), db = isoToDate(b);
+            if (!da || !db) return 0;
+            return Math.round((db - da) / msDay);
+        }
+        function addDays(iso, n) {
+            var d = isoToDate(iso); if (!d) return '';
+            d.setDate(d.getDate() + n);
+            return dateToISO(d);
+        }
+        function fmtDate(iso) {
+            if (!iso) return '';
+            var d = isoToDate(iso); if (!d) return iso;
+            var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return months[d.getMonth()] + ' ' + d.getDate();
+        }
+        function fmtHours(blocks) {
+            var h = (blocks || 0) * 0.5;
+            if (h === 0) return '0h';
+            if (h < 1) return (h * 60) + 'm';
+            if (h % 1 === 0) return h + 'h';
+            return h.toFixed(1) + 'h';
+        }
+        function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
+
+        function showToast(msg, isErr) {
+            var t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.borderColor = isErr ? 'rgba(255,115,166,0.6)' : 'var(--ui-border-strong)';
+            t.classList.add('show');
+            clearTimeout(showToast._t);
+            showToast._t = setTimeout(function () { t.classList.remove('show') }, 2200);
+        }
+        function setSyncState(state) { document.getElementById('sync-dot').className = 'sync-dot ' + state }
+
+        function currentProject() {
+            if (!currentProjectId) return null;
+            return projects.find(function (p) { return p.id === currentProjectId }) || null;
+        }
+        function setCurrentProject(id) {
+            currentProjectId = id || null;
+            saveLocal();
+            renderProjectPicker();
+            renderAll();
+        }
+        function onProjectPickerChange(v) {
+            if (v === '__new__') {
+                openProjectEditor(null);
+                // restore selection visually
+                document.getElementById('project-picker').value = currentProjectId || '';
+                return;
+            }
+            setCurrentProject(v);
+        }
+        function renderProjectPicker() {
+            var sel = document.getElementById('project-picker');
+            if (!sel) return;
+            sel.innerHTML = '';
+            var active = projects.filter(function (p) { return p.status !== 'archived' });
+            if (!active.length) {
+                var o = document.createElement('option');
+                o.value = ''; o.textContent = '(no projects)'; o.disabled = true; o.selected = true;
+                sel.appendChild(o);
+            } else {
+                active.forEach(function (p) {
+                    var o = document.createElement('option');
+                    o.value = p.id; o.textContent = p.name;
+                    if (p.id === currentProjectId) o.selected = true;
+                    sel.appendChild(o);
+                });
+                if (!currentProjectId || !active.find(function (p) { return p.id === currentProjectId })) {
+                    currentProjectId = active[0].id;
+                    sel.value = currentProjectId;
+                }
+            }
+            var sep = document.createElement('option'); sep.disabled = true; sep.textContent = '──────'; sel.appendChild(sep);
+            var nw = document.createElement('option'); nw.value = '__new__'; nw.textContent = '+ New project...'; sel.appendChild(nw);
+        }
+
+        // ============================================================
+        // LEGACY TRANSFORM (old bundled planner → new schema)
+        // ============================================================
+        function transformLegacyProject(p, sublists) {
+            var id = String(p.id);
+            var name = p.title || p.name || '(unnamed)';
+            var trackCat = p.cat ? String(p.cat) : '';
+            var trackSub = p.sub ? String(p.sub) : '';
+            // Infer trackCat/trackSub by looking up the project name in sublists.
+            if (!trackCat && !trackSub && sublists) {
+                var lname = String(name).toLowerCase();
+                var cats = Object.keys(sublists);
+                for (var i = 0; i < cats.length; i++) {
+                    var subs = sublists[cats[i]] || [];
+                    if (subs.indexOf(lname) !== -1) {
+                        trackCat = cats[i]; trackSub = lname;
+                        break;
+                    }
+                }
+            }
+            var palette = ['#8a63ff', '#bb79ff', '#79c4ff', '#6dffb1', '#ffc24a', '#ff73a6'];
+            return {
+                id: id,
+                name: name,
+                description: p.description || '',
+                color: p.color || palette[(Number(p.id) || 0) % palette.length],
+                trackCat: trackCat,
+                trackSub: trackSub,
+                status: p.status === 'archived' ? 'archived' : 'active',
+                createdAt: Number(p.id) || Date.now(),
+                updatedAt: Number(p.updatedAt) || Number(p.id) || Date.now()
+            };
+        }
+
+        function transformLegacyFeature(f, projects) {
+            var id = String(f.id);
+            var projectId = f.projectId ? String(f.projectId) : '';
+            var parent = null;
+            for (var i = 0; i < projects.length; i++) {
+                if (projects[i].id === projectId) { parent = projects[i]; break; }
+            }
+            return {
+                id: id,
+                projectId: projectId,
+                title: f.title || '(untitled)',
+                description: f.description || '',
+                color: f.color || (parent ? parent.color : '#8a63ff'),
+                status: f.status === 'archived' ? 'archived' : 'active',
+                createdAt: Number(f.id) || Date.now(),
+                updatedAt: Number(f.updatedAt) || Number(f.id) || Date.now()
+            };
+        }
+
+        function transformLegacyIssue(it, featuresArr, fallbackProjectId) {
+            var id = String(it.id);
+            var featureId = it.featureId ? String(it.featureId) : null;
+            var projectId = fallbackProjectId;
+            if (featureId) {
+                var parent = null;
+                for (var i = 0; i < featuresArr.length; i++) {
+                    if (featuresArr[i].id === featureId) { parent = featuresArr[i]; break; }
+                }
+                if (parent) projectId = parent.projectId;
+                else featureId = null; // dangling reference
+            }
+            var stat = it.status;
+            if (stat === 'backlog' || !stat) stat = 'todo';
+            return {
+                id: id,
+                projectId: projectId,
+                featureId: featureId,
+                title: it.title || '(untitled)',
+                description: it.description || '',
+                type: it.type || 'story',
+                priority: Number(it.priority) || 3,
+                status: stat,
+                sprintId: it.sprintId ? String(it.sprintId) : null,
+                trackCat: it.trackCat || '',
+                trackSub: it.trackSub || '',
+                acceptance: it.acceptance || '',
+                tasks: Array.isArray(it.tasks) ? it.tasks : (Array.isArray(it.subtasks) ? it.subtasks : []),
+                order: Number(it.order) || 0,
+                createdAt: Number(it.id) || Date.now(),
+                updatedAt: Number(it.updatedAt) || Number(it.id) || Date.now(),
+                completedAt: it.completedAt || null
+            };
+        }
+
+        // ============================================================
+        // SYNC
+        // ============================================================
+        function makeFirebasePath() {
+            var dbUrl = (FIREBASE_DB_URL || '').trim().replace(/\/+$/, '');
+            var syncId = (FIREBASE_SYNC_ID || '').trim();
+            if (!dbUrl || !syncId) return '';
+            return dbUrl + '/' + encodeURIComponent(syncId) + '.json';
+        }
+        function scheduleSync() {
+            if (syncTimer) clearTimeout(syncTimer);
+            syncTimer = setTimeout(function () { syncNow(true) }, 800);
+        }
+        function startAutoSync() {
+            if (autoSyncTimer) clearInterval(autoSyncTimer);
+            autoSyncTimer = setInterval(function () {
+                if (document.hidden) return;
+                syncNow(true);
+            }, 30000);
+            window.addEventListener('focus', function () { syncNow(true) });
+        }
+
+        function syncNow(silent) {
+            var url = makeFirebasePath();
+            if (!url) {
+                if (!silent) showToast('Set Firebase URL and Sync ID in Settings', true);
+                setSyncState('err');
+                return Promise.resolve();
+            }
+            setSyncState('busy');
+            return fetch(url, { cache: 'no-store' })
+                .then(function (res) {
+                    if (!res.ok) throw new Error('fetch ' + res.status);
+                    return res.json();
+                })
+                .then(function (remote) {
+                    remote = remote || {};
+
+                    // --- 1. Worktracker fields first (legacy transform needs sublists) ---
+                    if (Array.isArray(remote.sessions)) wt.sessions = remote.sessions;
+                    if (Array.isArray(remote.tasks)) wt.tasks = remote.tasks;
+                    if (Array.isArray(remote.deletedIds)) wt.deletedIds = remote.deletedIds;
+
+                    var rCatOrder = Array.isArray(remote.categoryOrder) ? remote.categoryOrder : [];
+                    var rCatMeta = (remote.categoryMeta && typeof remote.categoryMeta === 'object') ? remote.categoryMeta : {};
+                    var rSublists = (remote.sublists && typeof remote.sublists === 'object') ? remote.sublists : {};
+
+                    wt.categoryOrder = unionArrays(rCatOrder, wt.categoryOrder || []);
+                    var mergedMeta = Object.assign({}, rCatMeta);
+                    Object.keys(wt.categoryMeta || {}).forEach(function (k) {
+                        if (!mergedMeta[k]) mergedMeta[k] = wt.categoryMeta[k];
+                    });
+                    wt.categoryMeta = mergedMeta;
+                    var mergedSubs = {};
+                    Object.keys(rSublists).forEach(function (k) { mergedSubs[k] = (rSublists[k] || []).slice(); });
+                    Object.keys(wt.sublists || {}).forEach(function (k) {
+                        if (!mergedSubs[k]) mergedSubs[k] = [];
+                        (wt.sublists[k] || []).forEach(function (s) {
+                            if (mergedSubs[k].indexOf(s) === -1) mergedSubs[k].push(s);
+                        });
+                    });
+                    wt.sublists = mergedSubs;
+
+                    var rWtTs = Number(remote.updatedAt || 0);
+                    wt.updatedAt = Math.max(rWtTs, wt.updatedAt || 0);
+
+                    // --- 2. Planner subkey ---
+                    var rPlanner = (remote.planner && typeof remote.planner === 'object') ? remote.planner : {};
+                    var rPlannerProjects = Array.isArray(rPlanner.projects) ? rPlanner.projects : [];
+                    var rPlannerFeatures = Array.isArray(rPlanner.features) ? rPlanner.features : [];
+                    var rPlannerIssues = Array.isArray(rPlanner.issues) ? rPlanner.issues : [];
+                    var rSprints = Array.isArray(rPlanner.sprints) ? rPlanner.sprints : [];
+                    var rPlannerDeleted = (rPlanner.deleted && typeof rPlanner.deleted === 'object')
+                        ? rPlanner.deleted : { projects: [], features: [], issues: [], sprints: [] };
+                    var rPlannerTs = Number(rPlanner.plannerUpdatedAt || remote.plannerUpdatedAt || 0);
+                    var localTs = plannerUpdatedAt || 0;
+
+                    // --- 3. Transform legacy top-level entities (old bundled planner) ---
+                    var legacyProjectsRaw = Array.isArray(remote.projects) ? remote.projects : [];
+                    var legacyFeaturesRaw = Array.isArray(remote.features) ? remote.features : [];
+                    var legacyIssuesRaw = Array.isArray(remote.issues) ? remote.issues : [];
+                    var migProjects = legacyProjectsRaw.map(function (p) { return transformLegacyProject(p, wt.sublists); });
+                    var migFeatures = legacyFeaturesRaw.map(function (f) { return transformLegacyFeature(f, migProjects); });
+                    var fallbackProj = migProjects.length ? migProjects[0].id : null;
+                    var migIssues = legacyIssuesRaw.map(function (it) { return transformLegacyIssue(it, migFeatures, fallbackProj); });
+
+                    // Planner-side entries placed AFTER migrations so they override on duplicate id.
+                    var rProjects = migProjects.concat(rPlannerProjects);
+                    var rFeatures = migFeatures.concat(rPlannerFeatures);
+                    var rIssues = migIssues.concat(rPlannerIssues);
+
+                    // --- 4. Deleted + entity merge ---
+                    var mergedDeleted = {
+                        projects: unionArrays(plannerDeleted.projects, rPlannerDeleted.projects),
+                        features: unionArrays(plannerDeleted.features, rPlannerDeleted.features),
+                        issues: unionArrays(plannerDeleted.issues, rPlannerDeleted.issues),
+                        sprints: unionArrays(plannerDeleted.sprints, rPlannerDeleted.sprints)
+                    };
+
+                    var mergedProjects = mergeById(projects, rProjects, mergedDeleted.projects, localTs >= rPlannerTs);
+                    var mergedFeatures = mergeById(features, rFeatures, mergedDeleted.features, localTs >= rPlannerTs);
+                    var mergedIssues = mergeById(issues, rIssues, mergedDeleted.issues, localTs >= rPlannerTs);
+                    var mergedSprints = mergeById(sprints, rSprints, mergedDeleted.sprints, localTs >= rPlannerTs);
+
+                    var mergedActive = (localTs >= rPlannerTs)
+                        ? activeSprintByProject
+                        : Object.assign({}, rPlanner.activeSprintByProject || {}, activeSprintByProject);
+
+                    var mergedCurrent = currentProjectId ||
+                        (rPlanner.currentProjectId && mergedProjects.find(function (p) { return p.id === rPlanner.currentProjectId })
+                            ? rPlanner.currentProjectId : null);
+
+                    var hasLocalPlanner = projects.length || features.length || issues.length || sprints.length ||
+                        plannerDeleted.projects.length || plannerDeleted.features.length ||
+                        plannerDeleted.issues.length || plannerDeleted.sprints.length;
+                    var hasRemotePlanner = !!rPlannerTs || rPlannerProjects.length || rPlannerFeatures.length ||
+                        rPlannerIssues.length || rSprints.length;
+
+                    // Compare merged against the PLANNER-SIDE remote (not legacy-augmented), otherwise
+                    // we'd see a constant "changed" every sync (legacy entries are always re-included).
+                    var changed = wtDirty ||
+                        localTs > rPlannerTs ||
+                        mergedProjects.length !== rPlannerProjects.length ||
+                        mergedFeatures.length !== rPlannerFeatures.length ||
+                        mergedIssues.length !== rPlannerIssues.length ||
+                        mergedSprints.length !== rSprints.length;
+
+                    projects = mergedProjects;
+                    features = mergedFeatures;
+                    issues = mergedIssues;
+                    sprints = mergedSprints;
+                    activeSprintByProject = mergedActive;
+                    plannerDeleted = mergedDeleted;
+                    currentProjectId = mergedCurrent;
+
+                    var nextTs = Math.max(localTs, rPlannerTs);
+                    if (changed) nextTs = Math.max(nextTs + 1, Date.now());
+                    plannerUpdatedAt = nextTs;
+                    saveLocal();
+
+                    // Auto-seed AgTech if no projects exist and the user hasn't explicitly deleted it.
+                    var SEED_AGTECH_ID = 'seed-agtech';
+                    var seeded = false;
+                    if (!projects.length && plannerDeleted.projects.indexOf(SEED_AGTECH_ID) === -1) {
+                        var seed = {
+                            id: SEED_AGTECH_ID,
+                            name: 'AgTech',
+                            description: 'Side project',
+                            color: '#6dffb1',
+                            trackCat: 'side project',
+                            trackSub: 'agtech',
+                            status: 'active',
+                            createdAt: Date.now(),
+                            updatedAt: Date.now()
+                        };
+                        projects.push(seed);
+                        currentProjectId = seed.id;
+                        plannerUpdatedAt = Date.now();
+                        saveLocal();
+                        seeded = true;
+                        changed = true;
+                    }
+
+                    if (!changed && !seeded) {
+                        renderProjectPicker();
+                        renderAll();
+                        setSyncState('ok');
+                        return;
+                    }
+
+                    // Don't push an empty payload — wait until there's real local activity.
+                    if (!hasLocalPlanner && !seeded && !wtDirty) {
+                        renderProjectPicker();
+                        renderAll();
+                        setSyncState('ok');
+                        return;
+                    }
+
+                    var payload = Object.assign({}, remote, {
+                        planner: {
+                            projects: projects, features: features, issues: issues, sprints: sprints,
+                            currentProjectId: currentProjectId,
+                            activeSprintByProject: activeSprintByProject,
+                            deleted: plannerDeleted,
+                            plannerUpdatedAt: plannerUpdatedAt
+                        }
+                    });
+
+                    if (wtDirty) {
+                        // Only write the cat/sub trio — worktracker's merge unions these regardless of timestamp.
+                        // Do NOT bump updatedAt: worktracker uses it to break session/task ties, and bumping
+                        // would make our (stale) view of sessions/tasks win over worktracker's actual edits.
+                        payload.categoryOrder = wt.categoryOrder;
+                        payload.categoryMeta = wt.categoryMeta;
+                        payload.sublists = wt.sublists;
+                    }
+
+                    return fetch(url, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    }).then(function (res2) {
+                        if (!res2.ok) throw new Error('put ' + res2.status);
+                        wtDirty = false;
+                        renderProjectPicker();
+                        renderAll();
+                        setSyncState('ok');
+                        if (!silent) showToast('Synced');
+                    });
+                })
+                .catch(function (err) {
+                    console.warn('sync error', err);
+                    setSyncState('err');
+                    if (!silent) showToast('Sync failed: ' + err.message, true);
+                });
+        }
+
+        function unionArrays(a, b) {
+            var out = (a || []).slice();
+            (b || []).forEach(function (x) { if (out.indexOf(x) === -1) out.push(x); });
+            return out;
+        }
+        function mergeById(local, remote, deleted, localWins) {
+            var map = {};
+            (remote || []).forEach(function (x) {
+                if (!x || !x.id) return;
+                if (deleted.indexOf(x.id) !== -1) return;
+                map[x.id] = x;
+            });
+            (local || []).forEach(function (x) {
+                if (!x || !x.id) return;
+                if (deleted.indexOf(x.id) !== -1) return;
+                if (!map[x.id]) { map[x.id] = x; return; }
+                var l = x, r = map[x.id];
+                var lTs = Number(l.updatedAt || l.createdAt || 0);
+                var rTs = Number(r.updatedAt || r.createdAt || 0);
+                if (lTs > rTs || (lTs === rTs && localWins)) map[x.id] = l;
+            });
+            return Object.keys(map).map(function (k) { return map[k]; });
+        }
+
+        // ============================================================
+        // DISPATCH
+        // ============================================================
+        function setTab(t) {
+            currentTab = t;
+            document.querySelectorAll('.tab').forEach(function (el) {
+                el.classList.toggle('active', el.getAttribute('data-tab') === t);
+            });
+            document.querySelectorAll('.tab-panel').forEach(function (el) {
+                el.style.display = (el.id === 'tab-' + t) ? '' : 'none';
+            });
+            renderAll();
+        }
+        function renderAll() {
+            if (currentTab === 'sprint') renderSprintTab();
+            else if (currentTab === 'backlog') renderBacklogTab();
+            else if (currentTab === 'features') renderFeaturesTab();
+            else if (currentTab === 'sprints') renderSprintsTab();
+            else if (currentTab === 'settings') renderSettingsTab();
+        }
+
+        function noProjectMsg(el) {
+            el.innerHTML =
+                '<div class="card">' +
+                '<div class="section-head">No project selected</div>' +
+                '<p style="font-size:13px;color:var(--ui-text-soft);margin-bottom:12px;line-height:1.5">' +
+                'Create a project to start planning. A project groups features, issues, and sprints, ' +
+                'and links to a worktracker sub-list so time spent flows in automatically.</p>' +
+                '<button class="btn primary" onclick="openProjectEditor(null)">+ New project</button>' +
+                '</div>';
+        }
+
+        // ============================================================
+        // SPRINT TAB
+        // ============================================================
+        function renderSprintTab() {
+            var el = document.getElementById('tab-sprint');
+            var proj = currentProject();
+            if (!proj) { noProjectMsg(el); return; }
+
+            var projSprints = sprints.filter(function (s) { return s.projectId === proj.id });
+            var activeId = activeSprintByProject[proj.id];
+            var sprint = activeId ? projSprints.find(function (s) { return s.id === activeId }) : null;
+            if (!sprint) {
+                sprint = projSprints.find(function (s) { return s.status === 'active' }) ||
+                    projSprints.slice().sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0) })[0] ||
+                    null;
+                if (sprint) { activeSprintByProject[proj.id] = sprint.id; saveLocal(); }
+            }
+
+            if (!sprint) {
+                el.innerHTML =
+                    '<div class="card">' +
+                    '<div class="section-head">No active sprint</div>' +
+                    '<p style="font-size:13px;color:var(--ui-text-soft);margin-bottom:12px">' +
+                    'No sprint exists in <b>' + escHtml(proj.name) + '</b> yet. Create one to time-box work.</p>' +
+                    '<button class="btn primary" onclick="openSprintEditor(null,true)">+ Create first sprint</button>' +
+                    '</div>';
+                return;
+            }
+
+            var sprintIssues = issues.filter(function (s) { return s.sprintId === sprint.id });
+            var totalPts = sprintIssues.reduce(function (a, s) { return a + issueEstBlocks(s) }, 0);
+            var donePts = sprintIssues.filter(function (s) { return s.status === 'done' })
+                .reduce(function (a, s) { return a + issueEstBlocks(s) }, 0);
+            var pct = totalPts ? Math.round(100 * donePts / totalPts) : 0;
+            var totalActual = sprintIssues.reduce(function (a, s) { return a + issueActualBlocks(s) }, 0);
+            var today = todayISO();
+            var totalDays = Math.max(1, daysBetween(sprint.startDate, sprint.endDate) + 1);
+            var elapsed = clamp(daysBetween(sprint.startDate, today) + 1, 0, totalDays);
+            var remaining = Math.max(0, totalDays - elapsed);
+
+            var statuses = [
+                { k: 'todo', label: 'To Do' },
+                { k: 'in-progress', label: 'In Progress' },
+                { k: 'review', label: 'Review' },
+                { k: 'done', label: 'Done' }
+            ];
+            var byStatus = {};
+            statuses.forEach(function (s) { byStatus[s.k] = [] });
+            sprintIssues.forEach(function (s) {
+                var k = s.status || 'todo';
+                if (!byStatus[k]) byStatus[k] = [];
+                byStatus[k].push(s);
+            });
+            statuses.forEach(function (st) {
+                byStatus[st.k].sort(function (a, b) {
+                    return (a.priority || 3) - (b.priority || 3) || (a.order || 0) - (b.order || 0);
+                });
+            });
+
+            var html = '';
+            html += '<div class="card sprint-hero">';
+            html += '<div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:6px">';
+            html += '<div style="flex:1;min-width:0">';
+            html += '<div class="name">' + escHtml(sprint.name || 'Untitled sprint') + '</div>';
+            if (sprint.goal) html += '<div class="goal">' + escHtml(sprint.goal) + '</div>';
+            html += '</div>';
+            html += '<div class="row-tight">';
+            html += '<button class="btn ghost icon" title="Edit" onclick="openSprintEditor(\'' + sprint.id + '\',false)">&#9998;</button>';
+            html += sprintStatusButton(sprint);
+            html += '</div></div>';
+
+            html += '<div class="stats">';
+            html += '<div class="stat-tile"><div class="v">' + fmtHours(donePts) + '/' + fmtHours(totalPts) + '</div><div class="l">Hours</div></div>';
+            html += '<div class="stat-tile"><div class="v">' + pct + '%</div><div class="l">Done</div></div>';
+            html += '<div class="stat-tile"><div class="v">' + sprintIssues.length + '</div><div class="l">Issues</div></div>';
+            html += '<div class="stat-tile"><div class="v">' + fmtHours(totalActual) + '</div><div class="l">Logged</div></div>';
+            html += '<div class="stat-tile"><div class="v">' + remaining + '/' + totalDays + '</div><div class="l">Days left</div></div>';
+            html += '</div>';
+
+            html += '<div class="row" style="font-size:11px;color:var(--ui-text-soft);justify-content:space-between">';
+            html += '<span>' + fmtDate(sprint.startDate) + ' &mdash; ' + fmtDate(sprint.endDate) + '</span>';
+            if (sprint.capacityBlocks) {
+                var capPct = sprint.capacityBlocks ? Math.round(100 * totalPts / sprint.capacityBlocks) : 0;
+                html += '<span>Capacity: ' + fmtHours(totalPts) + '/' + fmtHours(sprint.capacityBlocks) + ' (' + capPct + '%)</span>';
+            }
+            html += '</div>';
+            html += '<div class="progress-bar" style="margin-top:8px"><div style="width:' + pct + '%"></div></div>';
+            html += '</div>';
+
+            html += '<div class="card">';
+            html += '<div class="section-head">Burndown</div>';
+            html += '<div class="chart-wrap"><canvas id="burndown-canvas"></canvas></div>';
+            html += '</div>';
+
+            html += '<div class="choice-row" style="margin-bottom:10px">';
+            html += filterPill('', 'All', sprintFilterStatus, 'sprintFilterStatus');
+            statuses.forEach(function (st) {
+                html += filterPill(st.k, st.label + ' (' + byStatus[st.k].length + ')', sprintFilterStatus, 'sprintFilterStatus');
+            });
+            html += '</div>';
+
+            if (!sprintIssues.length) {
+                html += '<div class="card"><div class="empty">No issues in this sprint yet. Add some from the Backlog or use the floating button.</div></div>';
+            } else {
+                statuses.forEach(function (st) {
+                    if (sprintFilterStatus && sprintFilterStatus !== st.k) return;
+                    var list = byStatus[st.k];
+                    if (!list.length && sprintFilterStatus !== st.k) return;
+                    var stPts = list.reduce(function (a, s) { return a + issueEstBlocks(s) }, 0);
+                    html += '<div class="status-group">';
+                    html += '<div class="status-group-head">';
+                    html += '<span class="label">' + st.label + ' &middot; ' + list.length + '</span>';
+                    html += '<span class="pts">' + fmtHours(stPts) + ' est</span>';
+                    html += '</div>';
+                    if (!list.length) html += '<div class="empty" style="padding:10px">&mdash;</div>';
+                    else list.forEach(function (s) { html += renderIssueCard(s, true); });
+                    html += '</div>';
+                });
+            }
+
+            el.innerHTML = html;
+            drawBurndown(sprint, sprintIssues);
+        }
+
+        function filterPill(k, label, current, varName) {
+            var active = (current === k) ? ' active' : '';
+            return '<button class="choice-btn' + active + '" onclick="setFilter(\'' + varName + '\',\'' + k + '\')">' +
+                escHtml(label) + '</button>';
+        }
+        function setFilter(varName, val) { window[varName] = val; renderAll(); }
+
+        function sprintStatusButton(sprint) {
+            if (sprint.status === 'planning') {
+                return '<button class="btn primary sm" onclick="startSprint(\'' + sprint.id + '\')">Start sprint</button>';
+            } else if (sprint.status === 'active') {
+                return '<button class="btn sm" onclick="completeSprint(\'' + sprint.id + '\')">Complete</button>';
+            }
+            return '<span class="pill sprint-completed">Completed</span>';
+        }
+
+        function startSprint(id) {
+            var s = sprints.find(function (x) { return x.id === id });
+            if (!s) return;
+            s.status = 'active';
+            s.updatedAt = Date.now();
+            activeSprintByProject[s.projectId] = id;
+            markUpdated(); renderAll();
+            showToast('Sprint started');
+        }
+
+        function completeSprint(id) {
+            var s = sprints.find(function (x) { return x.id === id });
+            if (!s) return;
+            var inSprint = issues.filter(function (it) { return it.sprintId === id });
+            var incomplete = inSprint.filter(function (it) { return it.status !== 'done' });
+            var msg = 'Complete this sprint?';
+            if (incomplete.length) {
+                msg += '\n\n' + incomplete.length + ' incomplete issue' + (incomplete.length === 1 ? '' : 's') +
+                    ' will return to the backlog.';
+            }
+            if (!confirm(msg)) return;
+            incomplete.forEach(function (it) { it.sprintId = null; it.updatedAt = Date.now(); });
+            s.status = 'completed';
+            s.completedAt = Date.now();
+            s.updatedAt = Date.now();
+            if (activeSprintByProject[s.projectId] === id) {
+                var nextActive = sprints.find(function (x) { return x.projectId === s.projectId && x.status === 'active' && x.id !== id });
+                if (nextActive) activeSprintByProject[s.projectId] = nextActive.id;
+                else delete activeSprintByProject[s.projectId];
+            }
+            markUpdated(); renderAll();
+            showToast('Sprint completed');
+        }
+
+        // ============================================================
+        // ISSUE CARDS
+        // ============================================================
+        function renderIssueCard(it, inSprintView) {
+            var fe = it.featureId ? features.find(function (f) { return f.id === it.featureId }) : null;
+            var sprint = it.sprintId ? sprints.find(function (sp) { return sp.id === it.sprintId }) : null;
+            var tasks = Array.isArray(it.tasks) ? it.tasks : [];
+            var taskDone = tasks.filter(function (x) { return x.done }).length;
+            var actualBlocks = issueActualBlocks(it);
+            var expanded = expandedIssueIds[it.id];
+
+            var html = '<div class="issue-card status-' + (it.status || 'todo') + (expanded ? ' expanded' : '') + '" data-id="' + it.id + '">';
+
+            html += '<div class="head" onclick="toggleIssue(\'' + it.id + '\')">';
+            html += '<div class="body">';
+            html += '<div class="issue-title">' + escHtml(it.title || '(untitled)') + '</div>';
+            html += '<div class="issue-meta">';
+            if (it.type && it.type !== 'story') html += '<span class="pill type-' + it.type + '">' + typeLabel(it.type) + '</span>';
+            var estBlocks = issueEstBlocks(it);
+            if (estBlocks) html += '<span class="pill points">' + fmtHours(estBlocks) + ' est</span>';
+            html += '<span class="pill prio-' + (it.priority || 3) + '">' + priorityLabel(it.priority) + '</span>';
+            if (fe) html += '<span class="pill feature" style="color:' + (fe.color || 'var(--ui-info)') + '">' + escHtml(fe.title) + '</span>';
+            if (sprint && !inSprintView) html += '<span class="pill">' + escHtml(sprint.name) + '</span>';
+            if (tasks.length) html += '<span class="pill">' + taskDone + '/' + tasks.length + ' tasks</span>';
+            if (actualBlocks) html += '<span class="pill time">' + fmtHours(actualBlocks) + ' logged</span>';
+            if (it.status && it.status !== 'todo') html += '<span class="pill status-' + it.status + '">' + statusLabel(it.status) + '</span>';
+            html += '</div></div>';
+            html += '<div class="toggle">&#9656;</div>';
+            html += '</div>';
+
+            html += '<div class="issue-body" onclick="event.stopPropagation()">';
+            if (it.description) {
+                html += '<div class="field-label">Description</div>';
+                html += '<div class="desc-text">' + escHtml(it.description) + '</div>';
+            }
+            if (it.acceptance) {
+                html += '<div class="field-label">Acceptance criteria</div>';
+                html += '<div class="desc-text">' + escHtml(it.acceptance) + '</div>';
+            }
+            html += '<div class="field-label">Tasks</div>';
+            html += '<div id="tasks-' + it.id + '">';
+            if (!tasks.length) html += '<div class="empty" style="padding:6px 0">No tasks</div>';
+            else tasks.forEach(function (t) {
+                var mapStr = '';
+                if (t.blocks) mapStr += fmtHours(t.blocks) + ' est (' + t.blocks + ' blocks)';
+                var noteStr = formatNotesSnippet(t.notes);
+                
+                html += '<div class="task-item">';
+                html += '<div class="task-check' + (t.done ? ' done' : '') + '" onclick="toggleTask(\'' + it.id + '\',\'' + t.id + '\')">' + (t.done ? '&#10004;' : '') + '</div>';
+                html += '<div class="task-info"><div class="task-title' + (t.done ? ' done' : '') + '">' + escHtml(t.title) + '</div>' + (mapStr ? '<div class="task-map">' + mapStr + '</div>' : '') + noteStr + '</div>';
+                html += '<div class="task-actions"><button onclick="openTaskModal(\'' + it.id + '\', \'' + t.id + '\')" title="Edit">&#9998;</button><button onclick="deleteTask(\'' + it.id + '\',\'' + t.id + '\')" title="Delete">&#128465;</button></div>';
+                html += '</div>';
+            });
+            html += '</div>';
+            html += '<button class="btn" style="width:100%; margin-top:8px; border:1px solid var(--ui-border); background:var(--ui-bg-soft); color:var(--ui-text-soft);" onclick="openTaskModal(\'' + it.id + '\')">+ Add Task</button>';
+
+            if (it.trackCat || it.trackSub) {
+                html += '<div class="field-label">Time tracking link</div>';
+                html += '<div style="font-size:12px;color:var(--ui-text-soft)">Override: ' +
+                    'category = <b>' + escHtml(it.trackCat || '(project default)') + '</b>' +
+                    (it.trackSub ? ', sub = <b>' + escHtml(it.trackSub) + '</b>' : '') +
+                    ' &middot; <b>' + fmtHours(actualBlocks) + '</b> logged total</div>';
+            }
+
+            html += '<div class="row" style="margin-top:14px;justify-content:space-between">';
+            html += '<div class="row-tight">' + statusButtons(it) + '</div>';
+            html += '<div class="row-tight">';
+            html += '<button class="btn ghost sm" onclick="openIssueEditor(\'' + it.id + '\')">Edit</button>';
+            html += '<button class="btn ghost sm danger" onclick="deleteIssue(\'' + it.id + '\')">Delete</button>';
+            html += '</div></div>';
+
+            html += '</div></div>';
+            return html;
+        }
+
+        function priorityLabel(p) {
+            return ({ 1: 'P1 Critical', 2: 'P2 High', 3: 'P3 Medium', 4: 'P4 Low' })[p || 3];
+        }
+        function statusLabel(st) {
+            return ({ 'todo': 'To Do', 'in-progress': 'In Progress', 'review': 'Review', 'done': 'Done' })[st || 'todo'];
+        }
+        function typeLabel(t) {
+            return ({ 'story': 'Story', 'bug': 'Bug', 'chore': 'Chore' })[t || 'story'];
+        }
+        function statusButtons(it) {
+            var statuses = [
+                { k: 'todo', lab: 'To Do' },
+                { k: 'in-progress', lab: 'Doing' },
+                { k: 'review', lab: 'Review' },
+                { k: 'done', lab: 'Done' }
+            ];
+            return statuses.map(function (st) {
+                var active = (it.status || 'todo') === st.k ? ' primary' : '';
+                return '<button class="btn sm' + active + '" onclick="setIssueStatus(\'' + it.id + '\',\'' + st.k + '\')">' +
+                    st.lab + '</button>';
+            }).join('');
+        }
+
+        function toggleIssue(id) {
+            expandedIssueIds[id] = !expandedIssueIds[id];
+            renderAll();
+        }
+
+        function setIssueStatus(id, status) {
+            var it = issues.find(function (x) { return x.id === id }); if (!it) return;
+            it.status = status; it.updatedAt = Date.now();
+            if (status === 'done') it.completedAt = Date.now();
+            else it.completedAt = null;
+            markUpdated(); renderAll();
+        }
+
+        function deleteIssue(id) {
+            if (!confirm('Delete this issue?')) return;
+            issues = issues.filter(function (s) { return s.id !== id });
+            if (plannerDeleted.issues.indexOf(id) === -1) plannerDeleted.issues.push(id);
+            markUpdated(); renderAll();
+            showToast('Issue deleted');
+        }
+
+        function toggleTask(issueId, tid) {
+            var it = issues.find(function (x) { return x.id === issueId }); if (!it) return;
+            var t = (it.tasks || []).find(function (x) { return x.id === tid }); if (!t) return;
+            t.done = !t.done; it.updatedAt = Date.now();
+            markUpdated(); renderAll();
+        }
+        function deleteTask(issueId, tid) {
+            var it = issues.find(function (x) { return x.id === issueId }); if (!it) return;
+            it.tasks = (it.tasks || []).filter(function (x) { return x.id !== tid });
+            it.updatedAt = Date.now();
+            markUpdated(); renderAll();
+        }
+        function issueEstBlocks(it) {
+            if (!it || !Array.isArray(it.tasks)) return 0;
+            return it.tasks.reduce(function(a, t) { return a + (Number(t.blocks) || 0); }, 0);
+        }
+
+        function changeTaskModalBlocks(d) {
+            currentTaskModalBlocks = Math.max(0, Math.min(16, currentTaskModalBlocks + d));
+            var el = document.getElementById('tm-blocks-val');
+            if (el) el.textContent = currentTaskModalBlocks;
+        }
+
+        function openTaskModal(issueId, taskId) {
+            var it = issues.find(function (x) { return x.id === issueId }); if (!it) return;
+            var isNew = !taskId;
+            var t = null;
+            if (!isNew) {
+                t = (it.tasks || []).find(function (x) { return x.id === taskId });
+                if (!t) return;
+            }
+            
+            currentTaskModalIssueId = issueId;
+            currentTaskModalTaskId = isNew ? uid() : taskId;
+            currentTaskModalBlocks = isNew ? 1 : (t.blocks || 0);
+            
+            var html = '<div class="modal" onclick="event.stopPropagation()" style="max-width:400px;">';
+            html += '<div class="modal-head" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">';
+            html += '<span style="font-weight:600; font-size:16px;">' + (isNew ? 'Add task' : 'Edit task') + '</span>';
+            html += '<button class="btn sm ghost" onclick="closeModal()">Cancel</button>';
+            html += '</div>';
+            
+            html += '<div class="field" style="margin-bottom:12px;">';
+            html += '<input type="text" id="tm-title" placeholder="Task name..." value="' + (isNew ? '' : escHtml(t.title)) + '" onkeydown="if(event.key===\'Enter\')saveTaskModal()" style="width:100%">';
+            html += '</div>';
+            
+            html += '<div class="field" style="margin-bottom:12px;"><label style="display:block; margin-bottom:4px; font-size:12px; color:var(--ui-text-soft);">Blocks (1 block = 0.5h)</label>';
+            html += '<div class="block-picker" style="margin:0;">';
+            html += '<button onclick="changeTaskModalBlocks(-1)">-</button>';
+            html += '<span class="block-val" id="tm-blocks-val">' + currentTaskModalBlocks + '</span>';
+            html += '<button onclick="changeTaskModalBlocks(1)">+</button>';
+            html += '</div></div>';
+            
+            html += '<div class="field" style="margin-bottom:16px;"><label style="display:block; margin-bottom:4px; font-size:12px; color:var(--ui-text-soft);">Notes (optional)</label>';
+            html += '<textarea id="tm-notes" placeholder="Task details or notes..." style="width:100%; min-height:60px;">' + (isNew ? '' : escHtml(t.notes || '')) + '</textarea></div>';
+            
+            html += '<button class="btn grow primary" style="width:100%; padding:10px; font-size:14px; font-weight:600;" onclick="saveTaskModal()">' + (isNew ? 'Add Task' : 'Save Task') + '</button>';
+            html += '</div>';
+            
+            showModal(html);
+        }
+
+        function saveTaskModal() {
+            var issueId = currentTaskModalIssueId;
+            var taskId = currentTaskModalTaskId;
+            if (!issueId || !taskId) return;
+            
+            var it = issues.find(function (x) { return x.id === issueId }); if (!it) return;
+            
+            var title = document.getElementById('tm-title').value.trim();
+            if (!title) title = 'Task';
+            var notes = document.getElementById('tm-notes').value.trim();
+            var blocks = currentTaskModalBlocks;
+            
+            var t = (it.tasks || []).find(function(x) { return x.id === taskId });
+            if (t) {
+                // Edit
+                t.title = title;
+                t.notes = notes;
+                t.blocks = blocks;
+            } else {
+                // Add
+                if (!Array.isArray(it.tasks)) it.tasks = [];
+                it.tasks.push({ id: taskId, title: title, done: false, blocks: blocks, notes: notes });
+            }
+            it.updatedAt = Date.now();
+            markUpdated(); renderAll();
+            closeModal();
+        }
+
+        function formatNotesSnippet(notesText) {
+            if (!notesText) return '';
+            var div = document.createElement('div');
+            div.textContent = notesText;
+            var escapedNotes = div.innerHTML.replace(/\n/g, '<br>');
+            if (notesText.length <= 60) {
+                return '<div class="s-notes">"' + escapedNotes + '"</div>';
+            }
+            var shortText = notesText.substring(0, 60).trim() + '...';
+            div.textContent = shortText;
+            return '<div class="s-notes">"' + div.innerHTML + '"</div>';
+        }
+
+        // ============================================================
+        // ISSUE EDITOR
+        // ============================================================
+        function openIssueEditor(id) {
+            var proj = currentProject(); if (!proj) { showToast('Pick or create a project first', true); return; }
+            var it = id ? issues.find(function (x) { return x.id === id }) : null;
+            var isNew = !it;
+            if (!it) it = createIssue({ projectId: proj.id });
+
+            var projFeatures = features.filter(function (f) { return f.projectId === it.projectId });
+            var projSprints = sprints.filter(function (sp) { return sp.projectId === it.projectId && sp.status !== 'completed' });
+
+            var html = '<div class="modal">';
+            html += '<h2>' + (isNew ? 'New issue' : 'Edit issue') + '</h2>';
+            html += '<div class="field"><label>Title</label>';
+            html += '<input id="ie-title" type="text" value="' + escHtml(it.title) + '"></div>';
+            html += '<div class="field"><label>Description</label>';
+            html += '<textarea id="ie-desc">' + escHtml(it.description || '') + '</textarea></div>';
+
+            html += '<div class="row">';
+            html += '<div class="field grow"><label>Type</label>';
+            html += '<select id="ie-type">';
+            [['story', 'Story'], ['bug', 'Bug'], ['chore', 'Chore']].forEach(function (p) {
+                html += '<option value="' + p[0] + '"' + ((it.type || 'story') === p[0] ? ' selected' : '') + '>' + p[1] + '</option>';
+            });
+            html += '</select></div>';
+            html += '<div class="field" style="flex:0 0 110px"><label>Priority</label>';
+            html += '<select id="ie-prio">';
+            [[1, 'P1 Critical'], [2, 'P2 High'], [3, 'P3 Medium'], [4, 'P4 Low']].forEach(function (p) {
+                html += '<option value="' + p[0] + '"' + ((it.priority || 3) === p[0] ? ' selected' : '') + '>' + p[1] + '</option>';
+            });
+            html += '</select></div>';
+            html += '</div>';
+
+            html += '<div class="row">';
+            html += '<div class="field grow"><label>Feature</label>';
+            html += '<select id="ie-feature"><option value="">(none)</option>';
+            projFeatures.forEach(function (f) {
+                html += '<option value="' + f.id + '"' + (f.id === it.featureId ? ' selected' : '') + '>' + escHtml(f.title) + '</option>';
+            });
+            html += '</select></div>';
+            html += '<div class="field grow"><label>Sprint</label>';
+            html += '<select id="ie-sprint"><option value="">Backlog</option>';
+            projSprints.forEach(function (sp) {
+                html += '<option value="' + sp.id + '"' + (sp.id === it.sprintId ? ' selected' : '') + '>' + escHtml(sp.name) + '</option>';
+            });
+            html += '</select></div>';
+            html += '<div class="field grow"><label>Status</label>';
+            html += '<select id="ie-status">';
+            [['todo', 'To Do'], ['in-progress', 'In Progress'], ['review', 'Review'], ['done', 'Done']].forEach(function (p) {
+                html += '<option value="' + p[0] + '"' + ((it.status || 'todo') === p[0] ? ' selected' : '') + '>' + p[1] + '</option>';
+            });
+            html += '</select></div>';
+            html += '</div>';
+
+            html += '<div class="field"><label>Acceptance criteria</label>';
+            html += '<textarea id="ie-acc" placeholder="Done when...">' + escHtml(it.acceptance || '') + '</textarea></div>';
+
+            html += '<div class="field-label" style="margin-top:6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ui-text-soft);margin-bottom:6px">Time tracking override (optional)</div>';
+            html += '<div class="row">';
+            html += '<div class="field grow"><label>Override category</label>';
+            html += '<select id="ie-trackCat" onchange="onTrackCatChange(\'ie\')"></select></div>';
+            html += '<div class="field grow"><label>Override sub</label>';
+            html += '<select id="ie-trackSub" onchange="onTrackSubChange(\'ie\')"></select></div>';
+            html += '</div>';
+            html += '<div class="help-text">By default, issues count time from the project\'s linked worktracker category &amp; sub-list. Override here to narrow further.</div>';
+
+            html += '<div class="modal-actions">';
+            html += '<button class="btn ghost" onclick="closeModal()">Cancel</button>';
+            if (!isNew) html += '<button class="btn danger" onclick="deleteIssueFromEditor(\'' + it.id + '\')">Delete</button>';
+            html += '<button class="btn primary" onclick="saveIssueFromEditor(' + (isNew ? 'true' : 'false') + ',\'' + it.id + '\')">Save</button>';
+            html += '</div></div>';
+            showModal(html);
+            populateTrackCatSelect('ie', it.trackCat);
+            populateTrackSubSelect('ie', it.trackCat, it.trackSub);
+        }
+
+        // ----- Worktracker cat/sub dropdowns -----
+        function addWtCategory(name) {
+            name = (name || '').trim();
+            if (!name) return false;
+            if (!Array.isArray(wt.categoryOrder)) wt.categoryOrder = [];
+            if (wt.categoryOrder.indexOf(name) === -1) wt.categoryOrder.push(name);
+            if (!wt.categoryMeta || typeof wt.categoryMeta !== 'object') wt.categoryMeta = {};
+            if (!wt.categoryMeta[name]) {
+                var hues = [30, 340, 280, 120, 55, 195, 0, 310];
+                var i = Object.keys(wt.categoryMeta).length % hues.length;
+                wt.categoryMeta[name] = { hue: hues[i] };
+            }
+            if (!wt.sublists || typeof wt.sublists !== 'object') wt.sublists = {};
+            if (!wt.sublists[name]) wt.sublists[name] = [];
+            wtDirty = true;
+            wt.updatedAt = Date.now();
+            markUpdated();
+            return true;
+        }
+
+        function addWtSublist(cat, sub) {
+            cat = (cat || '').trim();
+            sub = (sub || '').trim();
+            if (!cat || !sub) return false;
+            if (!wt.sublists || typeof wt.sublists !== 'object') wt.sublists = {};
+            if (!wt.sublists[cat]) wt.sublists[cat] = [];
+            if (wt.sublists[cat].indexOf(sub) === -1) wt.sublists[cat].push(sub);
+            wtDirty = true;
+            wt.updatedAt = Date.now();
+            markUpdated();
+            return true;
+        }
+
+        function populateTrackCatSelect(prefix, selectedVal) {
+            var sel = document.getElementById(prefix + '-trackCat');
+            if (!sel) return;
+            var cats = (wt.categoryOrder && wt.categoryOrder.length)
+                ? wt.categoryOrder.slice()
+                : Object.keys(wt.categoryMeta || {});
+            var emptyLabel = prefix === 'pr' ? '(pick a category)' : '(use project default)';
+            sel.innerHTML = '';
+            var blank = document.createElement('option');
+            blank.value = ''; blank.textContent = emptyLabel;
+            sel.appendChild(blank);
+            cats.forEach(function (c) {
+                var opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                if (c === selectedVal) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            var newOpt = document.createElement('option');
+            newOpt.value = '__new__'; newOpt.textContent = '+ Add new category...';
+            sel.appendChild(newOpt);
+            if (!selectedVal) sel.value = '';
+        }
+
+        function populateTrackSubSelect(prefix, cat, selectedVal) {
+            var sel = document.getElementById(prefix + '-trackSub');
+            if (!sel) return;
+            var subs = (cat && wt.sublists && wt.sublists[cat]) ? wt.sublists[cat].slice() : [];
+            var emptyLabel = prefix === 'pr' ? '(pick a sub-list)' : '(any)';
+            sel.innerHTML = '';
+            var blank = document.createElement('option');
+            blank.value = ''; blank.textContent = emptyLabel;
+            sel.appendChild(blank);
+            subs.forEach(function (s) {
+                var opt = document.createElement('option');
+                opt.value = s; opt.textContent = s;
+                if (s === selectedVal) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            if (cat) {
+                var newOpt = document.createElement('option');
+                newOpt.value = '__new__'; newOpt.textContent = '+ Add new sub-list...';
+                sel.appendChild(newOpt);
+            }
+            if (!selectedVal) sel.value = '';
+        }
+
+        function onTrackCatChange(prefix) {
+            var sel = document.getElementById(prefix + '-trackCat');
+            if (!sel) return;
+            if (sel.value === '__new__') {
+                var name = prompt('New category name:');
+                if (name && name.trim()) {
+                    var clean = name.trim();
+                    addWtCategory(clean);
+                    populateTrackCatSelect(prefix, clean);
+                    populateTrackSubSelect(prefix, clean, '');
+                    return;
+                }
+                sel.value = '';
+            }
+            populateTrackSubSelect(prefix, sel.value, '');
+        }
+
+        function onTrackSubChange(prefix) {
+            var sel = document.getElementById(prefix + '-trackSub');
+            if (!sel) return;
+            if (sel.value === '__new__') {
+                var catSel = document.getElementById(prefix + '-trackCat');
+                var cat = catSel ? catSel.value : '';
+                if (!cat || cat === '__new__') {
+                    showToast('Pick a category first', true);
+                    sel.value = '';
+                    return;
+                }
+                var name = prompt('New sub-list name under "' + cat + '":');
+                if (name && name.trim()) {
+                    var clean = name.trim();
+                    addWtSublist(cat, clean);
+                    populateTrackSubSelect(prefix, cat, clean);
+                    return;
+                }
+                sel.value = '';
+            }
+        }
+
+        function saveIssueFromEditor(isNew, id) {
+            var it = isNew ? createIssue({ id: id, projectId: currentProjectId }) :
+                issues.find(function (x) { return x.id === id });
+            if (!it) return;
+            it.title = document.getElementById('ie-title').value.trim();
+            it.description = document.getElementById('ie-desc').value.trim();
+            it.type = document.getElementById('ie-type').value;
+            it.featureId = document.getElementById('ie-feature').value || null;
+            it.priority = Number(document.getElementById('ie-prio').value) || 3;
+            it.sprintId = document.getElementById('ie-sprint').value || null;
+            it.status = document.getElementById('ie-status').value;
+            it.acceptance = document.getElementById('ie-acc').value.trim();
+            it.trackCat = document.getElementById('ie-trackCat').value || '';
+            it.trackSub = document.getElementById('ie-trackSub').value || '';
+            it.updatedAt = Date.now();
+            if (it.status === 'done' && !it.completedAt) it.completedAt = Date.now();
+            if (it.status !== 'done') it.completedAt = null;
+            if (!it.title) { showToast('Title is required', true); return; }
+            if (isNew) { it.createdAt = Date.now(); issues.unshift(it); }
+            closeModal();
+            markUpdated(); renderAll();
+        }
+
+        function deleteIssueFromEditor(id) {
+            closeModal();
+            deleteIssue(id);
+        }
+
+        function createIssue(over) {
+            return Object.assign({
+                id: uid(), title: '', description: '',
+                projectId: currentProjectId,
+                featureId: null,
+                priority: 3, type: 'story',
+                status: 'todo', sprintId: null,
+                trackCat: '', trackSub: '',
+                acceptance: '',
+                tasks: [],
+                order: 0,
+                createdAt: Date.now(), updatedAt: Date.now(),
+                completedAt: null
+            }, over || {});
+        }
+
+        // ============================================================
+        // BACKLOG TAB
+        // ============================================================
+        function renderBacklogTab() {
+            var el = document.getElementById('tab-backlog');
+            var proj = currentProject(); if (!proj) { noProjectMsg(el); return; }
+
+            var backlog = issues.filter(function (s) {
+                if (s.projectId !== proj.id) return false;
+                if (s.sprintId) return false;
+                if (backlogFilterFeature && s.featureId !== backlogFilterFeature) return false;
+                return true;
+            });
+            backlog.sort(function (a, b) {
+                return (a.priority || 3) - (b.priority || 3) || (b.createdAt || 0) - (a.createdAt || 0);
+            });
+
+            var totalPts = backlog.reduce(function (a, s) { return a + issueEstBlocks(s) }, 0);
+
+            var html = '';
+            var projFeatures = features.filter(function (f) { return f.projectId === proj.id && f.status !== 'archived' });
+            html += '<div class="choice-row">';
+            html += filterPill('', 'All features', backlogFilterFeature, 'backlogFilterFeature');
+            projFeatures.forEach(function (e) {
+                html += filterPill(e.id, e.title, backlogFilterFeature, 'backlogFilterFeature');
+            });
+            html += '</div>';
+
+            html += '<div class="section-head">Backlog <span class="count">' + backlog.length + ' &middot; ' + fmtHours(totalPts) + ' est</span></div>';
+
+            if (!backlog.length) {
+                html += '<div class="card"><div class="empty">Backlog is empty. Add issues above.</div></div>';
+            } else {
+                backlog.forEach(function (s) { html += renderIssueCard(s, false); });
+            }
+
+            el.innerHTML = html;
+        }
+
+
+        // ============================================================
+        // FEATURES TAB
+        // ============================================================
+        function renderFeaturesTab() {
+            var el = document.getElementById('tab-features');
+            var proj = currentProject(); if (!proj) { noProjectMsg(el); return; }
+            var html = '';
+            html += '<div class="quick-add">';
+            html += '<input id="feature-quick-add" type="text" placeholder="Name a new feature and press Enter..." ' +
+                'onkeydown="if(event.key===\'Enter\'){quickAddFeature()}">';
+            html += '<button class="btn primary sm" onclick="quickAddFeature()">Add</button>';
+            html += '</div>';
+
+            var projFeatures = features.filter(function (f) { return f.projectId === proj.id });
+            var active = projFeatures.filter(function (e) { return e.status !== 'archived' });
+            var archived = projFeatures.filter(function (e) { return e.status === 'archived' });
+
+            html += '<div class="section-head">Active features <span class="count">' + active.length + '</span></div>';
+            if (!active.length) {
+                html += '<div class="card"><div class="empty">No features yet. Features group related issues around a larger capability (e.g. "Onboarding flow", "Crop scanner").</div></div>';
+            } else {
+                active.forEach(function (e) { html += renderFeatureCard(e); });
+            }
+
+            if (archived.length) {
+                html += '<div class="divider"></div>';
+                html += '<div class="section-head">Archived <span class="count">' + archived.length + '</span></div>';
+                archived.forEach(function (e) { html += renderFeatureCard(e); });
+            }
+
+            el.innerHTML = html;
+        }
+
+        function renderFeatureCard(f) {
+            var its = issues.filter(function (s) { return s.featureId === f.id });
+            var total = its.length;
+            var done = its.filter(function (s) { return s.status === 'done' }).length;
+            var totalPts = its.reduce(function (a, s) { return a + issueEstBlocks(s) }, 0);
+            var donePts = its.filter(function (s) { return s.status === 'done' })
+                .reduce(function (a, s) { return a + issueEstBlocks(s) }, 0);
+            var pct = totalPts ? Math.round(100 * donePts / totalPts) : 0;
+            var actualBlocks = its.reduce(function (a, s) { return a + issueActualBlocks(s) }, 0);
+
+            var html = '<div class="feature-card" style="--feature-color:' + (f.color || '#8a63ff') + '">';
+            html += '<div class="row" style="justify-content:space-between;align-items:flex-start">';
+            html += '<div style="flex:1;min-width:0">';
+            html += '<div class="name">' + escHtml(f.title || '(untitled feature)') + '</div>';
+            if (f.description) html += '<div class="desc">' + escHtml(f.description) + '</div>';
+            html += '<div class="row">';
+            html += '<span class="pill">' + done + '/' + total + ' issues</span>';
+            html += '<span class="pill points">' + fmtHours(donePts) + '/' + fmtHours(totalPts) + ' est</span>';
+            html += '<span class="pill time">' + fmtHours(actualBlocks) + ' logged</span>';
+            html += '</div>';
+            html += '<div class="progress-bar" style="margin-top:8px"><div style="width:' + pct + '%;background:' + (f.color || 'var(--ui-accent)') + '"></div></div>';
+            html += '</div>';
+            html += '<div class="row-tight" style="margin-left:8px">';
+            html += '<button class="btn ghost icon" onclick="openFeatureEditor(\'' + f.id + '\')" title="Edit">&#9998;</button>';
+            html += '</div></div>';
+            html += '</div>';
+            return html;
+        }
+
+        function quickAddFeature() {
+            var proj = currentProject(); if (!proj) return;
+            var inp = document.getElementById('feature-quick-add');
+            var v = (inp.value || '').trim(); if (!v) return;
+            var colors = ['#8a63ff', '#79c4ff', '#6dffb1', '#ffc24a', '#ff73a6', '#bb79ff', '#ff9d6e', '#9affd4'];
+            var existing = features.filter(function (f) { return f.projectId === proj.id }).length;
+            var c = colors[existing % colors.length];
+            features.unshift({
+                id: uid(), projectId: proj.id, title: v, description: '', color: c,
+                status: 'active', createdAt: Date.now(), updatedAt: Date.now()
+            });
+            inp.value = '';
+            markUpdated(); renderAll();
+        }
+
+        function openFeatureEditor(id) {
+            var f = id ? features.find(function (x) { return x.id === id }) : null;
+            var isNew = !f;
+            if (!f) {
+                var proj = currentProject(); if (!proj) { showToast('Pick a project first', true); return; }
+                f = { id: uid(), projectId: proj.id, title: '', description: '', color: '#8a63ff', status: 'active', createdAt: Date.now() };
+            }
+            var colors = ['#8a63ff', '#bb79ff', '#79c4ff', '#6dffb1', '#ffc24a', '#ff73a6', '#ff9d6e', '#9affd4', '#ff9a9a', '#a4a4ff'];
+            var html = '<div class="modal">';
+            html += '<h2>' + (isNew ? 'New feature' : 'Edit feature') + '</h2>';
+            html += '<div class="field"><label>Title</label>';
+            html += '<input id="fe-title" type="text" value="' + escHtml(f.title) + '"></div>';
+            html += '<div class="field"><label>Description</label>';
+            html += '<textarea id="fe-desc">' + escHtml(f.description || '') + '</textarea></div>';
+            html += '<div class="field"><label>Colour</label>';
+            html += '<div class="swatch-row" id="fe-swatch">';
+            colors.forEach(function (c) {
+                html += '<div class="swatch' + (c === f.color ? ' active' : '') + '" style="background:' + c + '" data-c="' + c +
+                    '" onclick="pickFeatureColor(\'' + c + '\')"></div>';
+            });
+            html += '</div></div>';
+            html += '<div class="field"><label>Status</label>';
+            html += '<select id="fe-status">';
+            [['active', 'Active'], ['archived', 'Archived']].forEach(function (p) {
+                html += '<option value="' + p[0] + '"' + ((f.status || 'active') === p[0] ? ' selected' : '') + '>' + p[1] + '</option>';
+            });
+            html += '</select></div>';
+            html += '<input type="hidden" id="fe-color" value="' + f.color + '">';
+
+            html += '<div class="modal-actions">';
+            html += '<button class="btn ghost" onclick="closeModal()">Cancel</button>';
+            if (!isNew) html += '<button class="btn danger" onclick="deleteFeatureFromEditor(\'' + f.id + '\')">Delete</button>';
+            html += '<button class="btn primary" onclick="saveFeatureFromEditor(' + (isNew ? 'true' : 'false') + ',\'' + f.id + '\')">Save</button>';
+            html += '</div></div>';
+            showModal(html);
+        }
+        function pickFeatureColor(c) {
+            document.getElementById('fe-color').value = c;
+            document.querySelectorAll('#fe-swatch .swatch').forEach(function (el) {
+                el.classList.toggle('active', el.getAttribute('data-c') === c);
+            });
+        }
+        function saveFeatureFromEditor(isNew, id) {
+            var f = isNew ? { id: id, projectId: currentProjectId, createdAt: Date.now() } :
+                features.find(function (x) { return x.id === id });
+            if (!f) return;
+            f.title = document.getElementById('fe-title').value.trim();
+            f.description = document.getElementById('fe-desc').value.trim();
+            f.color = document.getElementById('fe-color').value;
+            f.status = document.getElementById('fe-status').value;
+            f.updatedAt = Date.now();
+            if (!f.title) { showToast('Title is required', true); return; }
+            if (isNew) features.unshift(f);
+            closeModal();
+            markUpdated(); renderAll();
+        }
+        function deleteFeatureFromEditor(id) {
+            closeModal();
+            var its = issues.filter(function (s) { return s.featureId === id });
+            var msg = 'Delete this feature?';
+            if (its.length) msg += '\n\n' + its.length + ' issue' + (its.length === 1 ? '' : 's') + ' will be moved out of any feature (kept).';
+            if (!confirm(msg)) return;
+            its.forEach(function (s) { s.featureId = null; s.updatedAt = Date.now(); });
+            features = features.filter(function (e) { return e.id !== id });
+            if (plannerDeleted.features.indexOf(id) === -1) plannerDeleted.features.push(id);
+            markUpdated(); renderAll();
+            showToast('Feature deleted');
+        }
+
+        // ============================================================
+        // SPRINTS TAB
+        // ============================================================
+        function renderSprintsTab() {
+            var el = document.getElementById('tab-sprints');
+            var proj = currentProject(); if (!proj) { noProjectMsg(el); return; }
+            var html = '';
+
+            var projSprints = sprints.filter(function (s) { return s.projectId === proj.id });
+            var today = todayISO();
+            var active = projSprints.filter(function (s) { return s.status === 'active' });
+            var future = projSprints.filter(function (s) {
+                return s.status !== 'active' && s.status !== 'completed' &&
+                    (s.status === 'planning' || (s.startDate && s.startDate > today));
+            });
+            var past = projSprints.filter(function (s) { return s.status === 'completed' });
+
+            html += '<div class="row" style="margin-bottom:10px;justify-content:space-between">';
+            html += '<div class="choice-row" style="margin-bottom:0">';
+            html += filterPill('active', 'Active (' + active.length + ')', sprintsTabFilter, 'sprintsTabFilter');
+            html += filterPill('future', 'Future (' + future.length + ')', sprintsTabFilter, 'sprintsTabFilter');
+            html += filterPill('past', 'Past (' + past.length + ')', sprintsTabFilter, 'sprintsTabFilter');
+            html += filterPill('all', 'All', sprintsTabFilter, 'sprintsTabFilter');
+            html += '</div>';
+            html += '<button class="btn primary sm" onclick="openSprintEditor(null,false)">+ New sprint</button>';
+            html += '</div>';
+
+            if (past.length >= 1) {
+                html += '<div class="card">';
+                html += '<div class="section-head">Velocity <span class="count">last ' + Math.min(past.length, 8) + '</span></div>';
+                html += '<div class="chart-wrap" style="height:160px"><canvas id="velocity-canvas"></canvas></div>';
+                html += '</div>';
+            }
+
+            var list = [];
+            if (sprintsTabFilter === 'active') list = active;
+            else if (sprintsTabFilter === 'future') list = future;
+            else if (sprintsTabFilter === 'past') list = past;
+            else list = projSprints.slice();
+
+            list.sort(function (a, b) {
+                var ad = a.startDate || '', bd = b.startDate || '';
+                if (ad === bd) return (b.createdAt || 0) - (a.createdAt || 0);
+                return bd.localeCompare(ad);
+            });
+
+            if (!list.length) {
+                html += '<div class="card"><div class="empty">No sprints in this view.</div></div>';
+            } else {
+                list.forEach(function (s) { html += renderSprintListCard(s) });
+            }
+
+            el.innerHTML = html;
+            if (past.length >= 1) drawVelocity(past);
+        }
+
+        function renderSprintListCard(s) {
+            var ss = issues.filter(function (x) { return x.sprintId === s.id });
+            var totalPts = ss.reduce(function (a, x) { return a + issueEstBlocks(x) }, 0);
+            var donePts = ss.filter(function (x) { return x.status === 'done' })
+                .reduce(function (a, x) { return a + issueEstBlocks(x) }, 0);
+            var pct = totalPts ? Math.round(100 * donePts / totalPts) : 0;
+            var isActive = s.id === activeSprintByProject[s.projectId];
+            var html = '<div class="sprint-list-card' + (isActive ? ' active' : '') + '" onclick="setActiveSprintAndOpen(\'' + s.id + '\')">';
+            html += '<div class="row1">';
+            html += '<div class="name">' + escHtml(s.name || 'Untitled') + '</div>';
+            html += '<span class="pill sprint-' + s.status + '">' + statusLabelSprint(s.status) + '</span>';
+            html += '</div>';
+            html += '<div class="row2">';
+            html += '<span>' + fmtDate(s.startDate) + ' &mdash; ' + fmtDate(s.endDate) + '</span>';
+            html += '<span>' + ss.length + ' issues</span>';
+            html += '<span>' + fmtHours(donePts) + '/' + fmtHours(totalPts) + ' est (' + pct + '%)</span>';
+            if (s.capacityBlocks) html += '<span>Capacity: ' + fmtHours(s.capacityBlocks) + '</span>';
+            html += '</div>';
+            html += '<div class="progress-bar" style="margin-top:6px"><div style="width:' + pct + '%"></div></div>';
+            html += '</div>';
+            return html;
+        }
+
+        function statusLabelSprint(s) {
+            return ({ planning: 'Planning', active: 'Active', completed: 'Completed' })[s || 'planning'];
+        }
+
+        function setActiveSprintAndOpen(id) {
+            var s = sprints.find(function (x) { return x.id === id }); if (!s) return;
+            activeSprintByProject[s.projectId] = id;
+            currentProjectId = s.projectId;
+            markUpdated();
+            setTab('sprint');
+        }
+
+        // ============================================================
+        // SPRINT EDITOR
+        // ============================================================
+        function openSprintEditor(id, andStart) {
+            var proj = currentProject(); if (!proj && !id) { showToast('Pick a project first', true); return; }
+            var s = id ? sprints.find(function (x) { return x.id === id }) : null;
+            var isNew = !s;
+            if (!s) {
+                var projSprints = sprints.filter(function (x) { return x.projectId === proj.id });
+                var n = projSprints.length + 1;
+                var prev = projSprints.slice().sort(function (a, b) { return (b.endDate || '').localeCompare(a.endDate || '') })[0];
+                var startISO = prev ? addDays(prev.endDate, 1) : todayISO();
+                if (startISO < todayISO()) startISO = todayISO();
+                var endISO = addDays(startISO, 13);
+                var avgVel = computeAvgVelocity(proj.id);
+                s = {
+                    id: uid(),
+                    projectId: proj.id,
+                    name: 'Sprint ' + n,
+                    goal: '',
+                    startDate: startISO,
+                    endDate: endISO,
+                    status: andStart ? 'active' : 'planning',
+                    capacityBlocks: avgVel || 0,
+                    createdAt: Date.now()
+                };
+            }
+            var html = '<div class="modal">';
+            html += '<h2>' + (isNew ? 'New sprint' : 'Edit sprint') + '</h2>';
+            html += '<div class="field"><label>Name</label>';
+            html += '<input id="sp-name" type="text" value="' + escHtml(s.name) + '"></div>';
+            html += '<div class="field"><label>Sprint goal</label>';
+            html += '<textarea id="sp-goal" placeholder="One outcome we want from this sprint">' + escHtml(s.goal || '') + '</textarea></div>';
+            html += '<div class="row">';
+            html += '<div class="field grow"><label>Start date</label>';
+            html += '<input id="sp-start" type="date" value="' + s.startDate + '"></div>';
+            html += '<div class="field grow"><label>End date</label>';
+            html += '<input id="sp-end" type="date" value="' + s.endDate + '"></div>';
+            html += '</div>';
+            html += '<div class="row">';
+            html += '<div class="field grow"><label>Capacity (blocks)</label>';
+            html += '<input id="sp-cap" type="number" min="0" max="999" value="' + (s.capacityBlocks || '') + '" placeholder="e.g. 20 (10 hrs)"></div>';
+            html += '<div class="field grow"><label>Status</label>';
+            html += '<select id="sp-status">';
+            [['planning', 'Planning'], ['active', 'Active'], ['completed', 'Completed']].forEach(function (p) {
+                html += '<option value="' + p[0] + '"' + ((s.status || 'planning') === p[0] ? ' selected' : '') + '>' + p[1] + '</option>';
+            });
+            html += '</select></div>';
+            html += '</div>';
+            var avg = isNew ? computeAvgVelocity(s.projectId) : 0;
+            if (avg) html += '<div class="help-text">Avg velocity (last ' + Math.min(3, sprints.filter(function (x) { return x.projectId === s.projectId && x.status === 'completed' }).length) + ' sprints in this project): <b>' + fmtHours(avg) + '</b>.</div>';
+
+            html += '<div class="modal-actions">';
+            html += '<button class="btn ghost" onclick="closeModal()">Cancel</button>';
+            if (!isNew) html += '<button class="btn danger" onclick="deleteSprintFromEditor(\'' + s.id + '\')">Delete</button>';
+            html += '<button class="btn primary" onclick="saveSprintFromEditor(' + (isNew ? 'true' : 'false') + ',\'' + s.id + '\')">Save</button>';
+            html += '</div></div>';
+            showModal(html);
+        }
+
+        function saveSprintFromEditor(isNew, id) {
+            var s = isNew ? { id: id, projectId: currentProjectId, createdAt: Date.now() } :
+                sprints.find(function (x) { return x.id === id });
+            if (!s) return;
+            s.name = document.getElementById('sp-name').value.trim();
+            s.goal = document.getElementById('sp-goal').value.trim();
+            s.startDate = document.getElementById('sp-start').value;
+            s.endDate = document.getElementById('sp-end').value;
+            s.capacityBlocks = Number(document.getElementById('sp-cap').value) || 0;
+            s.status = document.getElementById('sp-status').value;
+            s.updatedAt = Date.now();
+            if (!s.name) { showToast('Name required', true); return; }
+            if (!s.startDate || !s.endDate) { showToast('Start/end dates required', true); return; }
+            if (s.endDate < s.startDate) { showToast('End date must be after start', true); return; }
+            if (isNew) sprints.push(s);
+            if (s.status === 'active') activeSprintByProject[s.projectId] = s.id;
+            closeModal();
+            markUpdated();
+            setTab('sprint');
+        }
+
+        function deleteSprintFromEditor(id) {
+            closeModal();
+            var ss = issues.filter(function (s) { return s.sprintId === id });
+            var msg = 'Delete this sprint?';
+            if (ss.length) msg += '\n\n' + ss.length + ' issue' + (ss.length === 1 ? '' : 's') + ' will return to backlog.';
+            if (!confirm(msg)) return;
+            ss.forEach(function (s) { s.sprintId = null; s.updatedAt = Date.now(); });
+            var sp = sprints.find(function (x) { return x.id === id });
+            if (sp && activeSprintByProject[sp.projectId] === id) delete activeSprintByProject[sp.projectId];
+            sprints = sprints.filter(function (s) { return s.id !== id });
+            if (plannerDeleted.sprints.indexOf(id) === -1) plannerDeleted.sprints.push(id);
+            markUpdated(); renderAll();
+            showToast('Sprint deleted');
+        }
+
+        function computeAvgVelocity(projectId) {
+            var done = sprints.filter(function (s) { return s.projectId === projectId && s.status === 'completed' });
+            if (!done.length) return 0;
+            done.sort(function (a, b) { return (b.completedAt || 0) - (a.completedAt || 0) });
+            var sample = done.slice(0, 3);
+            var sum = 0;
+            sample.forEach(function (sp) {
+                var ss = issues.filter(function (x) { return x.sprintId === sp.id && x.status === 'done' });
+                sum += ss.reduce(function (a, s) { return a + issueEstBlocks(s) }, 0);
+            });
+            return Math.round(sum / sample.length);
+        }
+
+        // ============================================================
+        // PROJECT EDITOR
+        // ============================================================
+        function openProjectEditor(id) {
+            var p = id ? projects.find(function (x) { return x.id === id }) : null;
+            var isNew = !p;
+            if (!p) p = {
+                id: uid(), name: '', description: '', color: '#8a63ff',
+                trackCat: '', trackSub: '', status: 'active', createdAt: Date.now()
+            };
+            var colors = ['#8a63ff', '#bb79ff', '#79c4ff', '#6dffb1', '#ffc24a', '#ff73a6', '#ff9d6e', '#9affd4', '#ff9a9a', '#a4a4ff'];
+
+            var html = '<div class="modal">';
+            html += '<h2>' + (isNew ? 'New project' : 'Edit project') + '</h2>';
+            html += '<div class="field"><label>Name *</label>';
+            html += '<input id="pr-name" type="text" value="' + escHtml(p.name) + '" placeholder="e.g. AgTech"></div>';
+            html += '<div class="field"><label>Description</label>';
+            html += '<textarea id="pr-desc" placeholder="One-line summary">' + escHtml(p.description || '') + '</textarea></div>';
+            html += '<div class="field"><label>Colour</label>';
+            html += '<div class="swatch-row" id="pr-swatch">';
+            colors.forEach(function (c) {
+                html += '<div class="swatch' + (c === p.color ? ' active' : '') + '" style="background:' + c + '" data-c="' + c +
+                    '" onclick="pickProjectColor(\'' + c + '\')"></div>';
+            });
+            html += '</div></div>';
+            html += '<input type="hidden" id="pr-color" value="' + p.color + '">';
+
+            html += '<div class="divider"></div>';
+            html += '<div class="field-label" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ui-text-soft);margin-bottom:6px">Worktracker link *</div>';
+            html += '<div class="row">';
+            html += '<div class="field grow"><label>Category</label>';
+            html += '<select id="pr-trackCat" onchange="onTrackCatChange(\'pr\')"></select></div>';
+            html += '<div class="field grow"><label>Sub-list *</label>';
+            html += '<select id="pr-trackSub" onchange="onTrackSubChange(\'pr\')"></select></div>';
+            html += '</div>';
+            html += '<div class="help-text">A project must be tied to a worktracker sub-list. Time logged against that sub-list rolls up into the project automatically. Use "+ Add new..." to create a category or sub-list that doesn\'t exist yet.</div>';
+
+            html += '<div class="field" style="margin-top:12px"><label>Status</label>';
+            html += '<select id="pr-status">';
+            [['active', 'Active'], ['archived', 'Archived']].forEach(function (x) {
+                html += '<option value="' + x[0] + '"' + ((p.status || 'active') === x[0] ? ' selected' : '') + '>' + x[1] + '</option>';
+            });
+            html += '</select></div>';
+
+            html += '<div class="modal-actions">';
+            html += '<button class="btn ghost" onclick="closeModal()">Cancel</button>';
+            if (!isNew) html += '<button class="btn danger" onclick="deleteProjectFromEditor(\'' + p.id + '\')">Delete</button>';
+            html += '<button class="btn primary" onclick="saveProjectFromEditor(' + (isNew ? 'true' : 'false') + ',\'' + p.id + '\')">Save</button>';
+            html += '</div></div>';
+
+            showModal(html);
+            populateTrackCatSelect('pr', p.trackCat);
+            populateTrackSubSelect('pr', p.trackCat, p.trackSub);
+        }
+
+        function pickProjectColor(c) {
+            document.getElementById('pr-color').value = c;
+            document.querySelectorAll('#pr-swatch .swatch').forEach(function (el) {
+                el.classList.toggle('active', el.getAttribute('data-c') === c);
+            });
+        }
+
+        function saveProjectFromEditor(isNew, id) {
+            var p = isNew ? { id: id, createdAt: Date.now() } :
+                projects.find(function (x) { return x.id === id });
+            if (!p) return;
+            p.name = document.getElementById('pr-name').value.trim();
+            p.description = document.getElementById('pr-desc').value.trim();
+            p.color = document.getElementById('pr-color').value;
+            p.trackCat = document.getElementById('pr-trackCat').value.trim();
+            p.trackSub = document.getElementById('pr-trackSub').value.trim();
+            p.status = document.getElementById('pr-status').value;
+            p.updatedAt = Date.now();
+            if (!p.name) { showToast('Name required', true); return; }
+            if (!p.trackSub) { showToast('Worktracker sub-list required', true); return; }
+            if (isNew) {
+                projects.unshift(p);
+                currentProjectId = p.id;
+            }
+            closeModal();
+            markUpdated(); renderProjectPicker(); renderAll();
+        }
+
+        function deleteProjectFromEditor(id) {
+            closeModal();
+            var fts = features.filter(function (f) { return f.projectId === id });
+            var its = issues.filter(function (s) { return s.projectId === id });
+            var sps = sprints.filter(function (s) { return s.projectId === id });
+            var msg = 'Delete this project?';
+            if (fts.length || its.length || sps.length) {
+                msg += '\n\nThis will also delete:\n' +
+                    '  ' + fts.length + ' feature' + (fts.length === 1 ? '' : 's') + '\n' +
+                    '  ' + its.length + ' issue' + (its.length === 1 ? '' : 's') + '\n' +
+                    '  ' + sps.length + ' sprint' + (sps.length === 1 ? '' : 's');
+            }
+            if (!confirm(msg)) return;
+            fts.forEach(function (f) { if (plannerDeleted.features.indexOf(f.id) === -1) plannerDeleted.features.push(f.id); });
+            its.forEach(function (s) { if (plannerDeleted.issues.indexOf(s.id) === -1) plannerDeleted.issues.push(s.id); });
+            sps.forEach(function (s) { if (plannerDeleted.sprints.indexOf(s.id) === -1) plannerDeleted.sprints.push(s.id); });
+            features = features.filter(function (f) { return f.projectId !== id });
+            issues = issues.filter(function (s) { return s.projectId !== id });
+            sprints = sprints.filter(function (s) { return s.projectId !== id });
+            delete activeSprintByProject[id];
+            projects = projects.filter(function (p) { return p.id !== id });
+            if (plannerDeleted.projects.indexOf(id) === -1) plannerDeleted.projects.push(id);
+            if (currentProjectId === id) currentProjectId = projects.length ? projects[0].id : null;
+            markUpdated(); renderProjectPicker(); renderAll();
+            showToast('Project deleted');
+        }
+
+        // ============================================================
+        // BURNDOWN / VELOCITY CHARTS
+        // ============================================================
+        function drawBurndown(sprint, sprintIssues) {
+            var canvas = document.getElementById('burndown-canvas');
+            if (!canvas || !window.Chart) return;
+            if (burndownChart) { burndownChart.destroy(); burndownChart = null }
+
+            var totalPts = sprintIssues.reduce(function (a, s) { return a + issueEstBlocks(s) }, 0);
+            var totalDays = Math.max(1, daysBetween(sprint.startDate, sprint.endDate) + 1);
+            var labels = [], ideal = [], actual = [];
+            var today = todayISO();
+
+            var completedByDate = {};
+            sprintIssues.forEach(function (s) {
+                if (s.status === 'done' && s.completedAt) {
+                    var iso = new Date(s.completedAt).toISOString().slice(0, 10);
+                    completedByDate[iso] = (completedByDate[iso] || 0) + issueEstBlocks(s);
+                }
+            });
+            var cumDone = 0;
+            for (var i = 0; i < totalDays; i++) {
+                var d = addDays(sprint.startDate, i);
+                labels.push(fmtDate(d));
+                ideal.push(+(totalPts * (1 - i / Math.max(1, totalDays - 1))).toFixed(2));
+                if (d <= today) { cumDone += completedByDate[d] || 0; actual.push(totalPts - cumDone); }
+                else actual.push(null);
+            }
+
+            var css = getComputedStyle(document.documentElement);
+            var accent = css.getPropertyValue('--ui-accent').trim() || '#8a63ff';
+            var dim = css.getPropertyValue('--ui-text-dim').trim() || '#7d6ba8';
+            var soft = css.getPropertyValue('--ui-text-soft').trim() || '#b8abd8';
+
+            burndownChart = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Ideal', data: ideal, borderColor: dim, borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, tension: 0, fill: false },
+                        { label: 'Actual', data: actual, borderColor: accent, borderWidth: 2.5, backgroundColor: 'rgba(138,99,255,0.15)', pointRadius: 3, pointBackgroundColor: accent, tension: 0, fill: true, spanGaps: false }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: soft, font: { size: 11 } } },
+                        tooltip: { backgroundColor: '#1a1330', borderColor: '#322754', borderWidth: 1 }
+                    },
+                    scales: {
+                        x: { ticks: { color: dim, font: { size: 10 } }, grid: { color: 'rgba(50,39,84,0.4)' } },
+                        y: { ticks: { color: dim, font: { size: 10 } }, grid: { color: 'rgba(50,39,84,0.4)' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function drawVelocity(pastSprints) {
+            var canvas = document.getElementById('velocity-canvas');
+            if (!canvas || !window.Chart) return;
+            if (velocityChart) { velocityChart.destroy(); velocityChart = null }
+
+            var sorted = pastSprints.slice().sort(function (a, b) { return (a.completedAt || 0) - (b.completedAt || 0) }).slice(-8);
+            var labels = sorted.map(function (s) { return s.name || '?'; });
+            var planned = [], done = [];
+            sorted.forEach(function (sp) {
+                var ss = issues.filter(function (x) { return x.sprintId === sp.id });
+                planned.push(ss.reduce(function (a, x) { return a + issueEstBlocks(x) }, 0));
+                done.push(ss.filter(function (x) { return x.status === 'done' })
+                    .reduce(function (a, x) { return a + issueEstBlocks(x) }, 0));
+            });
+
+            var css = getComputedStyle(document.documentElement);
+            var accent = css.getPropertyValue('--ui-accent').trim() || '#8a63ff';
+            var dim = css.getPropertyValue('--ui-text-dim').trim() || '#7d6ba8';
+            var soft = css.getPropertyValue('--ui-text-soft').trim() || '#b8abd8';
+
+            velocityChart = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Planned', data: planned, backgroundColor: 'rgba(125,107,168,0.6)' },
+                        { label: 'Completed', data: done, backgroundColor: accent }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: soft, font: { size: 11 } } },
+                        tooltip: { backgroundColor: '#1a1330', borderColor: '#322754', borderWidth: 1 }
+                    },
+                    scales: {
+                        x: { ticks: { color: dim, font: { size: 10 } }, grid: { display: false } },
+                        y: { ticks: { color: dim, font: { size: 10 } }, grid: { color: 'rgba(50,39,84,0.4)' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // TIME AGGREGATION
+        // ============================================================
+        function issueActualBlocks(it) {
+            // Only count if the issue has specific tracking link overrides set.
+            // If it doesn't, we should not fall back to the project's tracking link,
+            // as that would double count the project's total time on every single issue.
+            var cat = it.trackCat || '';
+            var sub = it.trackSub || '';
+            if (!cat && !sub) return 0;
+            var sprint = it.sprintId ? sprints.find(function (s) { return s.id === it.sprintId }) : null;
+            var total = 0;
+            (wt.sessions || []).forEach(function (s) {
+                if (cat && s.cat !== cat) return;
+                if (sub && s.sub !== sub) return;
+                if (sprint && sprint.startDate && s.date < sprint.startDate) return;
+                if (sprint && sprint.endDate && s.date > sprint.endDate) return;
+                total += (s.blocks !== undefined ? s.blocks : 1);
+            });
+            return total;
+        }
+        function projectActualBlocks(p) {
+            if (!p || !p.trackSub) return 0;
+            var total = 0;
+            (wt.sessions || []).forEach(function (s) {
+                if (p.trackCat && s.cat !== p.trackCat) return;
+                if (p.trackSub && s.sub !== p.trackSub) return;
+                total += (s.blocks !== undefined ? s.blocks : 1);
+            });
+            return total;
+        }
+
+        // ============================================================
+        // SETTINGS TAB
+        // ============================================================
+        function renderSettingsTab() {
+            var el = document.getElementById('tab-settings');
+            var html = '';
+
+            html += '<div class="card">';
+            html += '<div class="section-head">Projects <span class="count">' + projects.length + '</span></div>';
+            if (!projects.length) {
+                html += '<div class="empty">No projects yet.</div>';
+            } else {
+                projects.forEach(function (p) {
+                    var its = issues.filter(function (s) { return s.projectId === p.id });
+                    var fts = features.filter(function (f) { return f.projectId === p.id });
+                    var spr = sprints.filter(function (s) { return s.projectId === p.id });
+                    var hrs = projectActualBlocks(p);
+                    html += '<div class="project-card" style="--proj-color:' + (p.color || '#8a63ff') + '">';
+                    html += '<div class="row" style="justify-content:space-between;align-items:flex-start">';
+                    html += '<div style="flex:1;min-width:0">';
+                    html += '<div class="name">' + escHtml(p.name) + (p.status === 'archived' ? ' <span class="pill">archived</span>' : '') + '</div>';
+                    if (p.description) html += '<div class="desc">' + escHtml(p.description) + '</div>';
+                    html += '<div class="row" style="font-size:11px;color:var(--ui-text-soft)">';
+                    html += '<span class="pill">link: ' + escHtml(p.trackCat || '-') + ' / ' + escHtml(p.trackSub || '-') + '</span>';
+                    html += '<span class="pill">' + fts.length + ' features</span>';
+                    html += '<span class="pill">' + its.length + ' issues</span>';
+                    html += '<span class="pill">' + spr.length + ' sprints</span>';
+                    html += '<span class="pill time">' + fmtHours(hrs) + ' logged</span>';
+                    html += '</div></div>';
+                    html += '<div class="row-tight" style="margin-left:8px">';
+                    html += '<button class="btn ghost icon" onclick="openProjectEditor(\'' + p.id + '\')" title="Edit">&#9998;</button>';
+                    html += '</div></div></div>';
+                });
+            }
+            html += '<div class="row" style="margin-top:10px"><button class="btn primary" onclick="openProjectEditor(null)">+ New project</button></div>';
+            html += '</div>';
+
+            html += '<div class="card">';
+            html += '<div class="section-head">Sync</div>';
+            html += '<div class="field"><label>Firebase Realtime DB URL</label>';
+            html += '<input id="set-dburl" type="text" placeholder="https://your-app.firebaseio.com" value="' + escHtml(FIREBASE_DB_URL) + '">';
+            html += '<div class="help-text">Same RTDB as your Work Tracker. The planner reads &amp; writes the same JSON document under your sync ID; worktracker data is preserved.</div></div>';
+            html += '<div class="field"><label>Sync ID</label>';
+            html += '<input id="set-syncid" type="text" placeholder="personal-main" value="' + escHtml(FIREBASE_SYNC_ID) + '">';
+            html += '<div class="help-text">Anyone with this ID can read/write your data. Use the same ID as worktracker.</div></div>';
+            var trackerStored = '';
+            try { trackerStored = localStorage.getItem('plnr_tracker_url') || ''; } catch (e) {}
+            html += '<div class="field"><label>Worktracker URL (for back link)</label>';
+            html += '<input id="set-trackerurl" type="text" placeholder="https://your-tracker-url/" value="' + escHtml(trackerStored) + '">';
+            html += '<div class="help-text">Used by the &#x2197; Tracker link in the header.</div></div>';
+            html += '<div class="row" style="margin-top:8px">';
+            html += '<button class="btn primary" onclick="applySyncSettings()">Save &amp; sync now</button>';
+            html += '<button class="btn" onclick="syncNow(false)">Sync now</button>';
+            html += '</div>';
+            html += '</div>';
+
+            html += '<div class="card">';
+            html += '<div class="section-head">Local data</div>';
+            html += '<div style="font-size:13px;color:var(--ui-text-soft);line-height:1.7">';
+            html += '&bull; <b>' + projects.length + '</b> projects<br>';
+            html += '&bull; <b>' + features.length + '</b> features<br>';
+            html += '&bull; <b>' + issues.length + '</b> issues (' + issues.filter(function (s) { return !s.sprintId }).length + ' in backlog)<br>';
+            html += '&bull; <b>' + sprints.length + '</b> sprints (' + sprints.filter(function (s) { return s.status === 'active' }).length + ' active)<br>';
+            html += '&bull; Linked worktracker: <b>' + wt.sessions.length + '</b> sessions, <b>' + wt.tasks.length + '</b> tasks<br>';
+            if (plannerUpdatedAt) html += '&bull; Last update: ' + new Date(plannerUpdatedAt).toLocaleString() + '<br>';
+            html += '</div></div>';
+
+            html += '<div class="card">';
+            html += '<div class="section-head">Data</div>';
+            html += '<div class="row">';
+            html += '<button class="btn" onclick="exportData()">Export JSON</button>';
+            html += '<button class="btn" onclick="document.getElementById(\'import-file\').click()">Import JSON</button>';
+            html += '<input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(this)">';
+            html += '<button class="btn danger" onclick="wipeLocal()">Wipe local cache</button>';
+            html += '</div>';
+            html += '<div class="help-text">Wipe clears only the device cache &mdash; remote data on Firebase is preserved and will resync.</div>';
+            html += '</div>';
+
+            el.innerHTML = html;
+        }
+
+        function applySyncSettings() {
+            FIREBASE_DB_URL = document.getElementById('set-dburl').value.trim();
+            FIREBASE_SYNC_ID = document.getElementById('set-syncid').value.trim();
+            var t = document.getElementById('set-trackerurl');
+            if (t) {
+                try { localStorage.setItem('plnr_tracker_url', t.value.trim()); } catch (e) {}
+                var link = document.getElementById('link-tracker');
+                if (link && t.value.trim()) link.href = t.value.trim();
+            }
+            saveSettings();
+            syncNow(false);
+        }
+
+        function exportData() {
+            var data = {
+                projects: projects, features: features, issues: issues, sprints: sprints,
+                currentProjectId: currentProjectId,
+                activeSprintByProject: activeSprintByProject,
+                plannerUpdatedAt: plannerUpdatedAt
+            };
+            var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = 'planner-' + todayISO() + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(input) {
+            var f = input.files && input.files[0]; if (!f) return;
+            var rd = new FileReader();
+            rd.onload = function () {
+                try {
+                    var d = JSON.parse(rd.result);
+                    if (!confirm('Replace local data with imported file? Remote will overwrite on next sync.')) return;
+                    if (Array.isArray(d.projects)) projects = d.projects;
+                    if (Array.isArray(d.features)) features = d.features;
+                    if (Array.isArray(d.issues)) issues = d.issues;
+                    if (Array.isArray(d.sprints)) sprints = d.sprints;
+                    if (d.currentProjectId !== undefined) currentProjectId = d.currentProjectId;
+                    if (d.activeSprintByProject) activeSprintByProject = d.activeSprintByProject;
+                    markUpdated(); renderProjectPicker(); renderAll();
+                    showToast('Imported');
+                } catch (e) { showToast('Invalid JSON', true); }
+            };
+            rd.readAsText(f);
+            input.value = '';
+        }
+
+        function wipeLocal() {
+            if (!confirm('Wipe local cache? Remote data is preserved.')) return;
+            try { localStorage.removeItem(LOCAL_KEY); } catch (e) {}
+            projects = []; features = []; issues = []; sprints = [];
+            currentProjectId = null; activeSprintByProject = {}; plannerUpdatedAt = 0;
+            plannerDeleted = { projects: [], features: [], issues: [], sprints: [] };
+            wt = { sessions: [], tasks: [], sublists: {}, categoryOrder: [], categoryMeta: {}, deletedIds: [], updatedAt: 0 };
+            renderProjectPicker(); renderAll();
+            syncNow(false);
+        }
+
+        // ============================================================
+        // MODAL
+        // ============================================================
+        function showModal(html) {
+            var m = document.getElementById('modal');
+            m.innerHTML = html;
+            m.classList.add('show');
+            m.onclick = function (e) { if (e.target === m) closeModal() };
+            setTimeout(function () {
+                var first = m.querySelector('input,textarea,select');
+                if (first) first.focus();
+            }, 30);
+        }
+        function closeModal() {
+            var m = document.getElementById('modal');
+            m.classList.remove('show');
+            m.innerHTML = '';
+        }
+
+        // ============================================================
+        // BOOT
+        // ============================================================
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+
+</html>
