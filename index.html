@@ -695,6 +695,12 @@
             try {
                 var p = new URLSearchParams(window.location.search);
                 var u = p.get('dbUrl'); var s = p.get('syncId');
+                
+                // If the worktracker passed the old root URL, upgrade it to the new /work_tracker node
+                if (u && u === STALE_DB_URL) {
+                    u = FIREBASE_DB_URL;
+                }
+
                 if (u) FIREBASE_DB_URL = u;
                 if (s) FIREBASE_SYNC_ID = s;
                 if (u || s) saveSettings();
