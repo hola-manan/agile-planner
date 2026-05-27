@@ -4,27 +4,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#090612">
+    <meta name="theme-color" content="#100E0B">
     <title>Agile Planner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --ui-bg: #090612;
-            --ui-bg-soft: #140f23;
-            --ui-card: #1a1330;
-            --ui-card-2: #221945;
-            --ui-border: #322754;
-            --ui-border-strong: #4f3b85;
-            --ui-text: #efe9ff;
-            --ui-text-soft: #b8abd8;
-            --ui-text-dim: #7d6ba8;
-            --ui-accent: #8a63ff;
-            --ui-accent-2: #bb79ff;
-            --ui-success: #6dffb1;
-            --ui-warning: #ffc24a;
-            --ui-danger: #ff73a6;
-            --ui-info: #79c4ff;
-            --font-sans: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            --ui-bg: #100E0B;
+            --ui-bg-soft: #1A1714;
+            --ui-card: #211D18;
+            --ui-card-2: #2A251E;
+            --ui-border: #2E2924;
+            --ui-border-strong: #443D34;
+            --ui-text: #EDE7DC;
+            --ui-text-soft: #A89C88;
+            --ui-text-dim: #6E6555;
+            --ui-accent: #D89A3F;
+            --ui-accent-2: #B97F2A;
+            --ui-success: #7BB880;
+            --ui-warning: #E0B255;
+            --ui-danger: #D26A5C;
+            --ui-info: #6FA3C7;
+            --font-sans: 'Helvetica Neue', Helvetica, 'Segoe UI', Arial, sans-serif;
             --border-radius-lg: 14px;
             --border-radius-md: 10px;
             --border-radius-sm: 6px;
@@ -66,10 +69,11 @@
         }
         .header-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto }
         .header h1 {
-            font-size: 19px; font-weight: 700; letter-spacing: -0.01em;
-            background: linear-gradient(120deg, var(--ui-accent), var(--ui-accent-2));
-            -webkit-background-clip: text; background-clip: text; color: transparent;
+            font-family: 'Instrument Serif', 'Iowan Old Style', 'Palatino', Georgia, serif;
+            font-size: 20px; font-weight: 400; letter-spacing: -0.015em; line-height: 1.1;
+            color: var(--ui-text);
             flex-shrink: 0;
+            white-space: nowrap;
         }
         .header .right {
             display: flex; align-items: center; gap: 8px; flex-shrink: 0;
@@ -79,14 +83,14 @@
             background: var(--ui-text-dim);
             transition: background 0.3s;
         }
-        .sync-dot.ok { background: var(--ui-success); box-shadow: 0 0 8px rgba(109,255,177,0.5); }
+        .sync-dot.ok { background: var(--ui-success); box-shadow: 0 0 8px rgba(123,184,128,0.5); }
         .sync-dot.busy { background: var(--ui-warning); animation: pulse 1s infinite; }
         .sync-dot.err { background: var(--ui-danger); }
         @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.3 } }
         .header-link {
             font-size: 11px; color: var(--ui-accent); text-decoration: none;
-            border: 1px solid var(--ui-accent); padding: 4px 9px; border-radius: 12px;
-            font-weight: 600; white-space: nowrap;
+            border: 1px solid var(--ui-accent); padding: 5px 11px; border-radius: 999px;
+            font-weight: 500; white-space: nowrap; letter-spacing: 0.02em;
         }
 
         .project-picker {
@@ -96,34 +100,39 @@
             font-family: var(--font-sans); font-size: 14px; font-weight: 600;
             padding: 6px 10px;
             border-radius: var(--border-radius-md);
-            cursor: pointer; min-width: 0; max-width: 220px;
+            cursor: pointer; min-width: 0; max-width: 180px; width: auto;
+            text-overflow: ellipsis;
             outline: none;
+            flex-shrink: 1;
         }
 
         .tabs {
-            display: flex; gap: 5px; margin-bottom: 0.9rem; padding: 6px;
-            background: var(--ui-bg-soft);
-            border: 0.5px solid var(--ui-border);
-            border-radius: var(--border-radius-lg);
+            display: flex; gap: 4px; margin-bottom: 14px; padding: 0;
+            background: transparent;
+            border: 0; border-bottom: 1px solid var(--ui-border);
+            border-radius: 0;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
         }
         .tabs::-webkit-scrollbar { display: none }
         .tab {
-            flex: 1 0 auto; white-space: nowrap; padding: 11px 14px;
-            background: transparent; border: 0.5px solid transparent;
-            border-radius: var(--border-radius-md);
-            font-size: 14px; font-weight: 600; cursor: pointer;
+            flex: 0 0 auto; white-space: nowrap; padding: 10px 14px 11px;
+            background: transparent; border: 0;
+            border-radius: 0;
+            font-size: 14px; font-weight: 500; cursor: pointer;
             color: var(--ui-text-soft); font-family: var(--font-sans);
-            transition: all .15s ease;
+            letter-spacing: -0.005em;
+            transition: color .15s ease, box-shadow .15s ease;
+            margin-bottom: -1px;
         }
         .tab:hover { color: var(--ui-text) }
         .tab.active {
-            background: linear-gradient(135deg, rgba(138,99,255,0.18), rgba(187,121,255,0.08));
+            background: transparent;
             color: var(--ui-text);
-            border-color: var(--ui-border-strong);
-            box-shadow: 0 1px 0 rgba(138,99,255,0.2) inset;
+            border-color: transparent;
+            box-shadow: inset 0 -2px 0 var(--ui-accent);
+            border-radius: 0;
         }
 
         .card {
@@ -188,12 +197,12 @@
         }
         .btn:hover { border-color: var(--ui-border-strong) }
         .btn.primary {
-            background: linear-gradient(135deg, var(--ui-accent), var(--ui-accent-2));
+            background: var(--ui-accent);
             border-color: transparent; color: white;
         }
         .btn.primary:hover { filter: brightness(1.1) }
-        .btn.danger { color: var(--ui-danger); border-color: rgba(255,115,166,0.4) }
-        .btn.danger:hover { background: rgba(255,115,166,0.1) }
+        .btn.danger { color: var(--ui-danger); border-color: rgba(210,106,92,0.4) }
+        .btn.danger:hover { background: rgba(210,106,92,0.1) }
         .btn.ghost { background: transparent; border-color: transparent; color: var(--ui-text-soft); padding: 6px 8px }
         .btn.ghost:hover { color: var(--ui-text); background: var(--ui-bg-soft) }
         .btn.sm { padding: 5px 10px; font-size: 12px }
@@ -207,23 +216,23 @@
             border: 0.5px solid var(--ui-border);
             color: var(--ui-text-soft);
         }
-        .pill.points { color: var(--ui-accent-2); border-color: rgba(187,121,255,0.4) }
-        .pill.feature { color: var(--ui-info); border-color: rgba(121,196,255,0.4) }
-        .pill.prio-1 { color: var(--ui-danger); border-color: rgba(255,115,166,0.4) }
-        .pill.prio-2 { color: var(--ui-warning); border-color: rgba(255,194,74,0.4) }
+        .pill.points { color: var(--ui-accent-2); border-color: rgba(216,154,63,0.4) }
+        .pill.feature { color: var(--ui-info); border-color: rgba(111,163,199,0.4) }
+        .pill.prio-1 { color: var(--ui-danger); border-color: rgba(210,106,92,0.4) }
+        .pill.prio-2 { color: var(--ui-warning); border-color: rgba(224,178,85,0.4) }
         .pill.prio-3 { color: var(--ui-text-soft) }
         .pill.prio-4 { color: var(--ui-text-dim) }
         .pill.status-todo { color: var(--ui-text-dim) }
-        .pill.status-in-progress { color: var(--ui-warning); border-color: rgba(255,194,74,0.4) }
-        .pill.status-review { color: var(--ui-info); border-color: rgba(121,196,255,0.4) }
-        .pill.status-done { color: var(--ui-success); border-color: rgba(109,255,177,0.4) }
-        .pill.sprint-active { color: var(--ui-success); border-color: rgba(109,255,177,0.4) }
-        .pill.sprint-planning { color: var(--ui-warning); border-color: rgba(255,194,74,0.4) }
+        .pill.status-in-progress { color: var(--ui-warning); border-color: rgba(224,178,85,0.4) }
+        .pill.status-review { color: var(--ui-info); border-color: rgba(111,163,199,0.4) }
+        .pill.status-done { color: var(--ui-success); border-color: rgba(123,184,128,0.4) }
+        .pill.sprint-active { color: var(--ui-success); border-color: rgba(123,184,128,0.4) }
+        .pill.sprint-planning { color: var(--ui-warning); border-color: rgba(224,178,85,0.4) }
         .pill.sprint-completed { color: var(--ui-text-dim) }
         .pill.time { color: var(--ui-text-soft) }
-        .pill.type-bug { color: var(--ui-danger); border-color: rgba(255,115,166,0.4) }
+        .pill.type-bug { color: var(--ui-danger); border-color: rgba(210,106,92,0.4) }
         .pill.type-chore { color: var(--ui-text-dim) }
-        .pill.type-story { color: var(--ui-info); border-color: rgba(121,196,255,0.4) }
+        .pill.type-story { color: var(--ui-info); border-color: rgba(111,163,199,0.4) }
 
         .choice-row {
             display: flex; gap: 5px; flex-wrap: wrap;
@@ -239,7 +248,7 @@
         }
         .choice-btn:hover { color: var(--ui-text) }
         .choice-btn.active {
-            background: linear-gradient(135deg, rgba(138,99,255,0.25), rgba(187,121,255,0.12));
+            background: linear-gradient(135deg, rgba(216,154,63,0.25), rgba(216,154,63,0.12));
             color: var(--ui-text);
             border-color: var(--ui-border-strong);
         }
@@ -251,12 +260,12 @@
             width: 56px;
             height: 56px;
             border-radius: 28px;
-            background: linear-gradient(135deg, var(--ui-accent), var(--ui-accent-2));
+            background: var(--ui-accent);
             color: white;
             font-size: 32px;
             font-weight: 300;
             border: none;
-            box-shadow: 0 6px 16px rgba(138, 99, 255, 0.4);
+            box-shadow: 0 6px 16px rgba(216,154,63,0.4);
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -348,13 +357,13 @@
             overflow: hidden; margin-top: 4px;
         }
         .progress-bar > div {
-            height: 100%; background: linear-gradient(90deg, var(--ui-accent), var(--ui-accent-2));
+            height: 100%; background: var(--ui-accent);
             transition: width .3s;
         }
 
         /* Sprint hero */
         .sprint-hero {
-            background: linear-gradient(135deg, rgba(138,99,255,0.12), rgba(187,121,255,0.05));
+            background: linear-gradient(135deg, rgba(216,154,63,0.12), rgba(216,154,63,0.05));
             border: 0.5px solid var(--ui-border-strong);
         }
         .sprint-hero .name {
@@ -432,7 +441,7 @@
         .sprint-list-card:hover { border-color: var(--ui-border-strong) }
         .sprint-list-card.active {
             border-color: var(--ui-accent);
-            box-shadow: 0 0 0 1px rgba(138,99,255,0.3) inset;
+            box-shadow: 0 0 0 1px rgba(216,154,63,0.3) inset;
         }
         .sprint-list-card .row1 {
             display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
@@ -544,6 +553,35 @@
 
         .divider { height: 0.5px; background: var(--ui-border); margin: 14px 0 }
 
+        /* Mobile-first responsive overrides */
+        @media (max-width: 520px) {
+            .header { flex-direction: column; align-items: stretch; gap: 10px; }
+            .header-left { width: 100%; min-width: 0; gap: 10px; }
+            .header-left h1 { font-size: 22px; }
+            .project-picker { max-width: none !important; flex: 1 1 auto; }
+            .header .right { justify-content: space-between; }
+        }
+
+        /* Slim & soften the FAB so it never overpowers content */
+        .fab {
+            width: 48px !important; height: 48px !important; border-radius: 24px !important;
+            font-size: 26px !important; font-weight: 400 !important;
+            bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
+            right: 16px !important;
+            box-shadow: 0 4px 14px rgba(216,154,63, 0.22) !important;
+        }
+        .fab:hover { box-shadow: 0 6px 18px rgba(216,154,63, 0.32) !important; }
+
+        /* Tighten card chip wrapping on narrow widths */
+        @media (max-width: 520px) {
+            .issue-meta { font-size: 10px; gap: 4px; }
+            .pill { font-size: 10px; padding: 2px 7px; }
+            .sprint-hero .stats { grid-template-columns: repeat(3, 1fr) !important; }
+            .stat-tile .v { font-size: 16px; }
+            .stat-tile { padding: 6px 8px; }
+            .app { padding-bottom: 88px; }
+        }
+
         @media (min-width: 640px) {
             .app { padding: 1.25rem 0.9rem 1.6rem; max-width: 760px; margin: 0 auto; border-radius: 14px; min-height: auto; }
             .sprint-hero .stats { grid-template-columns: repeat(5, 1fr) }
@@ -558,7 +596,7 @@
         .task-item { display: flex; align-items: flex-start; gap: 10px; padding: 11px 0; border-bottom: 0.5px solid var(--ui-border); }
         .task-item:last-child { border-bottom: none; }
         .task-check { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--ui-border-strong); background: var(--ui-bg-soft); cursor: pointer; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: transparent; transition: all .15s ease; touch-action: manipulation; }
-        .task-check.done { background: linear-gradient(135deg, var(--ui-accent), var(--ui-accent-2)); border-color: transparent; color: #fff; }
+        .task-check.done { background: var(--ui-accent); border-color: transparent; color: #fff; }
         .task-info { flex: 1; min-width: 0; }
         .task-title { font-size: 15px; font-weight: 500; color: var(--ui-text); word-break: break-word; }
         .task-title.done { text-decoration: line-through; opacity: 0.5; }
@@ -568,6 +606,353 @@
         .task-item:hover .task-actions { opacity: 1; }
         .task-actions button { background: none; border: none; font-size: 14px; cursor: pointer; color: var(--ui-text); padding: 4px; }
         .task-actions button:hover { color: var(--ui-accent); }
+    
+
+        /* =====================================================
+         * STRUCTURAL REDESIGN — applied on top of base styles
+         * ===================================================== */
+
+        /* Real type hierarchy for section heads — drop uppercase tracking */
+        .section-head {
+            font-family: 'Instrument Serif', 'Iowan Old Style', 'Palatino', Georgia, serif;
+            font-size: 17px;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: -0.01em;
+            color: var(--ui-text);
+            margin-bottom: 12px;
+            white-space: nowrap;
+        }
+        .section-head .count {
+            font-family: var(--font-sans);
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--ui-text-dim);
+            background: transparent;
+            border: 0;
+            padding: 0;
+            letter-spacing: 0;
+        }
+        .section-head .count::before { content: "/ "; color: var(--ui-text-dim); }
+
+        /* Status group head — used inside the sprint board */
+        .status-group-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            font-size: 10px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--ui-text-soft);
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--ui-border);
+        }
+        .status-group-head .label { font-weight: 500; }
+        .status-group-head .pts { color: var(--ui-text-dim); }
+
+        /* === Chip cleanup === */
+        /* Most pills become plain mono captions separated by · */
+        .issue-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0;
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            font-size: 11px;
+            color: var(--ui-text-soft);
+            letter-spacing: 0.01em;
+            line-height: 1.5;
+        }
+        .issue-meta .pill {
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            font-size: 11px;
+            font-weight: 400;
+            background: transparent !important;
+            border: 0 !important;
+            padding: 0 !important;
+            border-radius: 0;
+            color: var(--ui-text-soft);
+            letter-spacing: 0.01em;
+            display: inline-flex;
+            align-items: center;
+            gap: 0;
+        }
+        .issue-meta .pill + .pill::before {
+            content: "·";
+            margin: 0 7px;
+            color: var(--ui-text-dim);
+            opacity: 0.8;
+        }
+        /* Priority + feature get a tiny color cue */
+        .issue-meta .pill.prio-1 { color: var(--ui-danger); font-weight: 500; }
+        .issue-meta .pill.prio-2 { color: var(--ui-warning); font-weight: 500; }
+        .issue-meta .pill.prio-3,
+        .issue-meta .pill.prio-4 { color: var(--ui-text-dim); }
+        .issue-meta .pill.feature {
+            color: var(--ui-text-soft);
+        }
+        .issue-meta .pill.feature::before {
+            /* Color the leading separator with feature hue (set via inline color) */
+        }
+        /* Feature pill — show a small colored dot before the name */
+        .issue-meta .pill.feature {
+            position: relative;
+            padding-left: 12px !important;
+        }
+        .issue-meta .pill.feature::after {
+            content: "";
+            position: absolute;
+            left: 0; top: 50%;
+            transform: translateY(-50%);
+            width: 6px; height: 6px;
+            background: currentColor;
+            border-radius: 2px;
+            opacity: 0.85;
+        }
+        /* Override the ::before separator for the feature pill so the dot sits inside the gap */
+        .issue-meta .pill.feature + .pill::before { content: "·"; }
+        .issue-meta .pill.points,
+        .issue-meta .pill.time { color: var(--ui-text-soft); }
+        .issue-meta .pill.status-in-progress,
+        .issue-meta .pill.status-review,
+        .issue-meta .pill.status-done { color: var(--ui-text-dim); }
+        .issue-meta .pill.type-bug { color: var(--ui-danger); }
+
+        /* Issue title — slightly stronger weight to anchor the row */
+        .issue-title {
+            font-size: 14.5px !important;
+            font-weight: 500 !important;
+            letter-spacing: -0.005em;
+            line-height: 1.3 !important;
+            margin-bottom: 5px !important;
+        }
+
+        /* Sprint hero — drop the gradient look, treat as a normal card with side accent */
+        .sprint-hero {
+            background: var(--ui-card) !important;
+            border-left: 2px solid var(--ui-accent) !important;
+        }
+        .sprint-hero .name {
+            font-family: 'Instrument Serif', 'Iowan Old Style', 'Palatino', Georgia, serif;
+            font-size: 22px !important;
+            font-weight: 400 !important;
+            letter-spacing: -0.015em;
+            line-height: 1.1;
+            margin-bottom: 6px !important;
+        }
+        .sprint-hero .goal {
+            font-style: italic;
+            color: var(--ui-text-soft);
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        .sprint-hero .stat-tile {
+            background: transparent;
+            border: 0;
+            border-right: 1px solid var(--ui-border);
+            border-radius: 0;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .sprint-hero .stat-tile:last-child { border-right: 0; }
+        .sprint-hero .stat-tile .v {
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            font-size: 18px !important;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            color: var(--ui-text);
+        }
+        .sprint-hero .stat-tile .l {
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            font-size: 9px !important;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--ui-text-dim);
+            margin-top: 3px;
+        }
+
+        /* === SPRINT BOARD: columns on desktop, stack on mobile === */
+        .board-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        @media (min-width: 720px) {
+            .board-grid { grid-template-columns: 1fr 1fr 1fr; }
+            .board-grid .status-group:nth-child(4) {
+                /* Review column merges into "In progress" visually below "To do" if needed.
+                   Easier: span column 2 row 2. We have 4 statuses but typically 3 cols.
+                   Make Review fold into column 2 (In progress) by spanning. */
+                grid-column: 2;
+                grid-row: 2;
+            }
+            .board-grid .status-group:nth-child(3) { grid-column: 2; grid-row: 1; }
+            .board-grid .status-group:nth-child(2) { grid-column: 1; grid-row: 1; }
+            .board-grid .status-group:nth-child(1) { /* fallback */ }
+        }
+        .board-grid .status-group {
+            background: transparent;
+            min-width: 0;
+        }
+        .board-grid .issue-card {
+            margin-bottom: 8px;
+        }
+        /* On desktop, hide the redundant status-filter pills (columns provide that already) */
+        @media (min-width: 720px) {
+            #tab-sprint > .choice-row { display: none; }
+        }
+        /* On mobile, hide the column-merge rules so they don't fight */
+        @media (max-width: 719px) {
+            .board-grid { grid-template-columns: 1fr !important; }
+            .board-grid .status-group { grid-column: auto !important; grid-row: auto !important; }
+        }
+
+        /* Empty sprint state — better onboarding */
+        .empty-hero {
+            background: var(--ui-card);
+            border: 1px solid var(--ui-border);
+            border-radius: var(--border-radius-lg);
+            padding: 28px 22px;
+            text-align: left;
+        }
+        .empty-hero h3 {
+            font-family: 'Instrument Serif', 'Iowan Old Style', 'Palatino', Georgia, serif;
+            font-size: 24px;
+            font-weight: 400;
+            letter-spacing: -0.015em;
+            line-height: 1.15;
+            margin-bottom: 10px;
+        }
+        .empty-hero h3 em { font-style: italic; color: var(--ui-text-soft); }
+        .empty-hero p {
+            font-size: 14px;
+            color: var(--ui-text-soft);
+            line-height: 1.55;
+            margin-bottom: 18px;
+            max-width: 480px;
+        }
+        .empty-hero .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* === FEATURE CARDS: clean up metric chips === */
+        .feature-card .row .pill { 
+            background: transparent !important; 
+            border: 0 !important; 
+            padding: 0 !important;
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            font-size: 11px;
+            color: var(--ui-text-soft);
+            letter-spacing: 0.01em;
+        }
+        .feature-card .row .pill + .pill::before {
+            content: "·"; margin: 0 7px; color: var(--ui-text-dim); opacity: 0.7;
+        }
+
+        /* Section / status group head INSIDE backlog should match new hierarchy */
+        .status-group { margin-bottom: 18px; }
+
+        /* Issue card hover — subtle */
+        .issue-card { transition: border-color .15s, background .15s; }
+        .issue-card:hover { background: var(--ui-card-2); }
+
+        /* Sync dot caption — tiny mono "saved · just now" companion */
+        .sync-caption {
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            font-size: 10px;
+            color: var(--ui-text-dim);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+    
+        /* === Filter chip cleanup === */
+        .choice-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--ui-border);
+        }
+        .choice-btn {
+            font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+            font-size: 11px !important;
+            font-weight: 500 !important;
+            padding: 4px 9px !important;
+            background: transparent !important;
+            border: 1px solid var(--ui-border) !important;
+            color: var(--ui-text-soft) !important;
+            border-radius: 999px !important;
+            cursor: pointer;
+            letter-spacing: 0.02em;
+            transition: color .15s, border-color .15s, background .15s !important;
+        }
+        .choice-btn:hover {
+            color: var(--ui-text) !important;
+            border-color: var(--ui-border-strong) !important;
+        }
+        .choice-btn.active {
+            background: var(--ui-text) !important;
+            color: var(--ui-bg) !important;
+            border-color: var(--ui-text) !important;
+        }
+
+        /* === Quick-add bar — used on sprint/backlog/features === */
+        .quick-add {
+            display: flex;
+            gap: 6px;
+            padding: 6px;
+            margin-bottom: 12px;
+            background: var(--ui-card);
+            border: 1px solid var(--ui-border);
+            border-radius: var(--border-radius-md);
+            align-items: center;
+        }
+        .quick-add input {
+            background: transparent !important;
+            border: 0 !important;
+            padding: 6px 10px !important;
+            color: var(--ui-text);
+            font-family: var(--font-sans);
+            font-size: 13.5px !important;
+            outline: 0;
+            flex: 1;
+            min-width: 0;
+        }
+        .quick-add input::placeholder { color: var(--ui-text-dim); }
+        .quick-add .btn.primary {
+            padding: 6px 12px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            background: var(--ui-accent) !important;
+            color: #1a1408 !important;
+            border-color: var(--ui-accent) !important;
+        }
+        .quick-add .btn.primary:hover { filter: brightness(1.08); }
+        .quick-add .hint {
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            font-size: 10px;
+            color: var(--ui-text-dim);
+            letter-spacing: 0.02em;
+            padding-right: 6px;
+        }
+        @media (max-width: 480px) {
+            .quick-add .hint { display: none; }
+        }
+
+        /* === Sprint hero crumb (above name) === */
+        .sprint-crumb {
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            font-size: 10px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--ui-text-dim);
+            margin-bottom: 8px;
+        }
+        .sprint-crumb .sep { margin: 0 7px; opacity: 0.5; }
+        .sprint-crumb .day { color: var(--ui-accent); }
+
     </style>
 </head>
 
@@ -585,10 +970,10 @@
         </div>
 
         <div class="tabs" role="tablist">
-            <button class="tab active" data-tab="sprint" onclick="setTab('sprint')">Sprint</button>
+            <button class="tab active" data-tab="sprint" onclick="setTab('sprint')">Now</button>
             <button class="tab" data-tab="backlog" onclick="setTab('backlog')">Backlog</button>
             <button class="tab" data-tab="features" onclick="setTab('features')">Features</button>
-            <button class="tab" data-tab="sprints" onclick="setTab('sprints')">Sprints</button>
+            <button class="tab" data-tab="sprints" onclick="setTab('sprints')">All sprints</button>
             <button class="tab" data-tab="settings" onclick="setTab('settings')">Settings</button>
         </div>
 
@@ -613,8 +998,12 @@
         var sprints = [];
 
         var currentProjectId = null;
-        var activeSprintByProject = {}; // projectId -> sprintId
+        var activeSprintId = null;   // global, replaces activeSprintByProject
         var plannerUpdatedAt = 0;
+        var wtTasksDirty = false;    // set when AP edits a mirrored WT task
+
+        // Mirrors WT's grid so AP can compute sprint numbers/dates standalone.
+        var SPRINT_START_DATE_AP = new Date('2026-04-17T00:00:00Z');
 
         var currentTaskModalIssueId = null;
         var currentTaskModalTaskId = null;
@@ -651,10 +1040,51 @@
         // ============================================================
         // INIT
         // ============================================================
+        
+        // ============================================================
+        // ONE-TIME COLOR MIGRATION
+        // Old saturated-purple palette -> new harmonious earth palette.
+        // Runs on every load; idempotent. Saves locally + flags for sync.
+        // ============================================================
+        var LEGACY_COLOR_MAP = {
+            '#8a63ff': '#D89A3F', '#8A63FF': '#D89A3F',
+            '#bb79ff': '#9B86C4', '#BB79FF': '#9B86C4',
+            '#79c4ff': '#6FA3C7', '#79C4FF': '#6FA3C7',
+            '#6dffb1': '#7BB880', '#6DFFB1': '#7BB880',
+            '#ffc24a': '#E0B255', '#FFC24A': '#E0B255',
+            '#ff73a6': '#C77874', '#FF73A6': '#C77874',
+            '#ff9d6e': '#C49563', '#FF9D6E': '#C49563',
+            '#9affd4': '#7FA89B', '#9AFFD4': '#7FA89B',
+            '#ff9a9a': '#B894A8', '#FF9A9A': '#B894A8',
+            '#a4a4ff': '#A89C5C', '#A4A4FF': '#A89C5C'
+        };
+        function migrateLegacyColors() {
+            var changed = false;
+            var collections = [features, projects];
+            for (var i = 0; i < collections.length; i++) {
+                var arr = collections[i] || [];
+                for (var j = 0; j < arr.length; j++) {
+                    var c = arr[j] && arr[j].color;
+                    if (c && LEGACY_COLOR_MAP[c]) {
+                        arr[j].color = LEGACY_COLOR_MAP[c];
+                        changed = true;
+                    }
+                }
+            }
+            if (changed) {
+                try { saveLocal(); } catch (e) {}
+                try { plannerUpdatedAt = Date.now(); } catch (e) {}
+                try { if (typeof scheduleSync === 'function') scheduleSync(); } catch (e) {}
+            }
+        }
+
         function init() {
             loadSettings();
             applyUrlParams();
             loadLocal();
+            migrateLegacyColors();
+            migrateLegacySprints();
+            ensureSprintsAP();
             wireLinks();
             renderProjectPicker();
             renderAll();
@@ -717,7 +1147,12 @@
                     issues = Array.isArray(p.issues) ? p.issues : [];
                     sprints = Array.isArray(p.sprints) ? p.sprints : [];
                     currentProjectId = p.currentProjectId || null;
-                    activeSprintByProject = p.activeSprintByProject || {};
+                    activeSprintId = p.activeSprintId || null;
+                    // Backwards compat: migrate the old per-project map into a single global id.
+                    if (!activeSprintId && p.activeSprintByProject && typeof p.activeSprintByProject === 'object') {
+                        var legacyKeys = Object.keys(p.activeSprintByProject);
+                        if (legacyKeys.length) activeSprintId = p.activeSprintByProject[legacyKeys[0]] || null;
+                    }
                     plannerUpdatedAt = p.plannerUpdatedAt || 0;
                     plannerDeleted = p.plannerDeleted || { projects: [], features: [], issues: [], sprints: [] };
                     if (p.wt) wt = p.wt;
@@ -729,7 +1164,7 @@
                 localStorage.setItem(LOCAL_KEY, JSON.stringify({
                     projects: projects, features: features, issues: issues, sprints: sprints,
                     currentProjectId: currentProjectId,
-                    activeSprintByProject: activeSprintByProject,
+                    activeSprintId: activeSprintId,
                     plannerUpdatedAt: plannerUpdatedAt,
                     plannerDeleted: plannerDeleted,
                     wt: wt
@@ -757,8 +1192,9 @@
             link.addEventListener('click', function (e) {
                 e.preventDefault();
                 if (FIREBASE_DB_URL && FIREBASE_SYNC_ID) {
+                    var trackerDbUrl = FIREBASE_DB_URL.replace(/\/work_tracker\/?$/, '');
                     window.location.href = base + (base.indexOf('?') === -1 ? '?' : '&') +
-                        'dbUrl=' + encodeURIComponent(FIREBASE_DB_URL) +
+                        'dbUrl=' + encodeURIComponent(trackerDbUrl) +
                         '&syncId=' + encodeURIComponent(FIREBASE_SYNC_ID);
                 } else {
                     window.location.href = base;
@@ -820,10 +1256,115 @@
         }
         function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
 
+        // ── Sprint grid helpers (mirror of WT) ──
+        function getSprintNumberAP(dateStr) {
+            var d = new Date(dateStr + 'T12:00:00');
+            var diffDays = Math.floor((d.getTime() - SPRINT_START_DATE_AP.getTime()) / 86400000);
+            return Math.floor(diffDays / 14) + 1;
+        }
+        function getSprintDatesAP(num) {
+            var start = new Date(SPRINT_START_DATE_AP.getTime() + (num - 1) * 14 * 86400000);
+            var end = new Date(start.getTime() + 13 * 86400000);
+            return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+        }
+        function makeSprintIdAP(num) { return 'sprint-' + num; }
+        function ensureSprintsAP() {
+            var todayN = getSprintNumberAP(todayISO());
+            if (todayN < 1) todayN = 1;
+            var maxN = todayN + 1;
+            var added = false;
+            for (var n = 1; n <= maxN; n++) {
+                var exists = sprints.some(function (s) { return s.number === n; });
+                if (!exists) {
+                    var d = getSprintDatesAP(n);
+                    var status = n < todayN ? 'completed' : (n === todayN ? 'active' : 'planning');
+                    sprints.push({
+                        id: makeSprintIdAP(n),
+                        number: n,
+                        startDate: d.start, endDate: d.end,
+                        name: 'Sprint ' + n,
+                        goal: '',
+                        status: status,
+                        capacityBlocks: 0,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now()
+                    });
+                    added = true;
+                }
+            }
+            sprints.sort(function (a, b) { return a.number - b.number; });
+            if (added) { plannerUpdatedAt = Date.now(); saveLocal(); }
+            if (!activeSprintId) {
+                var todaySp = sprints.filter(function (s) { return s.number === todayN; })[0];
+                if (todaySp) activeSprintId = todaySp.id;
+            }
+            return added;
+        }
+        // One-time migration: snap legacy per-project sprints to the global grid.
+        function migrateLegacySprints() {
+            var needs = sprints.some(function (s) { return s && (s.projectId !== undefined || typeof s.number !== 'number'); });
+            if (!needs) return false;
+            var byNumber = {};
+            var idRemap = {};
+            sprints.forEach(function (s) {
+                if (!s) return;
+                var sd = s.startDate || todayISO();
+                var n = getSprintNumberAP(sd);
+                if (n < 1) n = 1;
+                var grid = getSprintDatesAP(n);
+                var newId = makeSprintIdAP(n);
+                if (s.id && s.id !== newId) idRemap[s.id] = newId;
+                if (!byNumber[n]) {
+                    byNumber[n] = {
+                        id: newId, number: n,
+                        name: s.name || 'Sprint ' + n,
+                        goal: s.goal || '',
+                        startDate: grid.start, endDate: grid.end,
+                        status: s.status || 'planning',
+                        capacityBlocks: Number(s.capacityBlocks) || 0,
+                        createdAt: s.createdAt || Date.now(),
+                        updatedAt: s.updatedAt || Date.now()
+                    };
+                } else {
+                    var ex = byNumber[n];
+                    if (s.name && s.name.length > (ex.name || '').length) ex.name = s.name;
+                    if (s.goal && !ex.goal) ex.goal = s.goal;
+                    if ((Number(s.capacityBlocks) || 0) > ex.capacityBlocks) ex.capacityBlocks = Number(s.capacityBlocks) || 0;
+                    if (s.status === 'active' && ex.status !== 'active') ex.status = 'active';
+                }
+            });
+            sprints = Object.keys(byNumber).map(function (k) { return byNumber[k]; })
+                .sort(function (a, b) { return a.number - b.number; });
+            // Rewrite issue sprintId refs to the snapped IDs.
+            issues.forEach(function (it) {
+                if (it.sprintId && idRemap[it.sprintId]) {
+                    it.sprintId = idRemap[it.sprintId];
+                    it.updatedAt = Date.now();
+                }
+            });
+            // If the chosen active sprint got snapped to a new id, follow it.
+            if (activeSprintId && idRemap[activeSprintId]) activeSprintId = idRemap[activeSprintId];
+            plannerUpdatedAt = Date.now();
+            saveLocal();
+            return true;
+        }
+        function getSprintByNumberAP(n) {
+            for (var i = 0; i < sprints.length; i++) { if (sprints[i].number === n) return sprints[i]; }
+            return null;
+        }
+        function getActiveSprintAP() {
+            if (activeSprintId) {
+                var s = sprints.find(function (x) { return x.id === activeSprintId; });
+                if (s) return s;
+            }
+            var todayN = getSprintNumberAP(todayISO());
+            return getSprintByNumberAP(todayN);
+        }
+
         function showToast(msg, isErr) {
             var t = document.getElementById('toast');
             t.textContent = msg;
-            t.style.borderColor = isErr ? 'rgba(255,115,166,0.6)' : 'var(--ui-border-strong)';
+            t.style.borderColor = isErr ? 'rgba(210,106,92,0.6)' : 'var(--ui-border-strong)';
             t.classList.add('show');
             clearTimeout(showToast._t);
             showToast._t = setTimeout(function () { t.classList.remove('show') }, 2200);
@@ -894,7 +1435,7 @@
                     }
                 }
             }
-            var palette = ['#8a63ff', '#bb79ff', '#79c4ff', '#6dffb1', '#ffc24a', '#ff73a6'];
+            var palette = ['#D89A3F', '#9B86C4', '#6FA3C7', '#7BB880', '#E0B255', '#C77874', '#C49563', '#7FA89B', '#B894A8', '#A89C5C'];
             return {
                 id: id,
                 name: name,
@@ -920,7 +1461,9 @@
                 projectId: projectId,
                 title: f.title || '(untitled)',
                 description: f.description || '',
-                color: f.color || (parent ? parent.color : '#8a63ff'),
+                color: f.color || (parent ? parent.color : '#D89A3F'),
+                trackCat: f.trackCat || '',
+                trackSub: f.trackSub || '',
                 status: f.status === 'archived' ? 'archived' : 'active',
                 createdAt: Number(f.id) || Date.now(),
                 updatedAt: Number(f.updatedAt) || Number(f.id) || Date.now()
@@ -1066,9 +1609,14 @@
                     var mergedIssues = mergeById(issues, rIssues, mergedDeleted.issues, localTs >= rPlannerTs);
                     var mergedSprints = mergeById(sprints, rSprints, mergedDeleted.sprints, localTs >= rPlannerTs);
 
-                    var mergedActive = (localTs >= rPlannerTs)
-                        ? activeSprintByProject
-                        : Object.assign({}, rPlanner.activeSprintByProject || {}, activeSprintByProject);
+                    var rActiveSprintId = rPlanner.activeSprintId || null;
+                    if (!rActiveSprintId && rPlanner.activeSprintByProject && typeof rPlanner.activeSprintByProject === 'object') {
+                        var rLegacyKeys = Object.keys(rPlanner.activeSprintByProject);
+                        if (rLegacyKeys.length) rActiveSprintId = rPlanner.activeSprintByProject[rLegacyKeys[0]] || null;
+                    }
+                    var mergedActiveSprintId = (localTs >= rPlannerTs)
+                        ? (activeSprintId || rActiveSprintId)
+                        : (rActiveSprintId || activeSprintId);
 
                     var mergedCurrent = currentProjectId ||
                         (rPlanner.currentProjectId && mergedProjects.find(function (p) { return p.id === rPlanner.currentProjectId })
@@ -1093,9 +1641,14 @@
                     features = mergedFeatures;
                     issues = mergedIssues;
                     sprints = mergedSprints;
-                    activeSprintByProject = mergedActive;
+                    activeSprintId = mergedActiveSprintId;
                     plannerDeleted = mergedDeleted;
                     currentProjectId = mergedCurrent;
+
+                    // Snap legacy sprints to the grid, dedupe by number, drop projectId.
+                    migrateLegacySprints();
+                    // Backfill missing sprint entities so WT/AP both see a continuous calendar.
+                    ensureSprintsAP();
 
                     var nextTs = Math.max(localTs, rPlannerTs);
                     if (changed) nextTs = Math.max(nextTs + 1, Date.now());
@@ -1133,7 +1686,7 @@
                     }
 
                     // Don't push an empty payload — wait until there's real local activity.
-                    if (!hasLocalPlanner && !seeded && !wtDirty) {
+                    if (!hasLocalPlanner && !seeded && !wtDirty && !wtTasksDirty) {
                         renderProjectPicker();
                         renderAll();
                         setSyncState('ok');
@@ -1144,11 +1697,17 @@
                         planner: {
                             projects: projects, features: features, issues: issues, sprints: sprints,
                             currentProjectId: currentProjectId,
-                            activeSprintByProject: activeSprintByProject,
+                            activeSprintId: activeSprintId,
                             deleted: plannerDeleted,
                             plannerUpdatedAt: plannerUpdatedAt
                         }
                     });
+
+                    if (wtTasksDirty) {
+                        // AP edited a mirrored WT task. Push the whole tasks array so WT's per-task
+                        // updatedAt merge picks up our changes.
+                        payload.tasks = wt.tasks;
+                    }
 
                     if (wtDirty) {
                         // Only write the cat/sub trio — worktracker's merge unions these regardless of timestamp.
@@ -1166,6 +1725,7 @@
                     }).then(function (res2) {
                         if (!res2.ok) throw new Error('put ' + res2.status);
                         wtDirty = false;
+                        wtTasksDirty = false;
                         renderProjectPicker();
                         renderAll();
                         setSyncState('ok');
@@ -1240,26 +1800,23 @@
         // ============================================================
         function renderSprintTab() {
             var el = document.getElementById('tab-sprint');
-            var proj = currentProject();
-            if (!proj) { noProjectMsg(el); return; }
-
-            var projSprints = sprints.filter(function (s) { return s.projectId === proj.id });
-            var activeId = activeSprintByProject[proj.id];
-            var sprint = activeId ? projSprints.find(function (s) { return s.id === activeId }) : null;
-            if (!sprint) {
-                sprint = projSprints.find(function (s) { return s.status === 'active' }) ||
-                    projSprints.slice().sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0) })[0] ||
-                    null;
-                if (sprint) { activeSprintByProject[proj.id] = sprint.id; saveLocal(); }
+            // Sprints are global; we no longer require a current project to view them.
+            ensureSprintsAP();
+            var sprint = getActiveSprintAP();
+            if (sprint && sprint.id !== activeSprintId) {
+                activeSprintId = sprint.id;
+                saveLocal();
             }
 
             if (!sprint) {
                 el.innerHTML =
-                    '<div class="card">' +
-                    '<div class="section-head">No active sprint</div>' +
-                    '<p style="font-size:13px;color:var(--ui-text-soft);margin-bottom:12px">' +
-                    'No sprint exists in <b>' + escHtml(proj.name) + '</b> yet. Create one to time-box work.</p>' +
+                    '<div class="empty-hero">' +
+                    '<h3>No sprint <em>yet.</em></h3>' +
+                    '<p>A sprint time-boxes a slice of work — typically two weeks. Once you start one, this view turns into a board where you can drag issues from To do → In progress → Done and watch a burndown chart unfold.</p>' +
+                    '<div class="actions">' +
                     '<button class="btn primary" onclick="openSprintEditor(null,true)">+ Create first sprint</button>' +
+                    '<button class="btn" onclick="setTab(\'backlog\')">View backlog</button>' +
+                    '</div>' +
                     '</div>';
                 return;
             }
@@ -1298,6 +1855,7 @@
             html += '<div class="card sprint-hero">';
             html += '<div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:6px">';
             html += '<div style="flex:1;min-width:0">';
+            html += '<div class="sprint-crumb"><span class="day">Day ' + elapsed + ' / ' + totalDays + '</span><span class="sep">•</span>' + fmtDate(sprint.startDate) + ' → ' + fmtDate(sprint.endDate) + '</div>';
             html += '<div class="name">' + escHtml(sprint.name || 'Untitled sprint') + '</div>';
             if (sprint.goal) html += '<div class="goal">' + escHtml(sprint.goal) + '</div>';
             html += '</div>';
@@ -1306,27 +1864,29 @@
             html += sprintStatusButton(sprint);
             html += '</div></div>';
 
-            html += '<div class="stats">';
-            html += '<div class="stat-tile"><div class="v">' + fmtHours(donePts) + '/' + fmtHours(totalPts) + '</div><div class="l">Hours</div></div>';
-            html += '<div class="stat-tile"><div class="v">' + pct + '%</div><div class="l">Done</div></div>';
-            html += '<div class="stat-tile"><div class="v">' + sprintIssues.length + '</div><div class="l">Issues</div></div>';
+            html += '<div class="stats" style="grid-template-columns: repeat(4, 1fr) !important">';
+            html += '<div class="stat-tile"><div class="v">' + fmtHours(donePts) + '/' + fmtHours(totalPts) + '</div><div class="l">Hours est</div></div>';
             html += '<div class="stat-tile"><div class="v">' + fmtHours(totalActual) + '</div><div class="l">Logged</div></div>';
-            html += '<div class="stat-tile"><div class="v">' + remaining + '/' + totalDays + '</div><div class="l">Days left</div></div>';
+            html += '<div class="stat-tile"><div class="v">' + sprintIssues.length + '</div><div class="l">Issues</div></div>';
+            html += '<div class="stat-tile"><div class="v">' + pct + '<span style="font-size:11px;color:var(--ui-text-dim)">%</span></div><div class="l">Done</div></div>';
             html += '</div>';
 
-            html += '<div class="row" style="font-size:11px;color:var(--ui-text-soft);justify-content:space-between">';
-            html += '<span>' + fmtDate(sprint.startDate) + ' &mdash; ' + fmtDate(sprint.endDate) + '</span>';
             if (sprint.capacityBlocks) {
                 var capPct = sprint.capacityBlocks ? Math.round(100 * totalPts / sprint.capacityBlocks) : 0;
-                html += '<span>Capacity: ' + fmtHours(totalPts) + '/' + fmtHours(sprint.capacityBlocks) + ' (' + capPct + '%)</span>';
+                html += '<div class="row" style="font-family:\'JetBrains Mono\',ui-monospace,monospace;font-size:11px;color:var(--ui-text-soft);justify-content:flex-end;margin-top:4px"><span>Capacity · ' + fmtHours(totalPts) + ' / ' + fmtHours(sprint.capacityBlocks) + ' (' + capPct + '%)</span></div>';
             }
-            html += '</div>';
             html += '<div class="progress-bar" style="margin-top:8px"><div style="width:' + pct + '%"></div></div>';
             html += '</div>';
 
             html += '<div class="card">';
             html += '<div class="section-head">Burndown</div>';
             html += '<div class="chart-wrap"><canvas id="burndown-canvas"></canvas></div>';
+            html += '</div>';
+
+            html += '<div class="quick-add">';
+            html += '<span class="hint">NEW ISSUE</span>';
+            html += '<input id="sprint-quick-add" type="text" placeholder="Title — e.g. \'Refactor scoring · P2 · 2h\'" onkeydown="if(event.key===\'Enter\'){quickAddIssue(\'sprint\')}">';
+            html += '<button class="btn primary sm" onclick="quickAddIssue(\'sprint\')">Add →</button>';
             html += '</div>';
 
             html += '<div class="choice-row" style="margin-bottom:10px">';
@@ -1337,8 +1897,9 @@
             html += '</div>';
 
             if (!sprintIssues.length) {
-                html += '<div class="card"><div class="empty">No issues in this sprint yet. Add some from the Backlog or use the floating button.</div></div>';
+                html += '<div class="card"><div class="empty">No issues in this sprint yet. Pull some from the Backlog →</div></div>';
             } else {
+                html += '<div class="board-grid">';
                 statuses.forEach(function (st) {
                     if (sprintFilterStatus && sprintFilterStatus !== st.k) return;
                     var list = byStatus[st.k];
@@ -1349,10 +1910,34 @@
                     html += '<span class="label">' + st.label + ' &middot; ' + list.length + '</span>';
                     html += '<span class="pts">' + fmtHours(stPts) + ' est</span>';
                     html += '</div>';
-                    if (!list.length) html += '<div class="empty" style="padding:10px">&mdash;</div>';
-                    else list.forEach(function (s) { html += renderIssueCard(s, true); });
+                    if (!list.length) {
+                        html += '<div class="empty" style="padding:10px">&mdash;</div>';
+                    } else {
+                        // Group by project so cross-project sprints stay readable.
+                        var byProj = {};
+                        list.forEach(function (it) {
+                            var pid = it.projectId || '__none__';
+                            if (!byProj[pid]) byProj[pid] = [];
+                            byProj[pid].push(it);
+                        });
+                        var projIds = Object.keys(byProj).sort(function (a, b) {
+                            var pa = projects.find(function (p) { return p.id === a; });
+                            var pb = projects.find(function (p) { return p.id === b; });
+                            return (pa ? pa.name : 'zzz').localeCompare(pb ? pb.name : 'zzz');
+                        });
+                        projIds.forEach(function (pid) {
+                            var p = projects.find(function (x) { return x.id === pid; });
+                            var pname = p ? p.name : '(no project)';
+                            var pcolor = p ? p.color : 'var(--ui-text-dim)';
+                            html += '<div class="proj-subgroup" style="margin-bottom:8px">';
+                            html += '<div style="font-family:\'JetBrains Mono\',ui-monospace,monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ui-text-dim);margin:6px 0 4px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:2px;background:' + pcolor + '"></span>' + escHtml(pname) + '</div>';
+                            byProj[pid].forEach(function (s) { html += renderIssueCard(s, true); });
+                            html += '</div>';
+                        });
+                    }
                     html += '</div>';
                 });
+                html += '</div>'; // close .board-grid
             }
 
             el.innerHTML = html;
@@ -1380,7 +1965,7 @@
             if (!s) return;
             s.status = 'active';
             s.updatedAt = Date.now();
-            activeSprintByProject[s.projectId] = id;
+            activeSprintId = id;
             markUpdated(); renderAll();
             showToast('Sprint started');
         }
@@ -1393,17 +1978,17 @@
             var msg = 'Complete this sprint?';
             if (incomplete.length) {
                 msg += '\n\n' + incomplete.length + ' incomplete issue' + (incomplete.length === 1 ? '' : 's') +
-                    ' will return to the backlog.';
+                    ' will return to the backlog (per project).';
             }
             if (!confirm(msg)) return;
             incomplete.forEach(function (it) { it.sprintId = null; it.updatedAt = Date.now(); });
             s.status = 'completed';
             s.completedAt = Date.now();
             s.updatedAt = Date.now();
-            if (activeSprintByProject[s.projectId] === id) {
-                var nextActive = sprints.find(function (x) { return x.projectId === s.projectId && x.status === 'active' && x.id !== id });
-                if (nextActive) activeSprintByProject[s.projectId] = nextActive.id;
-                else delete activeSprintByProject[s.projectId];
+            if (activeSprintId === id) {
+                var nextActive = sprints.find(function (x) { return x.status === 'active' && x.id !== id }) ||
+                    sprints.filter(function (x) { return x.number > s.number; }).sort(function (a, b) { return a.number - b.number; })[0];
+                activeSprintId = nextActive ? nextActive.id : null;
             }
             markUpdated(); renderAll();
             showToast('Sprint completed');
@@ -1541,8 +2126,12 @@
             markUpdated(); renderAll();
         }
         function issueEstBlocks(it) {
-            if (!it || !Array.isArray(it.tasks)) return 0;
-            return it.tasks.reduce(function(a, t) { return a + (Number(t.blocks) || 0); }, 0);
+            if (!it) return 0;
+            if (Array.isArray(it.tasks) && it.tasks.length) {
+                var sum = it.tasks.reduce(function(a, t) { return a + (Number(t.blocks) || 0); }, 0);
+                if (sum > 0) return sum;
+            }
+            return Number(it.estBlocks) || 0;
         }
 
         function changeTaskModalBlocks(d) {
@@ -1618,17 +2207,35 @@
             closeModal();
         }
 
-        function formatNotesSnippet(notesText) {
+        window.toggleNotes = function (el) {
+            var isExpanded = el.getAttribute('data-expanded') === 'true';
+            var full = decodeURIComponent(el.getAttribute('data-full'));
+            var short = decodeURIComponent(el.getAttribute('data-short'));
+            if (isExpanded) {
+                el.innerHTML = '“' + short + '” <a href="#" onclick="event.preventDefault(); window.toggleNotes(this.parentElement); event.stopPropagation();" style="color:var(--ui-accent);text-decoration:none;white-space:nowrap;">read more</a>';
+                el.setAttribute('data-expanded', 'false');
+            } else {
+                el.innerHTML = '“' + full + '” <a href="#" onclick="event.preventDefault(); window.toggleNotes(this.parentElement); event.stopPropagation();" style="color:var(--ui-accent);text-decoration:none;white-space:nowrap;">show less</a>';
+                el.setAttribute('data-expanded', 'true');
+            }
+        };
+
+        function formatNotesSnippet(notesText, customClass) {
             if (!notesText) return '';
             var div = document.createElement('div');
             div.textContent = notesText;
             var escapedNotes = div.innerHTML.replace(/\n/g, '<br>');
+            var cls = customClass || 's-notes';
             if (notesText.length <= 60) {
-                return '<div class="s-notes">"' + escapedNotes + '"</div>';
+                return '<div class="' + cls + '">“' + escapedNotes + '”</div>';
             }
             var shortText = notesText.substring(0, 60).trim() + '...';
             div.textContent = shortText;
-            return '<div class="s-notes">"' + div.innerHTML + '"</div>';
+            var escapedShort = div.innerHTML;
+            var safeFull = encodeURIComponent(escapedNotes);
+            var safeShort = encodeURIComponent(escapedShort);
+            var spanHtml = '<span data-expanded="false" data-full="' + safeFull + '" data-short="' + safeShort + '">“' + escapedShort + '” <a href="#" onclick="event.preventDefault(); window.toggleNotes(this.parentElement); event.stopPropagation();" style="color:var(--ui-accent);text-decoration:none;white-space:nowrap;">read more</a></span>';
+            return '<div class="' + cls + '">' + spanHtml + '</div>';
         }
 
         // ============================================================
@@ -1890,6 +2497,11 @@
             var totalPts = backlog.reduce(function (a, s) { return a + issueEstBlocks(s) }, 0);
 
             var html = '';
+            html += '<div class="quick-add">';
+            html += '<span class="hint">NEW ISSUE</span>';
+            html += '<input id="backlog-quick-add" type="text" placeholder="Title — e.g. \'Refactor scoring · P2 · 2h\'" onkeydown="if(event.key===\'Enter\'){quickAddIssue(\'backlog\')}">';
+            html += '<button class="btn primary sm" onclick="quickAddIssue(\'backlog\')">Add →</button>';
+            html += '</div>';
             var projFeatures = features.filter(function (f) { return f.projectId === proj.id && f.status !== 'archived' });
             html += '<div class="choice-row">';
             html += filterPill('', 'All features', backlogFilterFeature, 'backlogFilterFeature');
@@ -1906,7 +2518,105 @@
                 backlog.forEach(function (s) { html += renderIssueCard(s, false); });
             }
 
+            // WT one-time tasks mirror — editable cards. AP can pin them to a project/feature/sprint.
+            var wtPending = (wt.tasks || []).filter(function (t) {
+                return t && !t.recurring && !t.archived && !t.completed;
+            });
+            if (wtPending.length) {
+                html += '<div class="section-head" style="margin-top:22px">From Tracker <span class="count">' + wtPending.length + '</span></div>';
+                html += '<div class="help-text" style="margin-bottom:8px">One-time tasks created in Work Tracker. Edits sync back to the tracker.</div>';
+                wtPending.forEach(function (t) { html += renderWtTaskCard(t); });
+            }
+
             el.innerHTML = html;
+        }
+
+        function renderWtTaskCard(t) {
+            var proj = t.projectId ? projects.find(function (p) { return p.id === t.projectId; }) : null;
+            var feat = t.featureId ? features.find(function (f) { return f.id === t.featureId; }) : null;
+            var sprintEnt = t.sprintId ? sprints.find(function (s) { return s.id === t.sprintId; }) : null;
+            var pname = proj ? proj.name : 'no project';
+            var fname = feat ? feat.title : 'no feature';
+            var sname = sprintEnt ? sprintEnt.name : 'backlog';
+            var pcolor = proj ? proj.color : 'var(--ui-text-dim)';
+
+            var html = '<div class="issue-card" style="border-left:2px solid var(--ui-warning)">';
+            html += '<div class="head" style="cursor:default">';
+            html += '<div class="body">';
+            html += '<div class="issue-title">' + escHtml(t.title || '(untitled)') + '</div>';
+            html += '<div class="issue-meta">';
+            html += '<span class="pill" style="color:' + pcolor + '">' + escHtml(pname) + '</span>';
+            html += '<span class="pill">' + escHtml(fname) + '</span>';
+            html += '<span class="pill">' + escHtml(sname) + '</span>';
+            if (t.cat) html += '<span class="pill">' + escHtml(t.cat) + (t.sub ? ' / ' + t.sub : '') + '</span>';
+            if (t.blocks) html += '<span class="pill points">' + fmtHours(t.blocks) + ' est</span>';
+            html += '<span class="pill" style="color:var(--ui-warning)">tracker</span>';
+            html += '</div></div>';
+            html += '<div class="row-tight">';
+            html += '<button class="btn ghost icon" onclick="openWtTaskEditor(' + t.id + ')" title="Edit (writes back to Tracker)">&#9998;</button>';
+            html += '</div>';
+            html += '</div></div>';
+            return html;
+        }
+
+        function openWtTaskEditor(taskId) {
+            var t = (wt.tasks || []).find(function (x) { return x.id === taskId; });
+            if (!t) { showToast('Task no longer exists', true); return; }
+
+            var html = '<div class="modal">';
+            html += '<h2>Edit Tracker task</h2>';
+            html += '<div class="field"><label>Title</label>';
+            html += '<input id="wt-title" type="text" value="' + escHtml(t.title || '') + '"></div>';
+            html += '<div class="field"><label>Notes</label>';
+            html += '<textarea id="wt-notes">' + escHtml(t.notes || '') + '</textarea></div>';
+
+            html += '<div class="row">';
+            html += '<div class="field grow"><label>Project</label><select id="wt-proj"><option value="">(none)</option>';
+            projects.filter(function (p) { return p.status !== 'archived'; }).forEach(function (p) {
+                html += '<option value="' + p.id + '"' + (p.id === t.projectId ? ' selected' : '') + '>' + escHtml(p.name) + '</option>';
+            });
+            html += '</select></div>';
+            html += '<div class="field grow"><label>Feature</label><select id="wt-feat"><option value="">(none)</option>';
+            features.filter(function (f) { return f.status !== 'archived'; }).forEach(function (f) {
+                html += '<option value="' + f.id + '"' + (f.id === t.featureId ? ' selected' : '') + '>' + escHtml(f.title) + '</option>';
+            });
+            html += '</select></div>';
+            html += '</div>';
+
+            html += '<div class="field"><label>Sprint</label><select id="wt-sprint"><option value="">Backlog (no sprint)</option>';
+            sprints.slice().sort(function (a, b) { return b.number - a.number; }).forEach(function (s) {
+                html += '<option value="' + s.id + '"' + (s.id === t.sprintId ? ' selected' : '') + '>Sprint ' + s.number +
+                    (s.name && s.name !== 'Sprint ' + s.number ? ' — ' + escHtml(s.name) : '') + '</option>';
+            });
+            html += '</select></div>';
+
+            html += '<div class="help-text">Source of truth lives in Work Tracker. Closing/completing the task must happen there.</div>';
+            html += '<div class="modal-actions">';
+            html += '<button class="btn ghost" onclick="closeModal()">Cancel</button>';
+            html += '<button class="btn primary" onclick="saveWtTaskEdit(' + t.id + ')">Save</button>';
+            html += '</div></div>';
+            showModal(html);
+        }
+
+        function saveWtTaskEdit(taskId) {
+            var t = (wt.tasks || []).find(function (x) { return x.id === taskId; });
+            if (!t) { closeModal(); return; }
+            t.title = document.getElementById('wt-title').value.trim() || t.title;
+            t.notes = document.getElementById('wt-notes').value.trim();
+            var pid = document.getElementById('wt-proj').value || null;
+            var fid = document.getElementById('wt-feat').value || null;
+            var sid = document.getElementById('wt-sprint').value || null;
+            t.projectId = pid;
+            t.featureId = fid;
+            t.sprintId = sid;
+            t.updatedAt = Date.now();
+            wtTasksDirty = true;
+            wt.updatedAt = Math.max(wt.updatedAt || 0, t.updatedAt);
+            saveLocal();
+            scheduleSync();
+            closeModal();
+            renderAll();
+            showToast('Tracker task updated');
         }
 
 
@@ -1951,9 +2661,9 @@
             var donePts = its.filter(function (s) { return s.status === 'done' })
                 .reduce(function (a, s) { return a + issueEstBlocks(s) }, 0);
             var pct = totalPts ? Math.round(100 * donePts / totalPts) : 0;
-            var actualBlocks = its.reduce(function (a, s) { return a + issueActualBlocks(s) }, 0);
+            var actualBlocks = featureActualBlocks(f);
 
-            var html = '<div class="feature-card" style="--feature-color:' + (f.color || '#8a63ff') + '">';
+            var html = '<div class="feature-card" style="--feature-color:' + (f.color || '#D89A3F') + '">';
             html += '<div class="row" style="justify-content:space-between;align-items:flex-start">';
             html += '<div style="flex:1;min-width:0">';
             html += '<div class="name">' + escHtml(f.title || '(untitled feature)') + '</div>';
@@ -1961,7 +2671,7 @@
             html += '<div class="row">';
             html += '<span class="pill">' + done + '/' + total + ' issues</span>';
             html += '<span class="pill points">' + fmtHours(donePts) + '/' + fmtHours(totalPts) + ' est</span>';
-            html += '<span class="pill time">' + fmtHours(actualBlocks) + ' logged</span>';
+            if (actualBlocks > 0) html += '<span class="pill time">' + fmtHours(actualBlocks) + ' logged</span>';
             html += '</div>';
             html += '<div class="progress-bar" style="margin-top:8px"><div style="width:' + pct + '%;background:' + (f.color || 'var(--ui-accent)') + '"></div></div>';
             html += '</div>';
@@ -1972,15 +2682,83 @@
             return html;
         }
 
+        
+        // ============================================================
+        // QUICK ADD ISSUE — natural-language parser
+        // Accepts: "Title · P2 · 2h · feature-name"
+        //   - "P1" / "P2" / "P3" / "P4" (case-insensitive)
+        //   - "1h", "1.5h", "30m"
+        //   - Bare title remains the title
+        // ============================================================
+        function quickAddIssue(mode) {
+            var proj = currentProject();
+            if (!proj) { showToast('Pick a project first', true); return; }
+            var inpId = mode === 'sprint' ? 'sprint-quick-add' : 'backlog-quick-add';
+            var inp = document.getElementById(inpId);
+            if (!inp) return;
+            var raw = (inp.value || '').trim();
+            if (!raw) return;
+
+            // Tokenise by · or | or ,
+            var parts = raw.split(/[\u00b7|,]/).map(function (s) { return s.trim(); }).filter(Boolean);
+            var title = parts.shift() || raw;
+            var priority = 3;
+            var estBlocks = 0;
+            var featureId = null;
+
+            // Try to match priority + estimate in any remaining parts
+            parts.forEach(function (tok) {
+                var pm = tok.match(/^p\s*([1-4])$/i);
+                if (pm) { priority = parseInt(pm[1], 10); return; }
+                var hm = tok.match(/^(\d+(?:\.\d+)?)\s*h$/i);
+                if (hm) { estBlocks = Math.round(parseFloat(hm[1]) * 2); return; }
+                var mm = tok.match(/^(\d+)\s*m$/i);
+                if (mm) { estBlocks = Math.max(1, Math.round(parseInt(mm[1], 10) / 30)); return; }
+                // Otherwise treat as feature name (fuzzy match)
+                var lower = tok.toLowerCase();
+                var fe = features.filter(function (f) { return f.projectId === proj.id; })
+                    .find(function (f) { return (f.title || '').toLowerCase().indexOf(lower) > -1; });
+                if (fe) featureId = fe.id;
+            });
+
+            // Active sprint context if in sprint mode (sprints are global)
+            var sprintId = null;
+            if (mode === 'sprint') {
+                sprintId = activeSprintId || (getActiveSprintAP() && getActiveSprintAP().id) || null;
+            }
+
+            var newIssue = {
+                id: uid(),
+                projectId: proj.id,
+                title: title,
+                description: '',
+                type: 'story',
+                status: 'todo',
+                priority: priority,
+                estBlocks: estBlocks,
+                featureId: featureId,
+                sprintId: sprintId,
+                tasks: [],
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+            issues.unshift(newIssue);
+            inp.value = '';
+            markUpdated();
+            renderAll();
+            showToast('Added: ' + title);
+        }
+
         function quickAddFeature() {
             var proj = currentProject(); if (!proj) return;
             var inp = document.getElementById('feature-quick-add');
             var v = (inp.value || '').trim(); if (!v) return;
-            var colors = ['#8a63ff', '#79c4ff', '#6dffb1', '#ffc24a', '#ff73a6', '#bb79ff', '#ff9d6e', '#9affd4'];
+            var colors = ['#D89A3F', '#9B86C4', '#6FA3C7', '#7BB880', '#E0B255', '#C77874', '#C49563', '#7FA89B', '#B894A8', '#A89C5C'];
             var existing = features.filter(function (f) { return f.projectId === proj.id }).length;
             var c = colors[existing % colors.length];
             features.unshift({
                 id: uid(), projectId: proj.id, title: v, description: '', color: c,
+                trackCat: '', trackSub: '',
                 status: 'active', createdAt: Date.now(), updatedAt: Date.now()
             });
             inp.value = '';
@@ -1992,9 +2770,9 @@
             var isNew = !f;
             if (!f) {
                 var proj = currentProject(); if (!proj) { showToast('Pick a project first', true); return; }
-                f = { id: uid(), projectId: proj.id, title: '', description: '', color: '#8a63ff', status: 'active', createdAt: Date.now() };
+                f = { id: uid(), projectId: proj.id, title: '', description: '', color: '#D89A3F', status: 'active', createdAt: Date.now() };
             }
-            var colors = ['#8a63ff', '#bb79ff', '#79c4ff', '#6dffb1', '#ffc24a', '#ff73a6', '#ff9d6e', '#9affd4', '#ff9a9a', '#a4a4ff'];
+            var colors = ['#D89A3F', '#9B86C4', '#6FA3C7', '#7BB880', '#E0B255', '#C77874', '#C49563', '#7FA89B', '#B894A8', '#A89C5C'];
             var html = '<div class="modal">';
             html += '<h2>' + (isNew ? 'New feature' : 'Edit feature') + '</h2>';
             html += '<div class="field"><label>Title</label>';
@@ -2016,12 +2794,24 @@
             html += '</select></div>';
             html += '<input type="hidden" id="fe-color" value="' + f.color + '">';
 
+            html += '<div class="divider"></div>';
+            html += '<div class="field-label" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ui-text-soft);margin-bottom:6px">Time tracking link (optional)</div>';
+            html += '<div class="row">';
+            html += '<div class="field grow"><label>Category</label>';
+            html += '<select id="fe-trackCat" onchange="onTrackCatChange(\'fe\')"></select></div>';
+            html += '<div class="field grow"><label>Sub-list</label>';
+            html += '<select id="fe-trackSub" onchange="onTrackSubChange(\'fe\')"></select></div>';
+            html += '</div>';
+            html += '<div class="help-text">Logged hours from this Worktracker cat/sub flow into this feature’s &ldquo;hours logged&rdquo; pill.</div>';
+
             html += '<div class="modal-actions">';
             html += '<button class="btn ghost" onclick="closeModal()">Cancel</button>';
             if (!isNew) html += '<button class="btn danger" onclick="deleteFeatureFromEditor(\'' + f.id + '\')">Delete</button>';
             html += '<button class="btn primary" onclick="saveFeatureFromEditor(' + (isNew ? 'true' : 'false') + ',\'' + f.id + '\')">Save</button>';
             html += '</div></div>';
             showModal(html);
+            populateTrackCatSelect('fe', f.trackCat);
+            populateTrackSubSelect('fe', f.trackCat, f.trackSub);
         }
         function pickFeatureColor(c) {
             document.getElementById('fe-color').value = c;
@@ -2037,6 +2827,10 @@
             f.description = document.getElementById('fe-desc').value.trim();
             f.color = document.getElementById('fe-color').value;
             f.status = document.getElementById('fe-status').value;
+            var trackCatEl = document.getElementById('fe-trackCat');
+            var trackSubEl = document.getElementById('fe-trackSub');
+            f.trackCat = trackCatEl ? (trackCatEl.value || '') : (f.trackCat || '');
+            f.trackSub = trackSubEl ? (trackSubEl.value || '') : (f.trackSub || '');
             f.updatedAt = Date.now();
             if (!f.title) { showToast('Title is required', true); return; }
             if (isNew) features.unshift(f);
@@ -2061,17 +2855,17 @@
         // ============================================================
         function renderSprintsTab() {
             var el = document.getElementById('tab-sprints');
-            var proj = currentProject(); if (!proj) { noProjectMsg(el); return; }
+            ensureSprintsAP();
             var html = '';
 
-            var projSprints = sprints.filter(function (s) { return s.projectId === proj.id });
+            var allSprints = sprints.slice();
             var today = todayISO();
-            var active = projSprints.filter(function (s) { return s.status === 'active' });
-            var future = projSprints.filter(function (s) {
+            var active = allSprints.filter(function (s) { return s.status === 'active' });
+            var future = allSprints.filter(function (s) {
                 return s.status !== 'active' && s.status !== 'completed' &&
                     (s.status === 'planning' || (s.startDate && s.startDate > today));
             });
-            var past = projSprints.filter(function (s) { return s.status === 'completed' });
+            var past = allSprints.filter(function (s) { return s.status === 'completed' });
 
             html += '<div class="row" style="margin-bottom:10px;justify-content:space-between">';
             html += '<div class="choice-row" style="margin-bottom:0">';
@@ -2094,7 +2888,7 @@
             if (sprintsTabFilter === 'active') list = active;
             else if (sprintsTabFilter === 'future') list = future;
             else if (sprintsTabFilter === 'past') list = past;
-            else list = projSprints.slice();
+            else list = allSprints.slice();
 
             list.sort(function (a, b) {
                 var ad = a.startDate || '', bd = b.startDate || '';
@@ -2118,7 +2912,7 @@
             var donePts = ss.filter(function (x) { return x.status === 'done' })
                 .reduce(function (a, x) { return a + issueEstBlocks(x) }, 0);
             var pct = totalPts ? Math.round(100 * donePts / totalPts) : 0;
-            var isActive = s.id === activeSprintByProject[s.projectId];
+            var isActive = s.id === activeSprintId;
             var html = '<div class="sprint-list-card' + (isActive ? ' active' : '') + '" onclick="setActiveSprintAndOpen(\'' + s.id + '\')">';
             html += '<div class="row1">';
             html += '<div class="name">' + escHtml(s.name || 'Untitled') + '</div>';
@@ -2141,8 +2935,7 @@
 
         function setActiveSprintAndOpen(id) {
             var s = sprints.find(function (x) { return x.id === id }); if (!s) return;
-            activeSprintByProject[s.projectId] = id;
-            currentProjectId = s.projectId;
+            activeSprintId = id;
             markUpdated();
             setTab('sprint');
         }
@@ -2151,41 +2944,33 @@
         // SPRINT EDITOR
         // ============================================================
         function openSprintEditor(id, andStart) {
-            var proj = currentProject(); if (!proj && !id) { showToast('Pick a project first', true); return; }
             var s = id ? sprints.find(function (x) { return x.id === id }) : null;
             var isNew = !s;
             if (!s) {
-                var projSprints = sprints.filter(function (x) { return x.projectId === proj.id });
-                var n = projSprints.length + 1;
-                var prev = projSprints.slice().sort(function (a, b) { return (b.endDate || '').localeCompare(a.endDate || '') })[0];
-                var startISO = prev ? addDays(prev.endDate, 1) : todayISO();
-                if (startISO < todayISO()) startISO = todayISO();
-                var endISO = addDays(startISO, 13);
-                var avgVel = computeAvgVelocity(proj.id);
+                ensureSprintsAP();
+                // Default to the next sprint after the latest existing one.
+                var maxN = sprints.reduce(function (m, x) { return Math.max(m, x.number || 0); }, 0);
+                var n = Math.max(1, maxN + 1);
+                var grid = getSprintDatesAP(n);
                 s = {
-                    id: uid(),
-                    projectId: proj.id,
+                    id: makeSprintIdAP(n),
+                    number: n,
                     name: 'Sprint ' + n,
                     goal: '',
-                    startDate: startISO,
-                    endDate: endISO,
+                    startDate: grid.start,
+                    endDate: grid.end,
                     status: andStart ? 'active' : 'planning',
-                    capacityBlocks: avgVel || 0,
+                    capacityBlocks: computeAvgVelocity() || 0,
                     createdAt: Date.now()
                 };
             }
             var html = '<div class="modal">';
-            html += '<h2>' + (isNew ? 'New sprint' : 'Edit sprint') + '</h2>';
+            html += '<h2>' + (isNew ? 'New sprint' : 'Edit sprint') + ' &mdash; #' + s.number + '</h2>';
             html += '<div class="field"><label>Name</label>';
             html += '<input id="sp-name" type="text" value="' + escHtml(s.name) + '"></div>';
             html += '<div class="field"><label>Sprint goal</label>';
             html += '<textarea id="sp-goal" placeholder="One outcome we want from this sprint">' + escHtml(s.goal || '') + '</textarea></div>';
-            html += '<div class="row">';
-            html += '<div class="field grow"><label>Start date</label>';
-            html += '<input id="sp-start" type="date" value="' + s.startDate + '"></div>';
-            html += '<div class="field grow"><label>End date</label>';
-            html += '<input id="sp-end" type="date" value="' + s.endDate + '"></div>';
-            html += '</div>';
+            html += '<div class="help-text" style="margin-bottom:8px">Dates follow the global 14-day grid: <b>' + fmtDate(s.startDate) + ' &rarr; ' + fmtDate(s.endDate) + '</b>. Sprints span all projects.</div>';
             html += '<div class="row">';
             html += '<div class="field grow"><label>Capacity (blocks)</label>';
             html += '<input id="sp-cap" type="number" min="0" max="999" value="' + (s.capacityBlocks || '') + '" placeholder="e.g. 20 (10 hrs)"></div>';
@@ -2196,33 +2981,48 @@
             });
             html += '</select></div>';
             html += '</div>';
-            var avg = isNew ? computeAvgVelocity(s.projectId) : 0;
-            if (avg) html += '<div class="help-text">Avg velocity (last ' + Math.min(3, sprints.filter(function (x) { return x.projectId === s.projectId && x.status === 'completed' }).length) + ' sprints in this project): <b>' + fmtHours(avg) + '</b>.</div>';
+            var avg = computeAvgVelocity();
+            if (avg) html += '<div class="help-text">Avg velocity (last 3 completed sprints across all projects): <b>' + fmtHours(avg) + '</b>.</div>';
 
             html += '<div class="modal-actions">';
             html += '<button class="btn ghost" onclick="closeModal()">Cancel</button>';
             if (!isNew) html += '<button class="btn danger" onclick="deleteSprintFromEditor(\'' + s.id + '\')">Delete</button>';
             html += '<button class="btn primary" onclick="saveSprintFromEditor(' + (isNew ? 'true' : 'false') + ',\'' + s.id + '\')">Save</button>';
             html += '</div></div>';
+            // Stash the new sprint so save can find it without re-running grid math.
+            openSprintEditor._draft = isNew ? s : null;
             showModal(html);
         }
 
         function saveSprintFromEditor(isNew, id) {
-            var s = isNew ? { id: id, projectId: currentProjectId, createdAt: Date.now() } :
-                sprints.find(function (x) { return x.id === id });
-            if (!s) return;
+            var s;
+            if (isNew) {
+                s = openSprintEditor._draft;
+                if (!s) return;
+            } else {
+                s = sprints.find(function (x) { return x.id === id });
+                if (!s) return;
+            }
             s.name = document.getElementById('sp-name').value.trim();
             s.goal = document.getElementById('sp-goal').value.trim();
-            s.startDate = document.getElementById('sp-start').value;
-            s.endDate = document.getElementById('sp-end').value;
             s.capacityBlocks = Number(document.getElementById('sp-cap').value) || 0;
             s.status = document.getElementById('sp-status').value;
             s.updatedAt = Date.now();
             if (!s.name) { showToast('Name required', true); return; }
-            if (!s.startDate || !s.endDate) { showToast('Start/end dates required', true); return; }
-            if (s.endDate < s.startDate) { showToast('End date must be after start', true); return; }
-            if (isNew) sprints.push(s);
-            if (s.status === 'active') activeSprintByProject[s.projectId] = s.id;
+            if (isNew) {
+                // Dedupe on number — if WT or AP already added this number, just merge into it.
+                var existing = sprints.find(function (x) { return x.number === s.number; });
+                if (existing) {
+                    existing.name = s.name; existing.goal = s.goal;
+                    existing.capacityBlocks = s.capacityBlocks;
+                    existing.status = s.status; existing.updatedAt = s.updatedAt;
+                    s = existing;
+                } else {
+                    sprints.push(s);
+                }
+            }
+            if (s.status === 'active') activeSprintId = s.id;
+            openSprintEditor._draft = null;
             closeModal();
             markUpdated();
             setTab('sprint');
@@ -2232,19 +3032,18 @@
             closeModal();
             var ss = issues.filter(function (s) { return s.sprintId === id });
             var msg = 'Delete this sprint?';
-            if (ss.length) msg += '\n\n' + ss.length + ' issue' + (ss.length === 1 ? '' : 's') + ' will return to backlog.';
+            if (ss.length) msg += '\n\n' + ss.length + ' issue' + (ss.length === 1 ? '' : 's') + ' will return to backlog (across all projects).';
             if (!confirm(msg)) return;
             ss.forEach(function (s) { s.sprintId = null; s.updatedAt = Date.now(); });
-            var sp = sprints.find(function (x) { return x.id === id });
-            if (sp && activeSprintByProject[sp.projectId] === id) delete activeSprintByProject[sp.projectId];
+            if (activeSprintId === id) activeSprintId = null;
             sprints = sprints.filter(function (s) { return s.id !== id });
             if (plannerDeleted.sprints.indexOf(id) === -1) plannerDeleted.sprints.push(id);
             markUpdated(); renderAll();
             showToast('Sprint deleted');
         }
 
-        function computeAvgVelocity(projectId) {
-            var done = sprints.filter(function (s) { return s.projectId === projectId && s.status === 'completed' });
+        function computeAvgVelocity() {
+            var done = sprints.filter(function (s) { return s.status === 'completed' });
             if (!done.length) return 0;
             done.sort(function (a, b) { return (b.completedAt || 0) - (a.completedAt || 0) });
             var sample = done.slice(0, 3);
@@ -2263,10 +3062,10 @@
             var p = id ? projects.find(function (x) { return x.id === id }) : null;
             var isNew = !p;
             if (!p) p = {
-                id: uid(), name: '', description: '', color: '#8a63ff',
+                id: uid(), name: '', description: '', color: '#D89A3F',
                 trackCat: '', trackSub: '', status: 'active', createdAt: Date.now()
             };
-            var colors = ['#8a63ff', '#bb79ff', '#79c4ff', '#6dffb1', '#ffc24a', '#ff73a6', '#ff9d6e', '#9affd4', '#ff9a9a', '#a4a4ff'];
+            var colors = ['#D89A3F', '#9B86C4', '#6FA3C7', '#7BB880', '#E0B255', '#C77874', '#C49563', '#7FA89B', '#B894A8', '#A89C5C'];
 
             var html = '<div class="modal">';
             html += '<h2>' + (isNew ? 'New project' : 'Edit project') + '</h2>';
@@ -2343,22 +3142,18 @@
             closeModal();
             var fts = features.filter(function (f) { return f.projectId === id });
             var its = issues.filter(function (s) { return s.projectId === id });
-            var sps = sprints.filter(function (s) { return s.projectId === id });
             var msg = 'Delete this project?';
-            if (fts.length || its.length || sps.length) {
+            if (fts.length || its.length) {
                 msg += '\n\nThis will also delete:\n' +
                     '  ' + fts.length + ' feature' + (fts.length === 1 ? '' : 's') + '\n' +
-                    '  ' + its.length + ' issue' + (its.length === 1 ? '' : 's') + '\n' +
-                    '  ' + sps.length + ' sprint' + (sps.length === 1 ? '' : 's');
+                    '  ' + its.length + ' issue' + (its.length === 1 ? '' : 's') +
+                    '\n\nSprints are shared across projects and are preserved.';
             }
             if (!confirm(msg)) return;
             fts.forEach(function (f) { if (plannerDeleted.features.indexOf(f.id) === -1) plannerDeleted.features.push(f.id); });
             its.forEach(function (s) { if (plannerDeleted.issues.indexOf(s.id) === -1) plannerDeleted.issues.push(s.id); });
-            sps.forEach(function (s) { if (plannerDeleted.sprints.indexOf(s.id) === -1) plannerDeleted.sprints.push(s.id); });
             features = features.filter(function (f) { return f.projectId !== id });
             issues = issues.filter(function (s) { return s.projectId !== id });
-            sprints = sprints.filter(function (s) { return s.projectId !== id });
-            delete activeSprintByProject[id];
             projects = projects.filter(function (p) { return p.id !== id });
             if (plannerDeleted.projects.indexOf(id) === -1) plannerDeleted.projects.push(id);
             if (currentProjectId === id) currentProjectId = projects.length ? projects[0].id : null;
@@ -2396,9 +3191,9 @@
             }
 
             var css = getComputedStyle(document.documentElement);
-            var accent = css.getPropertyValue('--ui-accent').trim() || '#8a63ff';
-            var dim = css.getPropertyValue('--ui-text-dim').trim() || '#7d6ba8';
-            var soft = css.getPropertyValue('--ui-text-soft').trim() || '#b8abd8';
+            var accent = css.getPropertyValue('--ui-accent').trim() || '#D89A3F';
+            var dim = css.getPropertyValue('--ui-text-dim').trim() || '#6E6555';
+            var soft = css.getPropertyValue('--ui-text-soft').trim() || '#A89C88';
 
             burndownChart = new Chart(canvas.getContext('2d'), {
                 type: 'line',
@@ -2406,18 +3201,18 @@
                     labels: labels,
                     datasets: [
                         { label: 'Ideal', data: ideal, borderColor: dim, borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, tension: 0, fill: false },
-                        { label: 'Actual', data: actual, borderColor: accent, borderWidth: 2.5, backgroundColor: 'rgba(138,99,255,0.15)', pointRadius: 3, pointBackgroundColor: accent, tension: 0, fill: true, spanGaps: false }
+                        { label: 'Actual', data: actual, borderColor: accent, borderWidth: 2.5, backgroundColor: 'rgba(216,154,63,0.15)', pointRadius: 3, pointBackgroundColor: accent, tension: 0, fill: true, spanGaps: false }
                     ]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     plugins: {
                         legend: { labels: { color: soft, font: { size: 11 } } },
-                        tooltip: { backgroundColor: '#1a1330', borderColor: '#322754', borderWidth: 1 }
+                        tooltip: { backgroundColor: '#1A1714', borderColor: '#443D34', borderWidth: 1 }
                     },
                     scales: {
-                        x: { ticks: { color: dim, font: { size: 10 } }, grid: { color: 'rgba(50,39,84,0.4)' } },
-                        y: { ticks: { color: dim, font: { size: 10 } }, grid: { color: 'rgba(50,39,84,0.4)' }, beginAtZero: true }
+                        x: { ticks: { color: dim, font: { size: 10 } }, grid: { color: 'rgba(68,61,52,0.4)' } },
+                        y: { ticks: { color: dim, font: { size: 10 } }, grid: { color: 'rgba(68,61,52,0.4)' }, beginAtZero: true }
                     }
                 }
             });
@@ -2439,16 +3234,16 @@
             });
 
             var css = getComputedStyle(document.documentElement);
-            var accent = css.getPropertyValue('--ui-accent').trim() || '#8a63ff';
-            var dim = css.getPropertyValue('--ui-text-dim').trim() || '#7d6ba8';
-            var soft = css.getPropertyValue('--ui-text-soft').trim() || '#b8abd8';
+            var accent = css.getPropertyValue('--ui-accent').trim() || '#D89A3F';
+            var dim = css.getPropertyValue('--ui-text-dim').trim() || '#6E6555';
+            var soft = css.getPropertyValue('--ui-text-soft').trim() || '#A89C88';
 
             velocityChart = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [
-                        { label: 'Planned', data: planned, backgroundColor: 'rgba(125,107,168,0.6)' },
+                        { label: 'Planned', data: planned, backgroundColor: 'rgba(111,163,199,0.5)' },
                         { label: 'Completed', data: done, backgroundColor: accent }
                     ]
                 },
@@ -2456,11 +3251,11 @@
                     responsive: true, maintainAspectRatio: false,
                     plugins: {
                         legend: { labels: { color: soft, font: { size: 11 } } },
-                        tooltip: { backgroundColor: '#1a1330', borderColor: '#322754', borderWidth: 1 }
+                        tooltip: { backgroundColor: '#1A1714', borderColor: '#443D34', borderWidth: 1 }
                     },
                     scales: {
                         x: { ticks: { color: dim, font: { size: 10 } }, grid: { display: false } },
-                        y: { ticks: { color: dim, font: { size: 10 } }, grid: { color: 'rgba(50,39,84,0.4)' }, beginAtZero: true }
+                        y: { ticks: { color: dim, font: { size: 10 } }, grid: { color: 'rgba(68,61,52,0.4)' }, beginAtZero: true }
                     }
                 }
             });
@@ -2497,6 +3292,19 @@
             });
             return total;
         }
+        function featureActualBlocks(f) {
+            if (!f) return 0;
+            var cat = f.trackCat || '';
+            var sub = f.trackSub || '';
+            if (!cat && !sub) return 0;
+            var total = 0;
+            (wt.sessions || []).forEach(function (s) {
+                if (cat && s.cat !== cat) return;
+                if (sub && s.sub !== sub) return;
+                total += (s.blocks !== undefined ? s.blocks : 1);
+            });
+            return total;
+        }
 
         // ============================================================
         // SETTINGS TAB
@@ -2515,7 +3323,7 @@
                     var fts = features.filter(function (f) { return f.projectId === p.id });
                     var spr = sprints.filter(function (s) { return s.projectId === p.id });
                     var hrs = projectActualBlocks(p);
-                    html += '<div class="project-card" style="--proj-color:' + (p.color || '#8a63ff') + '">';
+                    html += '<div class="project-card" style="--proj-color:' + (p.color || '#D89A3F') + '">';
                     html += '<div class="row" style="justify-content:space-between;align-items:flex-start">';
                     html += '<div style="flex:1;min-width:0">';
                     html += '<div class="name">' + escHtml(p.name) + (p.status === 'archived' ? ' <span class="pill">archived</span>' : '') + '</div>';
@@ -2596,7 +3404,7 @@
             var data = {
                 projects: projects, features: features, issues: issues, sprints: sprints,
                 currentProjectId: currentProjectId,
-                activeSprintByProject: activeSprintByProject,
+                activeSprintId: activeSprintId,
                 plannerUpdatedAt: plannerUpdatedAt
             };
             var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -2619,7 +3427,12 @@
                     if (Array.isArray(d.issues)) issues = d.issues;
                     if (Array.isArray(d.sprints)) sprints = d.sprints;
                     if (d.currentProjectId !== undefined) currentProjectId = d.currentProjectId;
-                    if (d.activeSprintByProject) activeSprintByProject = d.activeSprintByProject;
+                    if (d.activeSprintId !== undefined) activeSprintId = d.activeSprintId;
+                    else if (d.activeSprintByProject) {
+                        var keys = Object.keys(d.activeSprintByProject);
+                        if (keys.length) activeSprintId = d.activeSprintByProject[keys[0]];
+                    }
+                    migrateLegacySprints();
                     markUpdated(); renderProjectPicker(); renderAll();
                     showToast('Imported');
                 } catch (e) { showToast('Invalid JSON', true); }
@@ -2632,7 +3445,7 @@
             if (!confirm('Wipe local cache? Remote data is preserved.')) return;
             try { localStorage.removeItem(LOCAL_KEY); } catch (e) {}
             projects = []; features = []; issues = []; sprints = [];
-            currentProjectId = null; activeSprintByProject = {}; plannerUpdatedAt = 0;
+            currentProjectId = null; activeSprintId = null; plannerUpdatedAt = 0;
             plannerDeleted = { projects: [], features: [], issues: [], sprints: [] };
             wt = { sessions: [], tasks: [], sublists: {}, categoryOrder: [], categoryMeta: {}, deletedIds: [], updatedAt: 0 };
             renderProjectPicker(); renderAll();
