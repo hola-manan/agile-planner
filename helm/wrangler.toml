@@ -1,0 +1,24 @@
+name = "helm"
+main = "apps/server/src/worker.ts"
+compatibility_date = "2026-03-17"
+compatibility_flags = ["nodejs_compat"]
+
+# Serve the built React SPA. Requests that don't match a file fall back to
+# index.html; /api/* is handled by the Worker first so it isn't swallowed.
+[assets]
+directory = "./apps/web/dist"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+# SQLite-compatible database. Create with `wrangler d1 create helm` and paste the
+# returned database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "helm"
+database_id = "REPLACE_WITH_ID_FROM_wrangler_d1_create"
+migrations_dir = "apps/server/migrations"
+
+[vars]
+HELM_MODEL_JUDGE = "gemini-2.5-pro"
+HELM_MODEL_FAST = "gemini-2.5-flash"
+# GOOGLE_API_KEY is a secret: `wrangler secret put GOOGLE_API_KEY`

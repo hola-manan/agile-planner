@@ -1,0 +1,5 @@
+# Wrangler local secrets. Copy to `.dev.vars` (gitignored) for `npm run cf:dev`.
+# Vertex AI Express key (serves Gemini). Leave blank to run in mock mode.
+GOOGLE_API_KEY=
+# Backend override: gemini (default when key present) | vertex | mock
+HELM_AI_BACKEND=

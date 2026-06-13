@@ -2,18 +2,29 @@
   "name": "helm",
   "version": "0.1.0",
   "private": true,
-  "description": "AI chief-of-staff: Eisenhower quadrants + 3-3-3 + agile, powered by Gemini (Vertex AI) and LangGraph.",
+  "description": "AI chief-of-staff: Eisenhower quadrants + 3-3-3 + agile, powered by Gemini (Vertex AI) and LangGraph. Runs on Cloudflare Workers + D1.",
   "type": "module",
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspace @helm/engine",
-    "dev:server": "npm run dev --workspace @helm/server",
-    "dev:web": "npm run dev --workspace @helm/web"
+    "build:engine": "npm run build --workspace @helm/engine",
+    "build:web": "npm run build --workspace @helm/web",
+    "build": "npm run build:engine && npm run build:web",
+    "cf:dev": "npm run build:engine && wrangler dev",
+    "web:dev": "npm run dev --workspace @helm/web",
+    "db:create": "wrangler d1 create helm",
+    "db:migrate": "wrangler d1 migrations apply helm --remote",
+    "db:migrate:local": "wrangler d1 migrations apply helm --local",
+    "deploy": "npm run build && wrangler deploy",
+    "predeploy": "wrangler d1 migrations apply helm --remote"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "wrangler": "^4.0.0"
   },
   "engines": {
     "node": ">=20"

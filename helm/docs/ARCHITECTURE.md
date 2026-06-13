@@ -59,10 +59,20 @@ Config via env: `HELM_AI_BACKEND`, `GOOGLE_API_KEY` / `HELM_VERTEX_API_KEY`,
 
 ## Persistence
 
-SQLite (`better-sqlite3`) — one file, single user. Tables mirror the engine
-types: `lists`, `sublists`, `tasks`, `sprints`, plus `alerts` and a LangGraph
-checkpoint store. Project `.md` files live in *your* project repos; Helm reads a
-pasted copy (or a raw URL) and keeps the machine-readable backlog block in sync.
+**Cloudflare D1** (SQLite-compatible) — free, persistent, single user. Tables
+mirror the engine types: `lists`, `sublists`, `tasks`, `sprints` (schema in
+`apps/server/migrations/`). The store (`apps/server/src/store.ts`) is async and
+built per-request from the Worker's `DB` binding. Project `.md` files live in
+*your* project repos; Helm reads a pasted copy (or a raw URL) and keeps the
+machine-readable backlog block in sync.
+
+## Runtime — one Cloudflare Worker
+
+`apps/server/src/worker.ts` exports the Hono app (`app.ts`). Workers Static
+Assets serves the built React SPA from `apps/web/dist`; `run_worker_first`
+routes `/api/*` to the Worker, and `not_found_handling = "single-page-application"`
+falls back to `index.html` for client routes. One `wrangler deploy` ships UI +
+API + DB together. LangChain/LangGraph run under `nodejs_compat`.
 
 ## Data flow on every mutation
 

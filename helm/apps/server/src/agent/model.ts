@@ -12,7 +12,9 @@ export interface ModelConfig {
   apiKey?: string;
 }
 
-export function resolveConfig(env: NodeJS.ProcessEnv = process.env): ModelConfig {
+export type EnvMap = Record<string, string | undefined>;
+
+export function resolveConfig(env: EnvMap = {}): ModelConfig {
   const apiKey = env.GOOGLE_API_KEY || env.HELM_VERTEX_API_KEY || env.GEMINI_API_KEY;
   const explicit = env.HELM_AI_BACKEND as AiBackend | undefined;
   const backend: AiBackend = explicit ?? (apiKey ? 'gemini' : 'mock');
