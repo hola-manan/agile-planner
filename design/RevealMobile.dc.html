@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Felt — Reveal the runout (phone)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#262626}
+.app{font-family:'Bricolage Grotesque',system-ui,sans-serif;color:#ECE8DF;background:#262626}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.muted{color:#ABABAB}
+.btn{height:50px;padding:0 14px;border-radius:13px;border:1px solid #4A4A4A;background:#383838;color:#ECE8DF;font:700 15px 'Bricolage Grotesque',sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box}
+.btn.primary{background:#E6B85C;border-color:#E6B85C;color:#1A1408}
+.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#ABABAB;font-weight:600}
+.card{background:#F6F2E9;border-radius:8px;box-shadow:0 6px 14px rgba(0,0,0,.45);display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;font-weight:700;line-height:1;font-variant-emoji:text;width:58px;height:82px;padding:7px 8px;font-size:22px}
+.card .su{align-self:flex-end;font-size:1.3em}
+.ghost{background:rgba(246,242,233,.16);box-shadow:none;outline:2px dashed rgba(230,184,92,.85);outline-offset:-2px}
+</style>
+</helmet>
+<div class="app" style="width: 390px; height: 844px; padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; overflow: hidden">
+  <header style="display: flex; align-items: center; justify-content: space-between">
+    <div>
+      <div class="label">Hand #44 · ended on the flop</div>
+      <h1 style="margin: 4px 0 0; font-size: 26px; letter-spacing: -0.02em; line-height: 1.1">Dev wins <span class="mono" style="color: #F4D28E">34</span></h1>
+      <div class="muted" style="font-size: 14px; margin-top: 2px">Everyone else folded</div>
+    </div>
+  </header>
+
+  <div style="border-radius: 24px; padding: 24px 12px 18px; background: radial-gradient(ellipse at 50% 30%, #3DAA6E 0%, #1F8549 80%); box-shadow: inset 0 0 0 2px rgba(255,255,255,.14); display: flex; flex-direction: column; align-items: center; gap: 16px">
+    <div style="display: flex; gap: 6px">
+      <sc-for list="{{flop}}" as="c" hint-placeholder-count="3">
+        <div class="card" style="color: {{c.color}}"><span>{{c.r}}</span><span class="su">{{c.s}}</span></div>
+      </sc-for>
+      <sc-for list="{{runout}}" as="c" hint-placeholder-count="2">
+        <div class="card ghost" style="color: {{c.color}}"><span>{{c.r}}</span><span class="su">{{c.s}}</span></div>
+      </sc-for>
+    </div>
+    <div style="display: flex; gap: 16px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase">
+      <span style="color: #F0F0F0">Flop · dealt</span>
+      <span style="color: #F4D28E">Turn &amp; river · would have come</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(0,0,0,.35); font-size: 13px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E6B85C" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      Revealed by Leo · in hand history
+    </div>
+  </div>
+
+  <div style="padding: 14px 16px; border-radius: 16px; background: #303030; border: 1px solid #3D3D3D; font-size: 14px; line-height: 1.45" class="muted">
+    Folded before the flop? All five cards show as ghost cards. They never count for anyone.
+  </div>
+
+  <div style="flex: 1"></div>
+
+  <div style="margin: 0 -16px -16px; border-radius: 24px 24px 0 0; padding: 14px 16px 24px; background: #2E2E2E; border-top: 1px solid #E6B85C; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 -10px 30px rgba(0,0,0,.5)">
+    <div style="width: 40px; height: 4px; border-radius: 2px; background: #555555; align-self: center"></div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline">
+      <span style="font-weight: 700; font-size: 17px">You won · show your cards?</span>
+      <span class="label" style="color: #E6B85C">Dev's view</span>
+    </div>
+    <div class="muted" style="font-size: 13px">Nobody called, so you don't have to.</div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <button class="btn">Both</button><button class="btn">One</button><button class="btn primary">Hide</button>
+    </div>
+    <button class="btn" style="width: 100%; background: transparent">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>Reveal the runout · 8s</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"fourColor":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const four = this.props.fourColor ?? true;
+    const fc = { '♠': '#17191B', '♥': '#C42B38', '♦': '#1E5BC6', '♣': '#1B7F45' };
+    const gc = { '♠': '#ECE8DF', '♥': '#FF9AA2', '♦': '#9DBBFF', '♣': '#8FE0AF' };
+    const red = (s) => s === '♥' || s === '♦';
+    const mk = (r, s) => ({ r, s, color: four ? fc[s] : (red(s) ? '#C42B38' : '#17191B') });
+    const gh = (r, s) => ({ r, s, color: four ? gc[s] : (red(s) ? '#FF9AA2' : '#ECE8DF') });
+    return { flop: [mk('10', '♠'), mk('6', '♦'), mk('6', '♣')], runout: [gh('A', '♠'), gh('10', '♥')] };
+  }
+}
+</script>
+</body>
+</html>

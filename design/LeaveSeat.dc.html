@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Felt — Leave seat</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#262626}
+.app{font-family:'Bricolage Grotesque',system-ui,sans-serif;color:#ECE8DF;background:#1B1B1B}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.muted{color:#ABABAB}
+.btn{height:50px;padding:0 20px;border-radius:12px;border:1px solid #4A4A4A;background:#383838;color:#ECE8DF;font:700 15px 'Bricolage Grotesque',sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
+.btn.leave{background:#E0705F;border-color:#E0705F;color:#1E0D0A}
+.opt{display:flex;gap:12px;padding:14px 16px;border-radius:14px;border:1px solid #4A4A4A;cursor:pointer;align-items:flex-start}
+.opt.on{border-color:#E6B85C;background:#3A3528}
+.opt input{accent-color:#E6B85C;width:18px;height:18px;margin:2px 0 0}
+.row{display:flex;justify-content:space-between;padding:9px 0;font-size:15px}
+</style>
+</helmet>
+<div class="app" style="width: 640px; height: 640px; display: grid; place-items: center">
+  <div role="dialog" aria-labelledby="lt" style="width: 520px; background: #303030; border: 1px solid #3D3D3D; border-radius: 22px; padding: 26px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px; box-shadow: 0 30px 80px rgba(0,0,0,.55)">
+    <div style="display: flex; align-items: center; gap: 14px">
+      <div style="width: 48px; height: 48px; border-radius: 50%; background: #3A2726; display: grid; place-items: center; flex: none">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F2A096" stroke-width="2" aria-hidden="true"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"></path></svg>
+      </div>
+      <div>
+        <h2 id="lt" style="margin: 0; font-size: 22px; letter-spacing: -0.01em">Leave your seat?</h2>
+        <div class="muted" style="font-size: 14px; margin-top: 2px">You can stay and watch the game.</div>
+      </div>
+    </div>
+    <div style="padding: 6px 16px; border-radius: 14px; background: #262626">
+      <div class="row"><span class="muted">Cash out (your stack)</span><span class="mono" style="font-weight: 700">476</span></div>
+      <div class="row" style="border-top: 1px solid #3A3A3A"><span class="muted">Bought in</span><span class="mono">500</span></div>
+      <div class="row" style="border-top: 1px solid #3A3A3A"><span class="muted">Net on the ledger</span><span class="mono" style="color: #F2A096; font-weight: 700">−24</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label class="opt on"><input type="radio" name="when" defaultChecked="{{true}}"><span><b>After this hand</b><br><span class="muted" style="font-size: 14px">Finish hand #42, then stand up</span></span></label>
+      <label class="opt"><input type="radio" name="when"><span><b>Right now</b><br><span class="muted" style="font-size: 14px">Folds your current hand</span></span></label>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+      <button class="btn">Stay</button>
+      <button class="btn leave">Leave seat</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":640,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

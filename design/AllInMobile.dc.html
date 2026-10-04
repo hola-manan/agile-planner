@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Felt — All-in with win odds (phone)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#262626}
+.app{font-family:'Bricolage Grotesque',system-ui,sans-serif;color:#ECE8DF;background:#262626}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.muted{color:#ABABAB}
+.btn{height:44px;border-radius:14px;border:1px solid transparent;background:transparent;color:#ECE8DF;display:inline-flex;align-items:center;justify-content:center}
+.card{background:#F6F2E9;border-radius:6px;box-shadow:0 4px 10px rgba(0,0,0,.4);display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;font-weight:700;line-height:1;font-variant-emoji:text}
+.card .su{align-self:flex-end;font-size:1.3em}
+.card.md{width:44px;height:62px;padding:5px 6px;font-size:18px;border-radius:7px}
+.card.rv{width:30px;height:42px;padding:3px 4px;font-size:13px;border-radius:5px;animation:flip .55s ease-out both}
+.card.xl{width:66px;height:92px;padding:7px 8px;font-size:26px;border-radius:9px}
+.slot{background:rgba(0,0,0,.14);border:1.5px dashed rgba(236,232,223,.3);box-shadow:none}
+@keyframes flip{0%{transform:perspective(400px) rotateY(90deg) scale(.7)}100%{transform:perspective(400px) rotateY(0) scale(1)}}
+.seat{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2}
+.pod{display:flex;flex-direction:column;align-items:center;padding:5px 8px;background:#333333;border:1px solid #4A4A4A;border-radius:12px;min-width:58px}
+.pod.folded{opacity:.45}.pod.out{opacity:.55;border-style:dashed}
+.pod.allin{border-color:#E6B85C}
+.av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:11px;color:#14110C;margin-top:-16px;border:2px solid #333333}
+</style>
+</helmet>
+<div class="app" style="width: 390px; height: 844px; display: flex; flex-direction: column; overflow: hidden">
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 6px">
+    <button class="btn" aria-label="Menu" style="width: 44px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+    <div style="text-align: center">
+      <div style="font-weight: 700; font-size: 15px">Friday Night Game</div>
+      <div class="muted" style="font-size: 12px">Hand <span class="mono">#43</span> · All-in</div>
+    </div>
+    <span style="width: 44px"></span>
+  </header>
+
+  <div style="flex: 1; padding: 46px 40px 84px; position: relative">
+    <div style="position: relative; height: 100%; border-radius: 999px; background: #1C1C1C; padding: 10px; box-sizing: border-box">
+      <div style="position: relative; width: 100%; height: 100%; border-radius: 999px; background: radial-gradient(ellipse at 50% 40%, #3DAA6E 0%, #1F8549 75%); box-shadow: inset 0 0 0 2px rgba(255,255,255,.14)">
+        <div style="position: absolute; left: 50%; top: 47%; transform: translate(-50%,-50%); display: flex; flex-direction: column; align-items: center; gap: 10px">
+          <span style="padding: 3px 10px; border-radius: 999px; background: rgba(0,0,0,.3); font-size: 13px">Pot <b class="mono" style="color: #F4D28E">910</b></span>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px">
+            <sc-for list="{{board}}" as="c" hint-placeholder-count="3">
+              <div class="card md" style="color: {{c.color}}"><span>{{c.r}}</span><span class="su">{{c.s}}</span></div>
+            </sc-for>
+            <div class="card md slot"></div>
+            <div class="card md slot"></div>
+          </div>
+          
+        </div>
+        <sc-for list="{{seats}}" as="p" hint-placeholder-count="7">
+          <div class="seat" style="left: {{p.x}}%; top: {{p.y}}%">
+            <sc-if value="{{p.shown}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; gap: 2px; margin-bottom: 8px">
+                <sc-for list="{{p.cards}}" as="c" hint-placeholder-count="2">
+                  <div class="card rv" style="color: {{c.color}}"><span>{{c.r}}</span><span class="su">{{c.s}}</span></div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div class="pod {{p.cls}}">
+              <div class="av" style="background: {{p.hue}}">{{p.ini}}</div>
+              <span style="font-size: 12px; font-weight: 600">{{p.name}}</span>
+              <span class="mono" style="font-size: 12px; color: #E6B85C">{{p.stack}}</span>
+            </div>
+            <sc-if value="{{p.hasEq}}" hint-placeholder-val="{{false}}">
+              <span class="mono" style="font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: rgba(0,0,0,.6); color: {{p.hue}}">{{p.eq}}</span>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); display: flex; gap: 8px; opacity: .55">
+      <div class="card xl" style="color: {{j1}}; transform: rotate(-5deg)"><span>J</span><span class="su">♠</span></div>
+      <div class="card xl" style="color: {{j2}}; transform: rotate(5deg)"><span>J</span><span class="su">♣</span></div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"fourColor":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const four = this.props.fourColor ?? true;
+    const fc = { '♠': '#17191B', '♥': '#C42B38', '♦': '#1E5BC6', '♣': '#1B7F45' };
+    const col = (s) => four ? fc[s] : ((s === '♥' || s === '♦') ? '#C42B38' : '#17191B');
+    const mk = (r, s) => ({ r, s, color: col(s) });
+    const base = { shown: false, cards: [], hasEq: false, eq: '' };
+    return {
+      j1: col('♠'), j2: col('♣'),
+      board: [mk('Q', '♠'), mk('8', '♥'), mk('3', '♥')],
+      seats: [
+        { ...base, name: 'Priya', ini: 'PR', stack: 260, x: 4, y: 76, hue: '#C9A7E0', cls: 'folded' },
+        { ...base, name: 'Kim', ini: 'KI', stack: 222, x: 2, y: 47, hue: '#8FD0CF', cls: 'folded' },
+        { ...base, name: 'Leo', ini: 'LE', stack: 205, x: 12, y: 16, hue: '#A7B8E8', cls: 'folded' },
+        { ...base, name: 'Maya', ini: 'MA', stack: 0, x: 50, y: 3, hue: '#E9B872', cls: 'allin', shown: true, cards: [mk('A', '♥'), mk('5', '♥')], hasEq: true, eq: '44%' },
+        { ...base, name: 'Dev', ini: 'DE', stack: 118, x: 88, y: 16, hue: '#9CC5A1', cls: 'folded' },
+        { ...base, name: 'Ari', ini: 'AR', stack: 371, x: 96, y: 47, hue: '#E8A3A3', cls: 'allin', shown: true, cards: [mk('Q', '♣'), mk('10', '♣')], hasEq: true, eq: '56%' },
+        { ...base, name: 'Jonah', ini: 'JO', stack: 0, x: 96, y: 76, hue: '#D9C79A', cls: 'out' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

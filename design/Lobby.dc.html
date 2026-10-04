@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Felt — Start a game</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#262626}
+a{color:#E6B85C}a:hover{color:#F4D28E}
+.app{font-family:'Bricolage Grotesque',system-ui,sans-serif;color:#ECE8DF;background:#262626}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.muted{color:#ABABAB}
+.panel{background:#303030;border:1px solid #3D3D3D;border-radius:18px}
+.btn{height:48px;padding:0 20px;border-radius:12px;border:1px solid #4A4A4A;background:#383838;color:#ECE8DF;font:600 15px 'Bricolage Grotesque',sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.btn.primary{background:#E6B85C;border-color:#E6B85C;color:#1A1408}
+.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#ABABAB;font-weight:600}
+.field{height:46px;border-radius:12px;border:1px solid #4A4A4A;background:#1F1F1F;color:#ECE8DF;padding:0 14px;font:500 15px 'Bricolage Grotesque',sans-serif;box-sizing:border-box;width:100%}
+.f{display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:600}
+.seg{display:flex;padding:4px;gap:4px;background:#1F1F1F;border:1px solid #4A4A4A;border-radius:12px}
+.seg button{flex:1;height:38px;border:0;border-radius:9px;background:transparent;color:#ABABAB;font:600 14px 'Bricolage Grotesque',sans-serif;cursor:pointer}
+.seg button.on{background:#444444;color:#ECE8DF;box-shadow:inset 0 0 0 1px #E6B85C}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid #3A3A3A}
+.switch{appearance:none;-webkit-appearance:none;width:44px;height:26px;border-radius:999px;background:#4A4A4A;position:relative;cursor:pointer;margin:0;flex:none}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#ECE8DF;transition:left .15s}
+.switch:checked{background:#E6B85C}.switch:checked::after{left:21px;background:#1A1408}
+.card{background:#F6F2E9;border-radius:10px;box-shadow:0 10px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;font-weight:700;line-height:1;font-variant-emoji:text;width:96px;height:134px;padding:10px 12px;font-size:36px}
+.card .su{align-self:flex-end;font-size:1.35em}
+</style>
+</helmet>
+<div class="app" style="min-height: 100vh">
+  <div style="max-width: 1240px; margin: 0 auto; padding: 32px 24px 48px; display: flex; flex-direction: column; gap: 36px">
+    <header style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#E6B85C" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c3 3.2 7 5.6 7 9.2a3.6 3.6 0 0 1-6.2 2.5L13.5 19h-3l.7-4.3A3.6 3.6 0 0 1 5 12.2C5 8.6 9 6.2 12 3z"></path></svg>
+        <span style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em">Felt</span>
+      </div>
+      <a href="#" style="font-weight: 600">Sign in</a>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+      <div style="flex: 1 1 380px; display: flex; flex-direction: column; gap: 28px; padding-top: 12px">
+        <h1 style="margin: 0; font-size: clamp(44px, 6vw, 76px); line-height: .95; letter-spacing: -0.035em; font-weight: 800">Home game,<br>real table.</h1>
+        <p class="muted" style="margin: 0; font-size: 18px; line-height: 1.5; max-width: 440px">Deal a private game for your friends. The host handles buy-ins and chip counts; everyone gets a clean ledger and who-owes-who at the end.</p>
+        <div style="display: flex; gap: 12px; padding: 18px 0 8px">
+          <div class="card" style="color: #17191B; transform: rotate(-8deg)"><span>A</span><span class="su">♠</span></div>
+          <div class="card" style="color: #C42B38; transform: rotate(3deg) translateY(-8px)"><span>A</span><span class="su">♥</span></div>
+        </div>
+        <div class="panel" style="padding: 20px; display: flex; flex-direction: column; gap: 14px; max-width: 460px">
+          <span style="font-weight: 700; font-size: 18px">Join a game</span>
+          <div style="display: flex; gap: 10px">
+            <label style="flex: 1"><span class="label" style="display: block; margin-bottom: 8px">Room code</span>
+              <input class="field mono" placeholder="RVR-0000" style="letter-spacing: .1em; text-transform: uppercase"></label>
+            <button class="btn" style="align-self: flex-end">Join</button>
+          </div>
+        </div>
+      </div>
+
+      <form class="panel" style="flex: 1 1 520px; padding: 28px; display: flex; flex-direction: column; gap: 22px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
+          <h2 style="margin: 0; font-size: 26px; letter-spacing: -0.02em">Start a game</h2>
+          <span class="muted" style="font-size: 14px">You'll be the host</span>
+        </div>
+        <label class="f">Game name<input class="field" defaultValue="Friday Night Game"></label>
+        <div class="f"><span>Game</span>
+          <div class="seg"><button type="button" class="on" aria-pressed="true">No-Limit Hold'em</button><button type="button">Pot-Limit Omaha</button></div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px">
+          <label class="f">Small blind<input class="field mono" defaultValue="1"></label>
+          <label class="f">Big blind<input class="field mono" defaultValue="2"></label>
+          <label class="f">Seats<select class="field"><option>6</option><option selected="selected">8</option><option>9</option></select></label>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+          <label class="f">Min buy-in<input class="field mono" defaultValue="100"></label>
+          <label class="f">Max buy-in<input class="field mono" defaultValue="400"></label>
+        </div>
+        <div>
+          <div class="row"><div><div style="font-weight: 600">Host approves buy-ins</div><div class="muted" style="font-size: 14px; margin-top: 2px">Every buy-in and rebuy goes on the ledger</div></div><input type="checkbox" class="switch" aria-label="Host approves buy-ins" defaultChecked="{{true}}"></div>
+          <div class="row"><div><div style="font-weight: 600">Allow running it more than once</div><div class="muted" style="font-size: 14px; margin-top: 2px">All-in players vote to run 1, 2 or 3 times</div></div><input type="checkbox" class="switch" aria-label="Allow running it more than once" defaultChecked="{{true}}"></div>
+          <div class="row"><div><div style="font-weight: 600">Reveal the runout after a fold</div><div class="muted" style="font-size: 14px; margin-top: 2px">Show the cards that would have come</div></div>
+            <select class="field" aria-label="Who can reveal" style="width: 170px"><option>Anyone can</option><option>Winner only</option><option>Host only</option><option>Off</option></select></div>
+          <div class="row"><div><div style="font-weight: 600">Losing hands at showdown</div><div class="muted" style="font-size: 14px; margin-top: 2px">All-in and last-called hands are always shown</div></div>
+            <select class="field" aria-label="Losing hands at showdown" style="width: 170px"><option>Player chooses</option><option>Always shown</option></select></div>
+        </div>
+        <button class="btn primary" type="submit" style="height: 56px; font-size: 17px">Create table</button>
+      </form>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

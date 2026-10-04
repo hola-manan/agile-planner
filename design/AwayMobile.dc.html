@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Felt — Away mode (phone)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#262626}
+.app{font-family:'Bricolage Grotesque',system-ui,sans-serif;color:#ECE8DF;background:#262626}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.muted{color:#ABABAB}
+.btn{height:52px;border-radius:14px;border:1px solid #4A4A4A;background:#383838;color:#ECE8DF;font:700 16px 'Bricolage Grotesque',sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;text-decoration:none}
+.btn.primary{background:#E6B85C;border-color:#E6B85C;color:#1A1408}
+.btn.danger{border-color:#6E3A36;color:#F2A096;background:#3A2726}
+.card{background:#F6F2E9;border-radius:7px;box-shadow:0 5px 12px rgba(0,0,0,.45);display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;font-weight:700;line-height:1;font-variant-emoji:text}
+.card .su{align-self:flex-end;font-size:1.3em}
+.card.md{width:44px;height:62px;padding:5px 6px;font-size:18px}
+.slot{background:rgba(0,0,0,.14);border:1.5px dashed rgba(236,232,223,.3);box-shadow:none}
+.seat{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2}
+.pod{display:flex;flex-direction:column;align-items:center;padding:5px 8px;background:#333333;border:1px solid #4A4A4A;border-radius:12px;min-width:58px}
+.pod.folded{opacity:.45}
+.av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:11px;color:#14110C;margin-top:-16px;border:2px solid #333333}
+</style>
+</helmet>
+<div class="app" style="width: 390px; height: 844px; display: flex; flex-direction: column; overflow: hidden">
+  <header style="display: flex; align-items: center; justify-content: center; padding: 20px 16px 6px; height: 44px">
+    <div style="text-align: center">
+      <div style="font-weight: 700; font-size: 15px">Friday Night Game</div>
+      <div class="muted" style="font-size: 12px">Hand <span class="mono">#46</span></div>
+    </div>
+  </header>
+
+  <div style="flex: 1; padding: 34px 40px 44px; position: relative">
+    <div style="position: relative; height: 100%; border-radius: 999px; background: #1C1C1C; padding: 10px; box-sizing: border-box">
+      <div style="position: relative; width: 100%; height: 100%; border-radius: 999px; background: radial-gradient(ellipse at 50% 40%, #3DAA6E 0%, #1F8549 75%); box-shadow: inset 0 0 0 2px rgba(255,255,255,.14)">
+        <div style="position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%); display: flex; flex-direction: column; align-items: center; gap: 10px">
+          <span style="padding: 4px 12px; border-radius: 999px; background: rgba(0,0,0,.3); font-size: 13px">Pot <b class="mono" style="color: #F4D28E">14</b></span>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px">
+            <sc-for list="{{board}}" as="c" hint-placeholder-count="3">
+              <div class="card md" style="color: {{c.color}}"><span>{{c.r}}</span><span class="su">{{c.s}}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <sc-for list="{{seats}}" as="p" hint-placeholder-count="7">
+          <div class="seat" style="left: {{p.x}}%; top: {{p.y}}%">
+            <div class="pod {{p.cls}}">
+              <div class="av" style="background: {{p.hue}}">{{p.ini}}</div>
+              <span style="font-size: 12px; font-weight: 600">{{p.name}}</span>
+              <span class="mono" style="font-size: 12px; color: #E6B85C">{{p.stack}}</span>
+            </div>
+          </div>
+        </sc-for>
+        <div class="seat" style="left: 50%; top: 100%">
+          <div class="pod" style="border-style: dashed; opacity: .75">
+            <div class="av" style="background: #F2D9A0">YO</div>
+            <span style="font-size: 12px; font-weight: 700">You</span>
+            <span class="mono" style="font-size: 12px; color: #E6B85C">476</span>
+          </div>
+          <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: #3A3528; color: #F4D28E">Away</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 16px 16px 22px; background: #303030; border-top: 1px solid #6A5A30; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <div style="width: 40px; height: 40px; border-radius: 50%; background: #3A3528; display: grid; place-items: center; flex: none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E6B85C" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+      </div>
+      <div>
+        <div style="font-weight: 700; font-size: 17px">You're away</div>
+        <div class="muted" style="font-size: 13px">Seat held until you're back · skipping blinds</div>
+      </div>
+    </div>
+    <label style="display: flex; align-items: center; gap: 10px; font-size: 14px"><input type="checkbox" defaultChecked="{{true}}" style="accent-color: #E6B85C; width: 20px; height: 20px; margin: 0">Wait for big blind when I'm back</label>
+    <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px">
+      <a class="btn danger" href="LeaveSeatMobile.dc.html">Leave seat</a>
+      <button class="btn primary">I'm back</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"fourColor":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const four = this.props.fourColor ?? true;
+    const fc = { '♠': '#17191B', '♥': '#C42B38', '♦': '#1E5BC6', '♣': '#1B7F45' };
+    const col = (s) => four ? fc[s] : ((s === '♥' || s === '♦') ? '#C42B38' : '#17191B');
+    const mk = (r, s) => ({ r, s, color: col(s) });
+    return {
+      board: [mk('J', '♦'), mk('7', '♠'), mk('4', '♥')],
+      seats: [
+        { name: 'Priya', ini: 'PR', stack: 252, x: 4, y: 74, hue: '#C9A7E0', cls: '' },
+        { name: 'Kim', ini: 'KI', stack: 224, x: 2, y: 45, hue: '#8FD0CF', cls: 'folded' },
+        { name: 'Leo', ini: 'LE', stack: 229, x: 12, y: 16, hue: '#A7B8E8', cls: '' },
+        { name: 'Maya', ini: 'MA', stack: 455, x: 50, y: 2, hue: '#E9B872', cls: 'folded' },
+        { name: 'Dev', ini: 'DE', stack: 112, x: 88, y: 16, hue: '#9CC5A1', cls: '' },
+        { name: 'Ari', ini: 'AR', stack: 826, x: 98, y: 45, hue: '#E8A3A3', cls: 'folded' },
+        { name: 'Jonah', ini: 'JO', stack: 200, x: 96, y: 74, hue: '#D9C79A', cls: 'folded' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
