@@ -107,6 +107,8 @@ export function primeRoom(code, view) {
 // ─── the hook ────────────────────────────────────────────────────────────────
 
 const RESYNC_STATUSES = new Set([403, 404, 409]);
+/** Refetch delays after a transient failure (429 / 5xx / network), reset by the next success. */
+const TRANSIENT_BACKOFF = [400, 1200, 3000];
 
 export function useRoomData(rawCode) {
   const code = normalizeCode(rawCode);
@@ -120,6 +122,8 @@ export function useRoomData(rawCode) {
   const verRef = useRef(view ? view.version : -1);
   const wantRef = useRef(0); // highest version announced by realtime
   const lagRetryRef = useRef(0);
+  const transientRef = useRef(0); // consecutive transient refetch failures (see TRANSIENT_BACKOFF)
+  const refreshRef = useRef(null);
   const inflightRef = useRef(null);
   const againRef = useRef(false);
   const aliveRef = useRef(true);
@@ -172,10 +176,18 @@ export function useRoomData(rawCode) {
         const cur = getSession(code);
         if ((cur ? cur.token : null) !== tokenUsed) againRef.current = true; // identity changed: fetch again
       }
+      transientRef.current = 0;
     } catch (err) {
       if (!aliveRef.current) return;
       if (err.code === 'not_found' || !viewRef.current) setError(err);
-      // A transient failure while we already have a view: keep showing it; the next event refetches.
+      // A transient failure (rate limit, server hiccup, network) while we already have a view: keep
+      // showing it and refetch a few times with backoff, so a missed update can't leave us stale until
+      // the next event. Other errors wait for the next event as before.
+      const transient = err.status === 429 || err.status >= 500 || !err.status;
+      if (transient && viewRef.current && transientRef.current < TRANSIENT_BACKOFF.length) {
+        const wait = TRANSIENT_BACKOFF[transientRef.current++];
+        setTimeout(() => aliveRef.current && refreshRef.current && refreshRef.current(), wait);
+      }
     } finally {
       if (aliveRef.current) setLoading(false);
     }
@@ -202,6 +214,7 @@ export function useRoomData(rawCode) {
     inflightRef.current = p;
     return p;
   }, [fetchOnce]);
+  refreshRef.current = refresh;
 
   // initial load + resync when the tab comes back / the network returns
   useEffect(() => {

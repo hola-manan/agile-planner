@@ -127,11 +127,16 @@ async function assertNoReload(p) {
   assert(await p.page.evaluate(() => window.__live === true), p.name + ' reloaded');
 }
 async function viewOf(p) {
-  return p.page.evaluate(async (code) => {
-    const s = JSON.parse(localStorage.getItem('felt:' + code) || 'null');
-    const r = await fetch('/api/state?code=' + code, { headers: s ? { 'x-felt-token': s.token } : {} });
-    return (await r.json()).view;
-  }, CODE);
+  // The test polls far harder than a real client; ride out a transient 429/5xx instead of failing.
+  for (let attempt = 0; ; attempt++) {
+    const v = await p.page.evaluate(async (code) => {
+      const s = JSON.parse(localStorage.getItem('felt:' + code) || 'null');
+      const r = await fetch('/api/state?code=' + code, { headers: s ? { 'x-felt-token': s.token } : {} });
+      return r.ok ? (await r.json()).view : null;
+    }, CODE);
+    if (v || attempt >= 5) return v;
+    await sleep(500 * (attempt + 1));
+  }
 }
 async function shot(label, p) {
   await sleep(500);
@@ -152,7 +157,30 @@ async function whoseTurn(ps) {
 }
 
 /** Plays the current hand to the end: check when free, else call. */
-async function checkDown(ps, label) {
+/** The armed player's "Call any" fired on its own: their call/check is in this street's hand log. */
+async function assertPreFired(a) {
+  const w = await viewOf(players[0]);
+  const log0 = (w.hand && w.hand.no === a.hand ? w.hand.log : (w.lastHand && w.lastHand.log)) || [];
+  const hit = log0.find((e) => e.pid === a.p.pid && e.street === a.street && /call|check/i.test(e.text));
+  assert(hit, a.p.name + ' pre-action should have called/checked on ' + a.street + ': ' + JSON.stringify(log0.slice(-6)));
+  log(a.p.name, 'pre-action fired by itself →', hit.text, hit.amount != null ? hit.amount : '');
+}
+
+/** POSTs triggered by a key press (not a click) → asserts 200. */
+async function actKey(p, key) {
+  const [res] = await Promise.all([
+    p.page.waitForResponse((r) => r.url().startsWith(ORIGIN + '/api/act') && r.request().method() === 'POST' && !/"type":"tick"/.test(r.request().postData() || ''), { timeout: T }),
+    p.page.keyboard.press(key),
+  ]);
+  assert(res.status() === 200, `${p.name}: key ${key} → ${res.status()} ${await res.text().catch(() => '')}`);
+  return JSON.parse(res.request().postData() || '{}');
+}
+
+/** Plays the current hand to the end: check when free, else call. Desktop players use the keyboard
+ *  (K / C), the phone player taps. Before the first decision, one waiting desktop player arms the
+ *  "Call any" pre-action with A and we check it fires on their turn without another key press. */
+async function checkDown(ps, label, { preAction = false } = {}) {
+  let armed = null;
   for (let i = 0; i < 40; i++) {
     const v = await viewOf(ps[0]);
     if (!v.hand || v.hand.phase === 'complete') return v;
@@ -161,10 +189,47 @@ async function checkDown(ps, label) {
       await sleep(400);
       continue;
     }
+    if (preAction && !armed) {
+      const waiter = ps.find((q) => !q.mobile && q !== p && v.hand.players.some((x) => x.pid === q.pid && !x.folded && !x.allIn));
+      if (waiter) {
+        const before = JSON.stringify(v.hand.players.find((x) => x.pid === waiter.pid).lastAction || null);
+        await waiter.page.keyboard.press('a');
+        await bar(waiter).getByRole('button', { name: /^Call any/ }).and(waiter.page.locator('[aria-pressed="true"]')).waitFor({ timeout: T });
+        armed = { p: waiter, before, street: v.hand.street, hand: v.hand.no };
+        log(waiter.name, 'armed Call any with A');
+      }
+    }
+    if (armed && armed.p && p === armed.p) {
+      // The pre-action must fire by itself once the turn reaches the armed player: their lastAction
+      // changes to a call/check this street without any key press from the test.
+      const a = armed;
+      await until(a.p.name + ' pre-action fired', async () => {
+        const w = await viewOf(ps[0]);
+        if (!w.hand || w.hand.no !== a.hand) return true;
+        const me = w.hand.players.find((x) => x.pid === a.p.pid);
+        return w.hand.street !== a.street || JSON.stringify(me.lastAction || null) !== a.before;
+      }, T);
+      await assertPreFired(a);
+      armed = 'done';
+      continue;
+    }
+    if (armed && armed.p) {
+      // the armed player may already have been passed by (it fired between our polls): detect it
+      const me = v.hand.players.find((x) => x.pid === armed.p.pid);
+      if (v.hand.no !== armed.hand || v.hand.street !== armed.street || JSON.stringify(me.lastAction || null) !== armed.before) {
+        await assertPreFired(armed);
+        armed = 'done';
+      }
+    }
     await bar(p).getByRole('button', { name: 'Fold', exact: true }).waitFor({ timeout: T });
-    const checkBtn = bar(p).getByRole('button', { name: 'Check', exact: true });
-    if (await checkBtn.count()) await act(p, checkBtn);
-    else await act(p, bar(p).getByRole('button', { name: /^Call/ }));
+    const canCheck = (await bar(p).getByRole('button', { name: 'Check', exact: true }).count()) > 0;
+    if (p.mobile) {
+      if (canCheck) await act(p, bar(p).getByRole('button', { name: 'Check', exact: true }));
+      else await act(p, bar(p).getByRole('button', { name: /^Call/ }).first());
+    } else {
+      const sent = await actKey(p, canCheck ? 'k' : 'c');
+      assert(sent.move === (canCheck ? 'check' : 'call'), `${p.name}: key sent ${JSON.stringify(sent)}`);
+    }
   }
   throw new Fail('hand did not finish: ' + label);
 }
@@ -234,7 +299,7 @@ async function main() {
   log('hand 1 dealt');
   await shot('03-preflop', H);
   await shot('03-preflop', C);
-  let v = await checkDown(ps, 'hand 1');
+  let v = await checkDown(ps, 'hand 1', { preAction: true });
   assert(v.hand.results, 'hand 1 has results');
   log('hand 1 done:', v.hand.results.endedBy, JSON.stringify(v.hand.results.awards));
   await shot('04-hand1-complete', B);
