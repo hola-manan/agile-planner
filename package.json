@@ -1,0 +1,14 @@
+{
+  "name": "felt",
+  "private": true,
+  "description": "Felt — private home-game poker (Hatchable app). No dependencies, no build step.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node --import ./dev/register.mjs dev/server.mjs",
+    "dev:watch": "node --watch-path=api --watch-path=lib --watch-path=dev --import ./dev/register.mjs dev/server.mjs",
+    "test": "node --test test/*.test.js"
+  }
+}
