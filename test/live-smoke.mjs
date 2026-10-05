@@ -328,6 +328,20 @@ async function main() {
   await until('vote or runout', async () => ['ritVote', 'runout', 'complete'].includes((await viewOf(ps[0])).hand.phase));
   v = await viewOf(ps[0]);
   if (v.hand.phase === 'ritVote') {
+    // While the players vote, nobody may see the all-in hands: each viewer gets only their own cards.
+    for (const q of ps) {
+      const qv = await viewOf(q);
+      for (const x of qv.hand.players) {
+        if (x.pid === q.pid || x.folded) continue;
+        assert(x.cards.every((c) => c === null), `${q.name} can see ${x.pid}'s cards during the vote`);
+        assert(x.equity == null, `${q.name} sees a win % during the vote`);
+      }
+      assert(!qv.hand.log.some((e) => /shows/.test(e.text)), `${q.name}: a "shows" line is in the log during the vote`);
+      const backs = await q.page.locator('.seat .card-back').count();
+      assert(backs >= 2, `${q.name}: expected face-down backs on the all-in seats during the vote, saw ${backs}`);
+    }
+    log('vote open: all-in hands are face down for every viewer');
+    await shot('05-vote-hidden', C);
     for (const pid of v.hand.ritVote.voters) {
       const q = ps.find((x) => x.pid === pid);
       await act(q, bar(q).getByRole('button', { name: 'Twice', exact: true }));
