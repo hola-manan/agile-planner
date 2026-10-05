@@ -235,11 +235,47 @@ function phaseLabel(h) {
   return STREET[h.street] || h.street;
 }
 
+/** Nearest ancestor that scrolls vertically (the side panel body, or a sheet's body on phones). */
+function scrollParent(el) {
+  for (let n = el && el.parentElement; n; n = n.parentElement) {
+    const oy = getComputedStyle(n).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight) return n;
+  }
+  return null;
+}
+
+/**
+ * Keep the newest line of the running hand in view while the reader is following along: a new
+ * hand starts at the top; each new line scrolls into view unless the reader scrolled away.
+ */
+function useFollowLog(endRef, handNo, lines) {
+  const follow = useRef(true);
+  const lastNo = useRef(handNo);
+  useLayoutEffect(() => {
+    const newHand = lastNo.current !== handNo;
+    lastNo.current = handNo;
+    if (newHand) follow.current = true;
+    const end = endRef.current;
+    const sp = end && scrollParent(end);
+    if (!sp) return undefined;
+    const below = () => end.getBoundingClientRect().bottom - sp.getBoundingClientRect().bottom;
+    if (newHand) sp.scrollTop = 0;
+    else if (follow.current && below() > 0) sp.scrollTop += below() + 8;
+    const onScroll = () => {
+      follow.current = below() <= 48;
+    };
+    sp.addEventListener('scroll', onScroll, { passive: true });
+    return () => sp.removeEventListener('scroll', onScroll);
+  }, [handNo, lines]);
+}
+
 export function HandLog() {
   const { view } = useRoom();
   const h = view.hand;
   const last = view.lastHand;
   const [showLast, setShowLast] = useState(false);
+  const endRef = useRef(null);
+  useFollowLog(endRef, h ? h.no : null, h ? h.log.length : 0);
 
   if (!h && !last) {
     return html`<div class="side-empty">
@@ -256,7 +292,8 @@ export function HandLog() {
         <span>Hand <span class="mono">#${h.no}</span></span>
         <span class="muted">${phaseLabel(h)}</span>
       </div>
-      <${LogGroups} log=${h.log} view=${view} />`}
+      <${LogGroups} log=${h.log} view=${view} />
+      <div ref=${endRef} class="log-end" aria-hidden="true"></div>`}
     ${last &&
     html`<div class=${cx('log-last', !h && 'is-only')}>
       <div class="log-title">

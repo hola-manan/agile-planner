@@ -229,6 +229,8 @@ Action `{ type:'act', move:'fold'|'check'|'call'|'raise', to? }` — `to` = tota
     A short all-in raise does not change `minRaise` and does NOT reopen raising for players who already acted:
     they must act again (call/fold) but may not raise. Track with `acted`: players with `acted=true` facing a
     short all-in raise get `mayRaise=false` for the rest of the street (store per player `raiseLocked`).
+    Exception (TDA rule, as implemented and tested): if the short raises made since a player last acted add
+    up to a full raise (`currentBet − what they had matched ≥ minRaise`), raising is open to them again.
   - `raise` illegal if no other player can still act (everyone else all-in/folded) — then only call/fold/check.
 - Every voluntary action: `timeouts = 0`, `acted = true`, `lastAction = {type, amount}` where type is
   `'fold'|'check'|'call'|'bet'|'raise'|'allin'` (bet = raise when currentBet was 0; allin when stack reaches 0),
@@ -442,7 +444,8 @@ View = {
   hand: null | {
     no, phase, street, variant, sb, bb, button, sbSeat, bbSeat,
     board: string[],                            // shared board
-    runs, currentRun, runBoards: string[][],    // runBoards empty unless runout started; each run's board so far
+    runs, currentRun, runBoards: string[][],    // empty until an all-in runout starts (then each run's board so far)
+                                                // or a river showdown settles (then [board], per §6.2)
     runResults: [ { winners, handName } ],
     potTotal,                                   // Σ committed incl. current bets
     potCenter,                                  // Σ committed − Σ current-street bets (chips already in the middle)
@@ -471,6 +474,14 @@ View = {
   chat: [ { id, t, pid, name, text } ],
 }
 ```
+
+Additive fields the UI relies on (all derived from public information, never secret):
+`hand.players[].name`; `hand.results.runs[].{amount, awards}`, `hand.results.pots[].{winnersByRun, returned}`,
+`hand.results.winners`; `hand.runout.name` and `lastHand.runout` (who revealed it); `lastHand.players[]`
+(`{ pid, name, seat, cards /*only cards that were shown*/, folded, won, handName }`); log entries may carry
+`cards` (public cards only: board / shown / runout), `run` and `handName`. `ledger.entries[].byName`,
+`ledger.players[].{seat, seated, adjustments}` and `ledger.totals.{buyInCount, players, hands, biggestWinner}`
+come from `summarize()`; adjust entries also carry `mode` and `target` (the amount the host typed).
 
 ## 11. Frontend
 
@@ -501,6 +512,9 @@ Screens (one SPA, `public/index.html`):
     table, right side panel (tabs Hand / Chat / Players + "your session": bought in, net, at-showdown pref, Request a
     buy-in, Away, Leave seat).
   - Mobile < 900px: compact header, portrait oval, bottom sheet action bar; Ledger/Host/Chat/Log via a menu → full-screen sheets.
+    As in design/Mobile.dc.html, other seats show their street amount in their tag (`Bet 60`, `BB · 2`) instead
+    of chips on the felt (only my own bet is drawn as a chip); short phones (height ≤ 740px) use a compact
+    table, and a phone on its side scrolls with the action bar pinned.
   - Seats: empty seats show "Sit" (opens buy-in dialog with seat). Seat pods show avatar initials, name, stack,
     status tags (Folded, Check, Bet 60, Call 60, All-in, Away, Sitting out/Busted, SB/BB, "Rebuy pending", "Leaving"),
     D button chip, face-down card backs for players in the hand, face-up (flip animation, slightly larger) when shown,

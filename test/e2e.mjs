@@ -141,6 +141,10 @@ function isFontNoise(text, url) {
 
 function watch(p) {
   const { page, name } = p;
+  p.ticks = 0;
+  page.on('request', (req) => {
+    if (req.method() === 'POST' && req.url() === BASE + '/api/act' && /"type":"tick"/.test(req.postData() || '')) p.ticks++;
+  });
   page.on('pageerror', (e) => problems.push(`${name}: page error: ${e.message}`));
   page.on('console', (m) => {
     if (m.type() !== 'error') return;
@@ -380,6 +384,12 @@ step('host creates a game in the lobby', async () => {
   CODE = new URL(pg.url()).searchParams.get('room');
   await waitText(H, pg.locator('.room-head'), 'E2E Friday');
   await waitText(H, pg.locator('.room-sub'), 'Waiting to deal');
+  // the four-colour deck toggle flips the whole page (and remembers it)
+  const deck = pg.locator('.deck-toggle');
+  await deck.click();
+  assert(await pg.evaluate(() => document.documentElement.classList.contains('two-color') && localStorage.getItem('felt:fourColor') === 'false'), 'two-colour deck on');
+  await deck.click();
+  assert(await pg.evaluate(() => !document.documentElement.classList.contains('two-color')), 'four-colour deck back on');
   log('room', CODE);
 });
 
@@ -512,8 +522,10 @@ step('host approves both requests from Host tools (one with an edited amount) an
 
 // Seats 0 (Maya), 2 (Ben), 4 (Cleo). Hand 1: button Maya, SB Ben, BB Cleo; Maya acts first.
 step('hand 1 deals when the clients tick (3-handed)', async () => {
+  const ticksBefore = players.reduce((a, p) => a + p.ticks, 0);
   await advance(3200);
   for (const p of [H, B, C]) await waitHand(p, 1);
+  assert(players.reduce((a, p) => a + p.ticks, 0) > ticksBefore, 'the deal came from a client tick');
   await waitTurn(H);
   // everyone sees their own two cards; others are face down
   assert((await H.page.locator('.hero-cards .card:not(.card-back)').count()) === 2, 'Maya should see 2 hole cards');
@@ -582,7 +594,8 @@ step('hand 1 after the showdown: Ben (folded preflop) shows one card; the loser 
   // realtime: Maya and Cleo now see exactly one of Ben's cards
   await until('Maya sees one Ben card', async () => (await seatOf(H, 'Ben').locator('.seat-cards .card:not(.card-back)').count()) === 1);
   await until('Cleo sees one Ben card', async () => (await seatOf(C, 'Ben').locator('.seat-cards .card:not(.card-back)').count()) === 1);
-  await waitText(H, H.page.locator('.handlog'), 'shows');
+  await waitText(H, H.page.locator('.handlog'), 'Ben shows'); // the hand log, live
+  await waitText(C, seatOf(C, 'Ben'), 'Folded · showed');
   if (!ctxNotes.hand1.cleoShown) {
     // Cleo lost without having to show: she picks "Hide" (keep hidden)
     await waitText(C, bar(C), 'Show your hand?');
@@ -818,6 +831,7 @@ step('hand 4: Ben chooses to leave after this hand (realtime "Leaving" tag)', as
   await d.getByText('After this hand').waitFor();
   await d.getByText('Right now').waitFor();
   await shot('18-leave-dialog', B);
+  await shotAsPhone('18-leave-dialog', B); // the same dialog as a bottom sheet
   await act(B, d.getByRole('button', { name: 'Leave seat' }));
   await d.waitFor({ state: 'detached' });
   await waitText(B, bar(B), 'when this hand ends');
@@ -829,8 +843,11 @@ step('hand 4: Ben chooses to leave after this hand (realtime "Leaving" tag)', as
 step('hand 4: Maya’s clock runs out → she is folded and set away (the clients’ tick does it)', async () => {
   const v = await viewOf(H);
   assert(v.deadlineKind === 'action' && v.hand.toAct === v.me.id, 'Maya is on the clock');
+  const ticksBefore = players.reduce((a, p) => a + p.ticks, 0);
   await advance(v.deadline - v.serverNow + 400);
   await waitText(H, bar(H), 'You’re away');
+  // nobody but the browsers' own deadline timers asked the server to move on
+  assert(players.reduce((a, p) => a + p.ticks, 0) > ticksBefore, 'a client tick processed the timeout');
   await waitText(H, bar(H), 'timed out');
   for (const p of [B, C]) await waitText(p, seatOf(p, 'Maya'), 'Away'); // realtime
   const v2 = await viewOf(H);

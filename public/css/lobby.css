@@ -776,6 +776,24 @@
   position: relative;
   z-index: 5;
 }
+/* Phone on its side (or any very short window): the portrait table can't fit above the dock, so
+   the page scrolls instead — the table keeps a usable size and the action bar stays pinned. */
+@media (max-width: 899px) and (max-height: 560px) {
+  .room-m {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+  .room-m-table {
+    flex: none;
+    height: 560px;
+  }
+  .room-m-dock {
+    position: sticky;
+    bottom: 0;
+  }
+}
 .room-m-ended {
   flex: 1;
   min-height: 0;
