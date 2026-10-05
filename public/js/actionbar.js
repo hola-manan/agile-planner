@@ -12,6 +12,7 @@ import { html, useState, useEffect, useRef, useMemo, Fragment } from './h.js';
 import { useRoom, useClock, serverNow } from './room.js';
 import { Button, Avatar, Icon, cx, fmt, cardText, countdownText, useIsMobile } from './ui.js';
 import { useShowPick, runWord } from './table.js';
+import { useBackPref } from './side.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const VOTE_LABEL = { 1: 'Once', 2: 'Twice', 3: '3×' };
@@ -436,7 +437,7 @@ function Waiting({ view, mobile, now, title, sub, children, icon }) {
 
 function AwayControls({ view, act, busy, mobile, onLeave }) {
   const me = view.me;
-  const [waitBB, setWaitBB] = useState(true);
+  const [waitBB, setWaitBB] = useBackPref();
   const why =
     me.awayBy === 'host'
       ? 'The host set you away.'

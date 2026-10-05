@@ -266,12 +266,12 @@ function Tag({ tone, children, title }) {
   return html`<span class=${cx('tag', tone && 'tag-' + tone)} title=${title}>${children}</span>`;
 }
 
-function EmptySeat({ seat, pos, canSit, reservedName, onSit, mobile }) {
+function EmptySeat({ seat, pos, canSit, reservedName, mine, onSit, mobile }) {
   if (reservedName) {
     return html`<div class="seat seat-empty-wrap" style=${at(pos)}>
-      <div class="seat-empty seat-reserved" title=${'Reserved for ' + reservedName}>
-        <span class="se-main">Reserved</span>
-        ${!mobile && html`<span class="se-sub">${reservedName}</span>`}
+      <div class=${cx('seat-empty', 'seat-reserved', mine && 'seat-mine')} title=${mine ? 'Your seat request is waiting for the host' : 'Reserved for ' + reservedName}>
+        <span class="se-main">${mine ? 'Requested' : 'Reserved'}</span>
+        ${!mobile && html`<span class="se-sub">${mine ? 'by you' : reservedName}</span>`}
       </div>
     </div>`;
   }
@@ -334,10 +334,16 @@ function Seat({ pos, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin 
   const tags = [];
   const wp = winPill(hand, hp);
   if (wp) tags.push(html`<${Tag} key="win" tone="gold">${wp}<//>`);
-  if (complete && hp && hp.handName) tags.push(html`<${Tag} key="hn">${hp.handName}<//>`);
+  // With several runs a single hand name would describe one board only; the run labels say it.
+  if (complete && hp && hp.handName && !(hand.runs > 1)) tags.push(html`<${Tag} key="hn">${hp.handName}<//>`);
   if (hp && !complete) {
     const pre = positionPrefix(hand, hp);
-    const act = acting ? 'Thinking…' : actionLabel(hp.lastAction);
+    let act = acting ? 'Thinking…' : actionLabel(hp.lastAction);
+    // Phones draw no bet chips for other seats (design/Mobile.dc.html): the tag carries the amount.
+    if (mobile && !acting && hand.phase === 'betting' && hp.bet > 0) {
+      if (!hp.lastAction) act = fmt(hp.bet); // posted blind: "BB · 2"
+      else if (hp.lastAction.type === 'allin') act = 'All-in ' + fmt(hp.bet);
+    }
     const text = [pre, act].filter(Boolean).join(' · ');
     if (text) tags.push(html`<${Tag} key="act" tone=${acting ? 'acting' : hp.lastAction && MONEY_ACTIONS.has(hp.lastAction.type) ? 'hot' : null}>${text}<//>`);
   } else if (hp && complete && folded) {
@@ -389,7 +395,9 @@ function Hero({ me, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin, 
   const wp = winPill(hand, hp);
   if (wp) pills.push(html`<${Tag} key="win" tone="gold">${wp}<//>`);
   if (inHand && folded) pills.push(html`<${Tag} key="fold">${complete ? 'Folded · only you see these' : 'Folded'}<//>`);
-  else if (inHand && me.handName && !equityPhase(hand)) pills.push(html`<${Tag} key="hn" tone="gold">${me.handName}<//>`);
+  else if (inHand && me.handName && !equityPhase(hand) && !(complete && hand.runs > 1)) {
+    pills.push(html`<${Tag} key="hn" tone=${complete && !winner ? null : 'gold'}>${me.handName}<//>`);
+  }
   if (inHand && !complete && !folded) {
     const pre = positionPrefix(hand, hp);
     const act = acting ? null : actionLabel(hp.lastAction);
@@ -441,7 +449,8 @@ function Hero({ me, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin, 
 
   if (mobile) {
     // Phone: cards (when dealt in) sit below the oval; otherwise the pod sits on the rail.
-    if (inHand) return { outside: cards, onFelt: null, mobilePills: pills, eq };
+    // The pod isn't drawn while I'm dealt in, so my winnings get their own tag above my cards.
+    if (inHand) return { outside: cards, onFelt: null, win: wp, eq };
     return {
       outside: null,
       onFelt: html`<div class="seat seat-hero-m" style=${at({ x: 50, y: 100 })}>
@@ -494,7 +503,14 @@ function Center({ view, hand, mobile, win }) {
   const complete = hand.phase === 'complete';
   const pot = hand.phase === 'betting' ? hand.potCenter : hand.potTotal;
   const multi = hand.runBoards.length > 1 || hand.runs > 1;
-  const runNote = hand.runs > 1 ? (complete ? ' · ran ' + runWord(hand.runs) : ' · running it ' + runWord(hand.runs)) : '';
+  const runNote =
+    hand.runs > 1
+      ? mobile
+        ? ' · ' + hand.runs + ' runs'
+        : complete
+          ? ' · ran ' + runWord(hand.runs)
+          : ' · running it ' + runWord(hand.runs)
+      : '';
 
   // Before any street completes nothing is in the middle yet: keep the pill's space, hide it.
   const potPill = html`<div class=${cx('pot', hand.phase === 'betting' && pot === 0 && 'pot-empty')} aria-hidden=${hand.phase === 'betting' && pot === 0 ? 'true' : undefined}>
@@ -622,18 +638,28 @@ export function Table({ onSit } = {}) {
         pos=${pos}
         canSit=${canSit && !s.reservedBy}
         reservedName=${reservedName}
+        mine=${!!(me && s.reservedBy === me.id)}
         onSit=${onSit}
         mobile=${mobile}
       />`);
     }
 
-    if (hp && hand.phase === 'betting' && hp.bet > 0) {
-      const r = rel === 0 ? (mobile ? 0.72 : 0.42) : mobile ? 0.62 : 0.6;
+    // Bet chips: every seat on desktop; on phones only mine (others' tags show their amounts —
+    // a portrait oval leaves no room between the pods and the board, see design/Mobile.dc.html).
+    if (hp && hand.phase === 'betting' && hp.bet > 0 && (!mobile || isHero)) {
+      const r = rel === 0 ? (mobile ? 0.72 : 0.42) : 0.6;
       bets.push(html`<${BetChip} key=${'b' + s.seat} pos=${polar(ang, r)} amount=${hp.bet} />`);
     }
     if (buttonSeat != null && s.seat === buttonSeat && (s.pid || hand)) {
-      const p = isHero ? polar(mobile ? 62 : 58, mobile ? 0.78 : 0.66) : polar(ang - (mobile ? 20 : 15), mobile ? 0.74 : 0.7);
-      dealer = html`<div class="dealer" style=${at(p)} title="Dealer button" aria-label="Dealer">D</div>`;
+      if (mobile && !isHero) {
+        // Phone pods carry cards above and tags below, so the button goes beside the pod, on the
+        // side that faces the middle of the table.
+        const toRight = Math.cos((ang * Math.PI) / 180) <= 0.001;
+        dealer = html`<div class=${cx('dealer', toRight ? 'dealer-r' : 'dealer-l')} style=${at(pos)} title="Dealer button" aria-label="Dealer">D</div>`;
+      } else {
+        const p = isHero ? polar(mobile ? 62 : 58, mobile ? 0.78 : 0.66) : polar(ang - 15, 0.7);
+        dealer = html`<div class="dealer" style=${at(p)} title="Dealer button" aria-label="Dealer">D</div>`;
+      }
     }
   }
 
@@ -650,6 +676,7 @@ export function Table({ onSit } = {}) {
       </div>
       ${hero && hero.outside && html`<div class="hero-m">
         ${hero.eq != null && html`<span class="eq mono hero-m-eq" style=${{ color: hueFor(me.seat) }}>${hero.eq}%</span>`}
+        ${hero.win && html`<span class="tag tag-gold hero-m-win">${hero.win}</span>`}
         ${hero.outside}
       </div>`}
     </div>

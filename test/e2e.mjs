@@ -246,6 +246,13 @@ async function shot(label, ...ps) {
   }
 }
 
+/** Marks the document; a reload (or a full navigation) would lose the mark. */
+async function markLoaded(p) {
+  await p.page.evaluate(() => {
+    window.__e2eLoaded = true;
+  });
+}
+
 /** Fails if the page scrolls sideways. */
 async function noHorizontalScroll(p, where) {
   const w = await p.page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
@@ -349,6 +356,7 @@ step('lobby renders on desktop and phone', async () => {
   C = await newPlayer('Cleo', 'mobile');
   for (const p of [H, C]) {
     await p.page.goto(BASE + '/', { waitUntil: 'load' });
+    await markLoaded(p);
     await p.page.getByRole('button', { name: 'Create table' }).waitFor();
     await p.page.evaluate(() => document.fonts && document.fonts.ready);
     await noHorizontalScroll(p, 'lobby');
@@ -409,6 +417,7 @@ step('Ben opens the invite link, joins and asks for seat 3', async () => {
   B = await newPlayer('Ben', 'desktop');
   const pg = B.page;
   await pg.goto(BASE + '/?room=' + CODE, { waitUntil: 'load' });
+  await markLoaded(B);
   const dlg = dialog(B);
   await dlg.getByRole('heading', { name: 'Join E2E Friday' }).waitFor();
   await shot('02-join', B);
@@ -429,6 +438,7 @@ step('Ben opens the invite link, joins and asks for seat 3', async () => {
 step('Cleo joins on her phone and asks for seat 5', async () => {
   const pg = C.page;
   await pg.goto(BASE + '/?room=' + CODE, { waitUntil: 'load' });
+  await markLoaded(C);
   const dlg = dialog(C);
   await dlg.getByRole('heading', { name: 'Join E2E Friday' }).waitFor();
   await shot('02-join', C);
@@ -632,7 +642,7 @@ step('hand 3: Cleo shoves with the All-in preset, Maya folds, Ben calls → run-
 });
 
 step('hand 3: it runs twice — two boards, the pot is split between the runs', async () => {
-  for (const p of [H, B, C]) await waitText(p, p.page.locator('.tbl-center .pot'), 'running it twice');
+  for (const p of [H, B, C]) await waitText(p, p.page.locator('.tbl-center .pot'), p.mobile ? '2 runs' : 'running it twice');
   await advance(1900); // run 1 flop
   await until('run 1 flop on Maya', async () => (await H.page.locator('.tbl-runs .run').first().locator('.card:not(.card-slot)').count()) >= 3);
   assert((await H.page.locator('.tbl-runs .run').count()) === 2, 'two board rows while running it twice');
@@ -643,7 +653,7 @@ step('hand 3: it runs twice — two boards, the pot is split between the runs', 
     await advance(1900);
     await sleep(150);
   }
-  for (const p of [H, B, C]) await waitText(p, p.page.locator('.tbl-center .pot'), 'ran twice');
+  for (const p of [H, B, C]) await waitText(p, p.page.locator('.tbl-center .pot'), p.mobile ? '2 runs' : 'ran twice');
   const v = await viewOf(H);
   const h = v.hand;
   assert(h.results && h.results.runs.length === 2, 'two runs in the results');
@@ -653,9 +663,329 @@ step('hand 3: it runs twice — two boards, the pot is split between the runs', 
   assert(perRun[0] + perRun[1] === pot && Math.abs(perRun[0] - perRun[1]) <= 1, `pot ${pot} must be split between the runs: ${perRun.join(' + ')}`);
   const labels = await H.page.locator('.tbl-runs .run-label').allInnerTexts();
   assert(labels.length === 2 && labels.every((t) => /Ben|Cleo/.test(t)), 'each run is labelled with its winner: ' + labels.join(' | '));
-  ctxNotes.cleoBusted = v.players.find((x) => x.name === 'Cleo').stack === 0;
-  log('  runs won by', h.results.runs.map((r) => r.winners.map((w) => v.players.find((x) => x.id === w).name).join('+')).join(' / '), '— Cleo busted:', ctxNotes.cleoBusted);
+  // the chips really moved: Σ awards = the pot, and nobody's stack is off
+  const awards = Object.values(h.results.awards).reduce((a, x) => a + x, 0);
+  const committed = h.players.reduce((a, x) => a + x.committed, 0);
+  assert(awards === committed, `awards ${awards} must equal the chips committed ${committed}`);
+  const busted = v.players.filter((x) => x.seat != null && x.stack === 0).map((x) => x.name);
+  ctxNotes.busted = busted[0] || null;
+  log('  runs won by', h.results.runs.map((r) => r.winners.map((w) => v.players.find((x) => x.id === w).name).join('+')).join(' / '), '— busted:', ctxNotes.busted || 'nobody');
   await shot('13-ran-twice', H, B, C);
+});
+
+// ─── between hands: pause, chip adjustments, a busted player's rebuy ────────
+
+const who = (name) => ({ Maya: H, Ben: B, Cleo: C })[name];
+const headerHost = (p = H) => p.page.getByRole('button', { name: /^Host tools/ });
+
+async function openHostTools() {
+  await headerHost().click();
+  const dlg = H.page.getByRole('dialog', { name: 'Host tools' });
+  await dlg.getByRole('heading', { name: 'Host tools' }).waitFor();
+  return dlg;
+}
+
+async function closeTop(p) {
+  const n = await p.page.getByRole('dialog').count();
+  await p.page.keyboard.press('Escape');
+  await until(`${p.name}: a dialog closes`, async () => (await p.page.getByRole('dialog').count()) < n, 5000);
+}
+
+/** Host tools (desktop) → Adjust chips on `name`'s row → fill the form → submit. → response view */
+async function adjustChips(dlg, name, { mode, amount, reason, count }) {
+  const row = dlg.locator('tbody tr').filter({ has: H.page.locator('.tbl-name', { hasText: new RegExp('^' + name + '$') }) });
+  await row.getByRole('button', { name: 'Adjust chips' }).click();
+  const form = dlg.getByRole('form', { name: `Adjust ${name}’s chips` });
+  await form.waitFor();
+  await form.getByRole('button', { name: { add: 'Add', remove: 'Remove', set: 'Set to' }[mode], exact: true }).click();
+  if (reason) await form.getByRole('button', { name: reason, exact: true }).click();
+  await form.getByRole('checkbox', { name: /Count as a buy-in/ }).setChecked(!!count);
+  await form.getByLabel('Amount', { exact: true }).fill(String(amount));
+  const v = await act(H, form.locator('button[type=submit]'));
+  await form.waitFor({ state: 'detached' });
+  return v;
+}
+
+/** Shoot a desktop player's page at phone size too (the layout is width-driven). */
+async function shotAsPhone(label, p) {
+  await p.page.setViewportSize({ width: 390, height: 844 });
+  await sleep(600);
+  await p.page.screenshot({ path: path.join(SHOTS, `e2e-${label}-${p.key}-mobile.png`) });
+  await noHorizontalScroll(p, label + ' at phone width');
+  await p.page.setViewportSize({ width: 1440, height: 1000 });
+  await sleep(300);
+}
+
+step('host pauses after the hand; the table stops dealing (realtime banner)', async () => {
+  const dlg = await openHostTools();
+  await act(H, dlg.getByRole('button', { name: 'Pause after hand' }));
+  await dlg.getByRole('button', { name: 'Keep playing' }).waitFor();
+  await closeTop(H);
+  for (const p of [H, B, C]) await waitText(p, p.page.locator('.room-banner'), 'Pausing after this hand');
+  await advance(31600); // nextHandDelay 30s + 1.5s for the second run: the clients tick, hand 3 is archived
+  for (const p of [H, B, C]) await waitText(p, p.page.locator('.room-banner'), 'paused');
+  await H.page.locator('.room-banner').getByRole('button', { name: 'Resume' }).waitFor();
+  assert((await B.page.locator('.room-banner button').count()) === 0, 'only the host gets the Resume button');
+  const v = await viewOf(H);
+  assert(v.paused && !v.hand && v.lastHand && v.lastHand.no === 3, 'paused with hand 3 archived');
+  for (const p of [B, C]) await waitText(p, p.page.locator('.tbl-center'), 'Paused');
+  await shot('14-paused', B, C);
+});
+
+step('host adjusts chips: add, set and (when nobody busted) a move from one player to another', async () => {
+  const v0 = await viewOf(H);
+  const stack = (v, name) => v.players.find((x) => x.name === name).stack;
+  const dlg = await openHostTools();
+  if (!ctxNotes.busted) {
+    // Nobody busted in the all-in: Cleo hands all her chips to Maya (a side bet) — remove + add,
+    // neither counted as a buy-in, so the books still balance.
+    const x = stack(v0, 'Cleo');
+    await adjustChips(dlg, 'Cleo', { mode: 'remove', amount: x, reason: 'Move from player', count: false });
+    await adjustChips(dlg, 'Maya', { mode: 'add', amount: x, reason: 'Move from player', count: false });
+    ctxNotes.busted = 'Cleo';
+    await waitText(C, bar(C), 'out of chips'); // realtime on her phone
+  } else {
+    await adjustChips(dlg, 'Maya', { mode: 'add', amount: 50, reason: 'Cash rebuy', count: true });
+  }
+  // "Set to" on whoever isn't busted (Ben unless he is), counted as a buy-in
+  const setName = ctxNotes.busted === 'Ben' ? 'Cleo' : 'Ben';
+  const v1 = await viewOf(H);
+  const target = stack(v1, setName) + 100;
+  // open the form and look at it before submitting (before → after preview)
+  const row = dlg.locator('tbody tr').filter({ has: H.page.locator('.tbl-name', { hasText: new RegExp('^' + setName + '$') }) });
+  await row.getByRole('button', { name: 'Adjust chips' }).click();
+  const form = dlg.getByRole('form', { name: `Adjust ${setName}’s chips` });
+  await form.getByRole('button', { name: 'Set to', exact: true }).click();
+  await form.getByLabel('Amount', { exact: true }).fill(String(target));
+  await waitText(H, form.locator('.adjust-after'), String(target));
+  await shot('15-adjust-form', H);
+  await act(H, form.locator('button[type=submit]'));
+  await form.waitFor({ state: 'detached' });
+  await shotAsPhone('15-host-tools', H); // the same dialog as a full-screen sheet at phone width
+  const tp = who(setName);
+  await waitText(tp, tp.page.locator('.pod-hero .pod-stack'), target.toLocaleString('en-US')); // realtime
+  const v2 = await viewOf(H);
+  assert(stack(v2, setName) === target, `${setName} should have been set to ${target}, has ${stack(v2, setName)}`);
+  const L = v2.ledger;
+  assert(L.totals.balanced, 'the ledger must still balance after the adjustments: ' + JSON.stringify(L.totals));
+  assert(L.entries.filter((e) => e.type === 'adjust').length >= 2, 'adjustments are on the ledger');
+  await closeTop(H);
+});
+
+step('the busted player asks to buy back in and the host approves it (realtime)', async () => {
+  const p = who(ctxNotes.busted);
+  await waitText(p, bar(p), 'out of chips');
+  await shot('16-busted', p);
+  await press(p, bar(p).getByRole('button', { name: 'Request a buy-in' }));
+  const d = dialog(p);
+  await d.getByRole('heading', { name: 'Buy back in' }).waitFor();
+  await press(p, d.locator('.buyin-presets button', { hasText: 'Min' }));
+  await act(p, d.getByRole('button', { name: /^Request 100/ }));
+  await d.waitFor({ state: 'detached' });
+  await waitText(p, bar(p), 'requested');
+  await H.page.getByRole('button', { name: 'Host tools, 1 pending' }).waitFor(); // badge, realtime
+  const dlg = await openHostTools();
+  const req = dlg.locator('.req').filter({ hasText: `${p.name} wants to rebuy` });
+  await waitText(H, req, 'Busted');
+  await shot('17-rebuy-request', H);
+  if (p === C) await shot('17-rebuy-request', C);
+  await act(H, req.getByRole('button', { name: 'Approve' }));
+  await req.waitFor({ state: 'detached' });
+  await closeTop(H);
+  // realtime: the player is back with 100 chips
+  await until(`${p.name} has chips again`, async () => !/out of chips|requested/.test(await bar(p).innerText()));
+  const v = await viewOf(p);
+  assert(v.me.stack === 100 && !v.me.busted && !v.me.request, 'rebuy of 100 applied: ' + JSON.stringify({ stack: v.me.stack, busted: v.me.busted }));
+  assert(v.ledger.entries.some((e) => e.type === 'buyin' && e.pid === v.me.id && e.amount === 100), 'the rebuy is on the ledger');
+});
+
+// ─── hand 4: a timeout → auto-away, leaving after the hand, a typed raise ───
+
+// Hand 4: button Maya (seat 1), SB Ben, BB Cleo — Maya acts first.
+step('host resumes; hand 4 deals 3-handed', async () => {
+  await act(H, H.page.locator('.room-banner').getByRole('button', { name: 'Resume' }));
+  for (const p of [H, B, C]) await p.page.locator('.room-banner').waitFor({ state: 'detached' });
+  await advance(3200);
+  for (const p of [H, B, C]) await waitHand(p, 4);
+  const v = await viewOf(H);
+  assert(v.hand.players.length === 3, 'all three are dealt in');
+  assert(v.hand.toAct === v.me.id, 'Maya (button, 3-handed) acts first preflop');
+});
+
+step('hand 4: Ben chooses to leave after this hand (realtime "Leaving" tag)', async () => {
+  await B.page.locator('.side').getByRole('button', { name: 'Leave seat' }).click();
+  const d = B.page.getByRole('dialog', { name: 'Leave your seat?' });
+  await d.getByText('After this hand').waitFor();
+  await d.getByText('Right now').waitFor();
+  await shot('18-leave-dialog', B);
+  await act(B, d.getByRole('button', { name: 'Leave seat' }));
+  await d.waitFor({ state: 'detached' });
+  await waitText(B, bar(B), 'when this hand ends');
+  await waitText(H, seatOf(H, 'Ben'), 'Leaving');
+  await waitText(C, seatOf(C, 'Ben'), 'Leaving');
+  assert((await viewOf(B)).me.leaveAfterHand === true, 'leaveAfterHand set');
+});
+
+step('hand 4: Maya’s clock runs out → she is folded and set away (the clients’ tick does it)', async () => {
+  const v = await viewOf(H);
+  assert(v.deadlineKind === 'action' && v.hand.toAct === v.me.id, 'Maya is on the clock');
+  await advance(v.deadline - v.serverNow + 400);
+  await waitText(H, bar(H), 'You’re away');
+  await waitText(H, bar(H), 'timed out');
+  for (const p of [B, C]) await waitText(p, seatOf(p, 'Maya'), 'Away'); // realtime
+  const v2 = await viewOf(H);
+  assert(v2.me.away && v2.me.awayBy === 'timeout', 'auto-away after 1 timeout: ' + JSON.stringify({ away: v2.me.away, by: v2.me.awayBy }));
+  assert(v2.hand.players.find((x) => x.pid === v2.me.id).folded, 'the timed-out player (facing the big blind) was folded');
+  await shot('19-timed-out-away', H);
+  await shotAsPhone('19-timed-out-away', H);
+});
+
+step('hand 4: Ben calls, Cleo raises by typing an amount on her phone, Ben folds', async () => {
+  await call(B);
+  await waitTurn(C);
+  const num = bar(C).locator('.raise-m .raise-num');
+  await num.fill('8');
+  const go = bar(C).locator('.abar-grid .btn-primary');
+  await until('Cleo: the raise button reads "Raise 8"', async () => (await go.innerText()).replace(/\s+/g, '') === 'Raise8');
+  await shot('20-typed-raise', C);
+  await act(C, go);
+  await waitText(B, seatOf(B, 'Cleo'), 'Raise to 8');
+  await fold(B);
+  for (const p of [B, C]) await waitComplete(p);
+  await until('Cleo: "You won" in the bar', async () => /You won|You win/.test(await bar(C).innerText()));
+  // Maya is away: her bar keeps offering "I'm back" while the hand finishes; the log names the winner
+  await waitText(H, bar(H), 'You’re away');
+  await waitText(H, H.page.locator('.handlog'), 'Cleo wins');
+});
+
+step('hand 4 ends: Ben is cashed out and the ledger shows it', async () => {
+  const before = await viewOf(B);
+  const cash = before.players.find((x) => x.name === 'Ben').stack;
+  await advance(30500);
+  await waitText(B, bar(B), 'Pick an empty seat');
+  const v = await viewOf(H);
+  assert(v.players.find((x) => x.name === 'Ben').seat === null, 'Ben stood up');
+  const e = v.ledger.entries.find((x) => x.type === 'cashout' && x.name === 'Ben');
+  assert(e && e.amount === cash, `Ben's cash-out of ${cash} is on the ledger: ` + JSON.stringify(e));
+  assert(v.ledger.totals.balanced, 'still balanced after the cash-out');
+  assert(!v.hand, 'no hand: Maya is away and Cleo is alone');
+  // Ben looks it up in the ledger
+  await B.page.getByRole('button', { name: 'Ledger' }).click();
+  const led = B.page.getByRole('dialog', { name: 'Ledger' });
+  await waitText(B, led.locator('.lfeed'), 'You cashed out ' + cash);
+  await led.getByText('Balanced').waitFor();
+  await shot('21-ledger-after-cashout', B);
+  await closeTop(B);
+});
+
+// ─── voluntary away, I'm back ×2, hand 5 heads-up ───────────────────────────
+
+step('Cleo steps away from the phone menu; both come back', async () => {
+  await press(C, C.page.getByRole('button', { name: /^Menu/ }));
+  const menu = C.page.getByRole('dialog', { name: 'Menu' });
+  await menu.getByText('Your session').waitFor();
+  await shot('22-menu', C);
+  await act(C, menu.getByRole('button', { name: 'Away', exact: true }));
+  await menu.getByRole('button', { name: /I’m back/ }).waitFor();
+  await closeTop(C);
+  await waitText(C, bar(C), 'You’re away');
+  await waitText(H, seatOf(H, 'Cleo'), 'Away'); // realtime
+  await shot('23-away', C);
+  // Maya first (play the next hand, don't wait for the big blind)
+  await bar(H).getByRole('checkbox', { name: /Wait for the big blind/ }).uncheck();
+  await act(H, bar(H).getByRole('button', { name: 'I’m back' }));
+  await waitText(H, bar(H), 'Waiting for players');
+  const mid = await viewOf(H);
+  assert(!mid.me.away && !mid.me.waitForBB && !mid.deadline, 'Maya is back; still nobody to play with');
+  await bar(C).getByRole('checkbox', { name: /Wait for the big blind/ }).uncheck();
+  await act(C, bar(C).getByRole('button', { name: 'I’m back' }));
+  await until('next hand scheduled', async () => (await viewOf(H)).deadlineKind === 'nextHand');
+  await advance(3200);
+  for (const p of [H, B, C]) await waitHand(p, 5);
+});
+
+// Hand 5, heads-up: Cleo is the button and small blind and acts first preflop; Maya first after.
+step('hand 5 (heads-up): Cleo limps, Maya checks, then bets a typed amount with Enter; Cleo folds', async () => {
+  const v = await viewOf(C);
+  assert(v.hand.players.length === 2 && v.hand.button === v.me.seat && v.hand.toAct === v.me.id, 'heads-up: the button acts first preflop');
+  await call(C);
+  await check(H);
+  await until('flop', async () => (await boardCount(H)) === 3);
+  await waitTurn(H);
+  const num = bar(H).locator('.raise-num');
+  await num.click();
+  await num.fill('4');
+  const [res] = await Promise.all([
+    H.page.waitForResponse((r) => r.url() === BASE + '/api/act' && /"move":"raise"/.test(r.request().postData() || '')),
+    num.press('Enter'),
+  ]);
+  assert(res.status() === 200, 'typed bet accepted');
+  await waitText(C, seatOf(C, 'Maya'), 'Bet 4');
+  await shot('24-facing-bet', C);
+  await fold(C);
+  for (const p of [H, C]) await waitComplete(p);
+  await until('Maya: "You won" in the bar', async () => /You won|You win/.test(await bar(H).innerText()));
+});
+
+// ─── remove, ledger + settle up, end the game ───────────────────────────────
+
+step('host removes Cleo from the table (confirm dialog); she is cashed out and watches', async () => {
+  const dlg = await openHostTools();
+  await dlg.getByRole('button', { name: 'Remove Cleo from seat' }).click();
+  const confirm = H.page.getByRole('dialog', { name: 'Remove Cleo from the table?' });
+  await confirm.getByText('cashed out for').waitFor();
+  await shot('25-remove-confirm', H);
+  await act(H, confirm.getByRole('button', { name: 'Remove', exact: true }));
+  await confirm.waitFor({ state: 'detached' });
+  await closeTop(H);
+  await waitText(C, bar(C), 'Pick an empty seat'); // realtime on her phone
+  const v = await viewOf(C);
+  assert(v.me.seat === null && v.ledger.entries.some((e) => e.type === 'cashout' && e.pid === v.me.id), 'Cleo cashed out');
+});
+
+step('ledger: balanced, settle-up ticked by the host shows up for everyone', async () => {
+  // Ben and Cleo open the ledger first, so the tick has to arrive in realtime
+  await B.page.getByRole('button', { name: 'Ledger' }).click();
+  const bl = B.page.getByRole('dialog', { name: 'Ledger' });
+  await press(C, C.page.getByRole('button', { name: 'Ledger', exact: true }));
+  const cl = C.page.getByRole('dialog', { name: 'Ledger' });
+  await cl.getByText('Settle up').waitFor();
+  await H.page.getByRole('button', { name: 'Ledger' }).click();
+  const hl = H.page.getByRole('dialog', { name: 'Ledger' });
+  await hl.getByText('Balanced').waitFor();
+  const v = await viewOf(H);
+  assert(v.ledger.totals.balanced && v.ledger.totals.diff === 0, 'balanced books');
+  const nets = v.ledger.players.reduce((a, r) => a + r.net, 0);
+  assert(nets === 0, 'nets sum to zero, got ' + nets);
+  assert(v.ledger.settlement.length >= 1, 'somebody owes somebody');
+  const pay = hl.locator('label.pay').first();
+  assert((await B.page.locator('label.pay input:disabled').count()) >= 1, 'only the host can tick payments');
+  await act(H, pay.locator('input[type=checkbox]'));
+  await until('the payment is ticked for Maya', async () => (await hl.locator('label.pay.is-paid').count()) === 1);
+  await until('Ben sees it ticked (realtime)', async () => (await bl.locator('label.pay.is-paid').count()) === 1);
+  await until('Cleo sees it ticked (realtime)', async () => (await cl.locator('label.pay.is-paid').count()) === 1);
+  assert((await viewOf(B)).ledger.settlement.filter((s) => s.paid).length === 1, 'markPaid stored');
+  await shot('26-ledger-settle', H, C);
+  await closeTop(H);
+  await closeTop(B);
+  await closeTop(C);
+});
+
+step('host ends the game: everyone sees the final ledger', async () => {
+  const dlg = await openHostTools();
+  await dlg.getByRole('button', { name: 'End game' }).click();
+  const confirm = H.page.getByRole('dialog', { name: 'End the game?' });
+  await act(H, confirm.getByRole('button', { name: 'End game', exact: true }));
+  await confirm.waitFor({ state: 'detached' });
+  await closeTop(H);
+  for (const p of [H, B, C]) await waitText(p, p.page.locator('.room-ended'), 'This game has ended');
+  const v = await viewOf(H);
+  assert(v.ended && v.players.every((x) => x.seat === null), 'ended, everyone stood up');
+  assert(v.ledger.totals.balanced && v.ledger.totals.chipsOnTable === 0, 'final ledger balanced, nothing left on the table');
+  for (const p of [H, B, C]) await noHorizontalScroll(p, 'ended');
+  await shot('27-ended', H, C);
+  // nothing in this run reloaded a page: every update above arrived over realtime
+  for (const p of [H, B, C]) assert(await p.page.evaluate(() => window.__e2eLoaded === true), p.name + ' reloaded the page');
 });
 
 // ─── runner ──────────────────────────────────────────────────────────────────

@@ -8,7 +8,7 @@
 //   SessionBox({ onBuyIn, onLeave })  bought in / net / buy-in / away / leave
 //
 // Also exports small helpers used by host.js and ledger.js (seedOf, clockTime, ordinal, playerStatus).
-import { html, useState, useEffect, useRef, useLayoutEffect, useMemo, Fragment } from './h.js';
+import { html, useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback, Fragment } from './h.js';
 import { useRoom } from './room.js';
 import { Button, Pill, Avatar, Icon, cx, fmt, fmtSigned, hueFor, rankLabel, SUIT_GLYPH, toast } from './ui.js';
 
@@ -90,6 +90,26 @@ export function playerStatus(view, p, { long = false } = {}) {
   const h = view.hand;
   if (h && h.phase !== 'complete' && !p.inHand) return { key: 'next', label: 'Next hand', tone: 'default' };
   return { key: 'playing', label: 'Playing', tone: 'default' };
+}
+
+// "When I come back" — wait for the big blind or play the next hand. One preference shared by the
+// session box (radios) and the action bar's away banner (checkbox), so the two never disagree.
+// Default off, as in design/AwayMobile.dc.html.
+let backWaitBB = false;
+const backSubs = new Set();
+
+export function useBackPref() {
+  const [v, setV] = useState(backWaitBB);
+  useEffect(() => {
+    backSubs.add(setV);
+    setV(backWaitBB);
+    return () => backSubs.delete(setV);
+  }, []);
+  const set = useCallback((next) => {
+    backWaitBB = !!next;
+    backSubs.forEach((fn) => fn(backWaitBB));
+  }, []);
+  return [v, set];
 }
 
 /** Small light "card chip" for inline text: K♥ */
@@ -393,7 +413,7 @@ export function SessionBox({ onBuyIn, onLeave }) {
   const { view, act } = room;
   const me = view.me;
   const [busy, setBusy] = useState('');
-  const [waitBB, setWaitBB] = useState(true);
+  const [waitBB, setWaitBB] = useBackPref();
 
   if (!me) {
     if (view.ended) return null;

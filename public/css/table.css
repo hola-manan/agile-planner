@@ -539,6 +539,12 @@
   border-color: rgba(230, 184, 92, 0.4);
   background: rgba(20, 17, 12, 0.4);
 }
+/* my own pending seat request */
+.seat-mine {
+  border-style: solid;
+  border-color: var(--brass);
+  background: var(--brass-tint);
+}
 .se-main {
   font-size: 13px;
   font-weight: 700;
@@ -967,6 +973,28 @@
   position: absolute;
   right: calc(100% + 6px);
   bottom: 12px;
+}
+/* my winnings (the phone hides my pod while I'm dealt in) */
+.hero-m-win {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  z-index: 6;
+  box-shadow: 0 0 0 3px rgba(230, 184, 92, 0.25), 0 4px 12px rgba(0, 0, 0, 0.4);
+  animation: bet-in 0.3s ease-out;
+}
+/* my pod on the rail (not dealt in): tags side by side, so they stay above the dock */
+.tbl-m .seat-hero-m .seat-below {
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+/* the dealer button beside a phone pod, on the side facing the middle */
+.tbl-m .dealer-r {
+  transform: translate(calc(-50% + 50px), -50%);
+}
+.tbl-m .dealer-l {
+  transform: translate(calc(-50% - 50px), -50%);
 }
 
 /* ─── action bar ───────────────────────────────────────────────────────── */
