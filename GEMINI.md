@@ -1,4 +1,4 @@
-# Felt — home-game poker web app
+﻿# Felt — home-game poker web app
 
 Felt is a private, real-time poker site for playing with friends (No-Limit Hold'em and Pot-Limit Omaha,
 2–9 seats): buy-in requests, host chip adjustments, a ledger with settle-up, run-it-twice/thrice, optional
@@ -27,8 +27,8 @@ api/*.js                   HTTP routes: create, join, state, act, events-token
 public/index.html          SPA shell (loads vendor React/htm, css, /js/main.js)
 public/js/                 h.js (htm/React bindings), api.js, room.js (data hook), ui.js (primitives),
                            main.js (App + room layout), lobby.js, table.js, actionbar.js (+ keyboard
-                           shortcuts), hotkeys.js (pure shortcut decisions), side.js (side panel, hand log,
-                           chat, players, session box), host.js, ledger.js, dialogs.js, csv.js
+                           shortcuts), hotkeys.js (pure shortcut decisions), side.js (side panel Hand/Players, hand log,
+                           ChatDock bottom-left on desktop, ChatFab on phones, players, session box), host.js, ledger.js, dialogs.js, csv.js
 public/css/                base.css (tokens/primitives), lobby.css (lobby + room shell), table.css, panels.css
 dev/                       local dev server, fakes, preview harness + fixtures (not deployed)
 test/                      node:test suites, e2e.mjs (3 browsers), live-smoke.mjs (deployed site)

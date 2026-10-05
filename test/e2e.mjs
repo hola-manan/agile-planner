@@ -1498,7 +1498,7 @@ step('keys: hand 2 — F does nothing before my turn; Ben folds with F; Maya (bi
   assert(await H.page.evaluate(() => document.activeElement !== document.querySelector('.chat-dock [data-chat-input="1"]')), 'Escape blurs the chat input');
   await H.page.keyboard.press('m');
   assert(await H.page.evaluate(() => document.activeElement === document.querySelector('.chat-dock [data-chat-input="1"]')), 'm key focuses the chat input');
-  assert.equal(await input.inputValue(), '', 'm was not typed into the input');
+  assert((await input.inputValue()) === '', 'm was not typed into the input');
   await H.page.keyboard.press('Escape');
   assert(await H.page.evaluate(() => document.activeElement !== document.querySelector('.chat-dock [data-chat-input="1"]')), 'Escape blurs again');
   const k = await keyAct(H, 'k');
