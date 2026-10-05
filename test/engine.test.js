@@ -900,26 +900,44 @@ describe('all-in runout', () => {
   // run 1: 2s 7d 9c Th Ks → kings; run 2: 3s 8d Jc 4h Ad → aces; run 3: 5s 6s 2h 9d Qc → aces
   const DECK = ['2s', '7d', '9c', 'Th', 'Ks', '3s', '8d', 'Jc', '4h', 'Ad', '5s', '6s', '2h', '9d', 'Qc'];
 
-  test('cards flip, the vote is unanimous for two runs, both run from one deck, the pot splits per run', () => {
+  test('cards stay face down through the vote, flip when it closes; two runs from one deck, the pot splits per run', () => {
     const g = newGame({ n: 2, settings: { maxRuns: 2 } });
     shoveAndCall(g, HOLES, DECK);
     const h = hand(g);
     assert.equal(h.phase, 'ritVote');
     assert.deepEqual(h.ritVoters, ['p1', 'p0']);
-    assert.ok(h.order.every((pid) => ps(g, pid).shown.every(Boolean)), 'mandatory reveal');
+    const hidden = () => {
+      assert.ok(h.order.every((pid) => ps(g, pid).shown.every((x) => x === false)), 'nothing is shown while voting');
+      assert.ok(!h.log.some((e) => e.text === 'shows'), 'no "shows" line while voting');
+      assert.equal(h.equity, null, 'no win chances while voting (they would give the hands away)');
+    };
+    hidden();
     assert.deepEqual([g.state.deadlineKind, g.state.deadline], ['ritVote', g.ctx.now + 12000]);
-    assert.equal(h.equity.run, 0);
-    assert.ok(h.equity.by.p0 > 70 && h.equity.by.p0 < 92, `AA vs KK preflop ≈ 82%, got ${h.equity.by.p0}`);
-    const sum = h.equity.by.p0 + h.equity.by.p1;
-    assert.ok(sum >= 99 && sum <= 101);
     fails(g, 'p0', { type: 'vote', runs: 3 }, 'bad_request');
     fails(g, 'p0', { type: 'vote', runs: 0 }, 'bad_request');
     act(g, 'p0', { type: 'vote', runs: 2 });
     assert.equal(h.phase, 'ritVote');
+    hidden();
+    wait(g, 5000); // a tick during the vote changes nothing either
+    hidden();
+    const n = h.log.length;
     act(g, 'p1', { type: 'vote', runs: 2 });
     assert.deepEqual([h.phase, h.runs, h.currentRun], ['runout', 2, 0]);
     assert.deepEqual(h.runBoards, [[]]);
-    assert.equal(lastLog(g).text, 'Running it twice');
+    assert.ok(h.order.every((pid) => ps(g, pid).shown.every(Boolean)), 'every live hand flips once the vote closes');
+    assert.deepEqual(
+      h.log.slice(n).map((e) => [e.pid, e.text, e.cards]),
+      [
+        [null, 'Running it twice', undefined],
+        ['p1', 'shows', ['Kh', 'Kc']],
+        ['p0', 'shows', ['Ah', 'Ac']],
+      ],
+      'the hands are shown right after the run count is announced',
+    );
+    assert.equal(h.equity.run, 0, 'win chances appear with the runout');
+    assert.ok(h.equity.by.p0 > 70 && h.equity.by.p0 < 92, `AA vs KK preflop ≈ 82%, got ${h.equity.by.p0}`);
+    const sum = h.equity.by.p0 + h.equity.by.p1;
+    assert.ok(sum >= 99 && sum <= 101);
     const t = g.ctx.now;
     assert.deepEqual([g.state.deadlineKind, g.state.deadline], ['runout', t + 1800]);
 
@@ -982,7 +1000,10 @@ describe('all-in runout', () => {
     act(g, 'p0', { type: 'vote', runs: 2 });
     act(g, 'p1', { type: 'vote', runs: 1 });
     assert.deepEqual([hand(g).phase, hand(g).runs], ['runout', 1]);
-    assert.equal(lastLog(g).text, 'Running it once');
+    assert.deepEqual(
+      hand(g).log.slice(-3).map((e) => [e.pid, e.text]),
+      [[null, 'Running it once'], ['p1', 'shows'], ['p0', 'shows']],
+    );
 
     g = newGame({ n: 2 });
     shoveAndCall(g, HOLES, DECK);
@@ -1015,6 +1036,12 @@ describe('all-in runout', () => {
     const g = newGame({ n: 2, settings: { maxRuns: 1 } });
     shoveAndCall(g, HOLES, DECK);
     assert.deepEqual([hand(g).phase, hand(g).runs, g.state.deadlineKind], ['runout', 1, 'runout']);
+    assert.ok(hand(g).order.every((pid) => ps(g, pid).shown.every(Boolean)), 'the hands flip straight away');
+    assert.deepEqual(
+      hand(g).log.slice(-3).map((e) => [e.pid, e.text]),
+      [['p1', 'calls all-in'], ['p1', 'shows'], ['p0', 'shows']],
+    );
+    assert.ok(!hand(g).log.some((e) => /^Running it/.test(e.text)), 'no vote, no announcement');
     assert.ok(hand(g).equity && hand(g).equity.run === 0);
   });
 
@@ -1033,8 +1060,10 @@ describe('all-in runout', () => {
     assert.equal(h.phase, 'ritVote', 'p0 still has chips but nobody is left to bet against');
     assert.deepEqual(h.ritVoters, ['p2', 'p0']);
     assert.deepEqual(ps(g, 'p1').shown, [false, false], 'folded hands stay hidden');
+    assert.deepEqual([ps(g, 'p0').shown, ps(g, 'p2').shown], [[false, false], [false, false]], 'live hands too, until the vote closes');
     act(g, 'p2', { type: 'vote', runs: 2 });
     act(g, 'p0', { type: 'vote', runs: 2 });
+    assert.deepEqual([ps(g, 'p0').shown, ps(g, 'p1').shown, ps(g, 'p2').shown], [[true, true], [false, false], [true, true]]);
     fire(g);
     assert.deepEqual(h.runBoards, [['2s', '7d', '9c', 'Th']]);
     fire(g);
@@ -1079,12 +1108,16 @@ describe('all-in runout', () => {
 
 // ─── equity rounding sanity across a showdown (independent of the deck) ──────
 
-test('equity during the vote covers every live player and is rounded', () => {
+test('no equity during the vote; once the runout starts it covers every live player and is rounded', () => {
   const g = newGame({ n: 3, stacks: [100, 100, 100] });
   deal(g);
   act(g, 'p0', { type: 'act', move: 'raise', to: 100 });
   act(g, 'p1', { type: 'act', move: 'call' });
   act(g, 'p2', { type: 'act', move: 'call' });
+  assert.equal(hand(g).phase, 'ritVote');
+  assert.equal(hand(g).equity, null);
+  wait(g, 12000); // nobody votes → run it once
+  assert.equal(hand(g).phase, 'runout');
   const eq = hand(g).equity;
   assert.equal(eq.run, 0);
   assert.deepEqual(Object.keys(eq.by).sort(), ['p0', 'p1', 'p2']);

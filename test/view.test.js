@@ -255,7 +255,7 @@ describe('pot, board and hand names', () => {
 });
 
 describe('all-in runout', () => {
-  test('the vote: voters, others’ votes, max runs, deadline; equity for live players only', () => {
+  test('the vote: voters, others’ votes, max runs, deadline; hands face down and no equity until it closes', () => {
     const g = game({ n: 3, spectators: 1, stacks: [100, 100, 100], settings: { maxRuns: 3 } });
     deal(g);
     rig(g, { p0: ['As', 'Ah'], p1: ['Kd', 'Kc'], p2: ['7h', '2c'] });
@@ -265,25 +265,47 @@ describe('all-in runout', () => {
     const h = g.state.hand;
     assert.equal(h.phase, 'ritVote');
     act(g, 'p0', { type: 'vote', runs: 2 });
+    const HOLE = { p0: ['As', 'Ah'], p1: ['Kd', 'Kc'], p2: ['7h', '2c'] };
     for (const viewer of viewers(g)) {
       const v = view(g, viewer);
       assert.deepEqual(v.hand.ritVote.voters, ['p1', 'p0'], 'voters in hand order (left of the button first)');
       assert.deepEqual(v.hand.ritVote.votes, { p0: 2, p1: null });
       assert.equal(v.hand.ritVote.maxRuns, 3);
       assert.equal(v.hand.ritVote.deadline, g.state.deadline);
-      const byPid = Object.fromEntries(v.hand.players.map((p) => [p.pid, p]));
-      // all-in hands are face up for everyone, the folded hand is not
-      assert.deepEqual(byPid.p0.cards, ['As', 'Ah']);
-      assert.deepEqual(byPid.p1.cards, ['Kd', 'Kc']);
-      assert.deepEqual(byPid.p2.cards, viewer === 'p2' ? ['7h', '2c'] : [null, null]);
-      assert.ok(Number.isInteger(byPid.p0.equity) && byPid.p0.equity > 70, 'aces are a big favourite');
-      assert.equal(byPid.p0.equity + byPid.p1.equity >= 98, true);
-      assert.equal(byPid.p2.equity, null, 'no equity for a folded player');
+      // while the players vote every hand is still face down: each viewer sees only their own
+      for (const p of v.hand.players) {
+        assert.deepEqual(p.cards, p.pid === viewer ? HOLE[p.pid] : [null, null], `${viewer} looking at ${p.pid}`);
+        assert.deepEqual(p.shown, [false, false]);
+        assert.equal(p.equity, null, 'no win chances during the vote — they would give the hands away');
+      }
+      assert.ok(!v.hand.log.some((e) => e.text === 'shows'), 'nobody "shows" yet');
+      const json = JSON.stringify(v);
+      for (const [pid, cards] of Object.entries(HOLE)) {
+        if (pid !== viewer) for (const c of cards) assert.ok(!json.includes(`"${c}"`), `${viewer} can see ${pid}’s ${c} during the vote`);
+      }
       assert.equal(v.hand.legal, null);
     }
     assertNoLeaks(g, 'vote');
     act(g, 'p1', { type: 'vote', runs: 2 });
     assert.equal(g.state.hand.phase, 'runout');
+    // the vote is closed: the all-in hands flip for everyone (the folded one stays down) and win chances appear
+    for (const viewer of viewers(g)) {
+      const v = view(g, viewer);
+      const byPid = Object.fromEntries(v.hand.players.map((p) => [p.pid, p]));
+      assert.deepEqual(byPid.p0.cards, ['As', 'Ah']);
+      assert.deepEqual(byPid.p1.cards, ['Kd', 'Kc']);
+      assert.deepEqual([byPid.p0.shown, byPid.p1.shown], [[true, true], [true, true]]);
+      assert.deepEqual(byPid.p2.cards, viewer === 'p2' ? ['7h', '2c'] : [null, null]);
+      assert.ok(Number.isInteger(byPid.p0.equity) && byPid.p0.equity > 70, 'aces are a big favourite');
+      assert.equal(byPid.p0.equity + byPid.p1.equity >= 98, true);
+      assert.equal(byPid.p2.equity, null, 'no equity for a folded player');
+      const tail = v.hand.log.slice(-3).map((e) => [e.text, e.name, e.cards]);
+      assert.deepEqual(tail, [
+        ['Running it twice', null, undefined],
+        ['shows', byPid.p1.name, ['Kd', 'Kc']],
+        ['shows', byPid.p0.name, ['As', 'Ah']],
+      ]);
+    }
     while (g.state.hand.phase === 'runout') {
       assertNoLeaks(g, 'runout');
       const v = view(g, null);
@@ -296,7 +318,7 @@ describe('all-in runout', () => {
     assert.equal(v.hand.results.runs.length, 2);
     assert.equal(v.hand.results.endedBy, 'showdown');
     assert.equal(Object.values(v.hand.results.awards).reduce((a, b) => a + b, 0), 202);
-    for (const p of v.hand.players) assert.equal(p.equity, null, 'equity only during the vote / runout');
+    for (const p of v.hand.players) assert.equal(p.equity, null, 'equity only during the runout');
   });
 });
 

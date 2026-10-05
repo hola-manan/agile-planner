@@ -299,7 +299,7 @@ fixture('my-turn-facing-bet-plo', 'My turn — facing a bet (PLO)', 'Pot-Limit O
   return g.view('alex');
 });
 
-fixture('allin-vote', 'All-in — run it vote', 'Hero all-in on the flop against Dev; Dev voted twice, hero has not voted yet.', () => {
+fixture('allin-vote', 'All-in — run it vote', 'Hero all-in on the flop against Dev; Dev voted twice, hero has not voted yet. Dev’s cards stay face down (and no win %) until the vote closes.', () => {
   const g = new Game({ seats: { maya: 0, dev: 1, ari: 2, alex: 3, kim: 4 }, stacks: { maya: 300, dev: 520, ari: 210, alex: 236, kim: 400 }, settings: { maxRuns: 3, maxBuyIn: 600 }, seed: 3 });
   g.deal().rig({ alex: ['Ah', 'Kh'], dev: ['Qs', 'Qd'] }, ['Qh', '7h', '2c', '5d', '9s']);
   // button maya(0) → dev SB, ari BB, alex, kim, maya

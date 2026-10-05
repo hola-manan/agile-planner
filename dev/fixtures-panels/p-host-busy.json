@@ -43,6 +43,7 @@
    "waitForBB": false,
    "awayAfterHand": false,
    "leaveAfterHand": false,
+   "removedByHost": false,
    "timeouts": 0,
    "status": "seated",
    "inHand": true,
@@ -1187,7 +1188,7 @@
    },
    "settlement": [
     {
-     "key": "ari>alex:508",
+     "key": "ari>alex:508#40",
      "from": "ari",
      "fromName": "Ari",
      "to": "alex",

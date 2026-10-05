@@ -376,16 +376,17 @@ function referee(hand, partial = false) {
     return { ended, L, shows, runs, paid: { [L[0]]: e.amount }, boardLen, rest: log.slice(i), oofCloses };
   }
   if (ended === 'runout') {
-    for (const pid of L) {
-      const e = next('an all-in reveal');
-      assert.equal(e.pid, pid, 'all-in: every live hand is turned up, in order');
-      assert.equal(e.text, 'shows');
-      assert.deepEqual(e.cards, hand.ps[pid].hole);
-      shows.push(pid);
-    }
+    // The run-it vote (if there was one) closes first; only then do the all-in hands flip.
     if (log[i] && log[i].pid === null && /^Running it/.test(log[i].text)) {
       const t = next('vote').text;
       runs = t === 'Running it once' ? 1 : t === 'Running it twice' ? 2 : Number(/^Running it (\d) times$/.exec(t)[1]);
+    }
+    for (const pid of L) {
+      const e = next('an all-in reveal');
+      assert.equal(e.pid, pid, 'all-in: every live hand is turned up, in order, after the vote');
+      assert.equal(e.text, 'shows');
+      assert.deepEqual(e.cards, hand.ps[pid].hole);
+      shows.push(pid);
     }
     assert.equal(hand.runs, runs, 'runs');
     assert.equal(hand.runBoards.length, runs);
@@ -1172,9 +1173,12 @@ class Fuzzer {
         assert.ok(sameSet(h.ritVoters, live), 'every live player votes');
         assert.ok(!h.ritVoters.every((v) => h.ritVotes[v] != null), 'a complete vote closes at once');
         for (const v of h.ritVoters) if (st.players[v].away) assert.ok(h.ritVotes[v] != null, 'away voters vote once automatically');
-        for (const pid of live) assert.ok(h.ps[pid].shown.every(Boolean), 'all-in: live hands are face up');
+        // the hands stay face down (and win chances unknown) until the vote closes
+        for (const pid of h.order) assert.ok(h.ps[pid].shown.every((x) => !x), 'ritVote: every hand is still face down');
+        assert.ok(!h.log.some((e) => e.text === 'shows'), 'ritVote: nobody has shown yet');
+        assert.ok(!h.log.some((e) => e.pid === null && /^Running it/.test(e.text)), 'ritVote: no run count yet');
+        assert.equal(h.equity, null, 'ritVote: no equity (it would give the hands away)');
         assert.ok(h.board.length < 5);
-        this.checkEquity(h, live);
         break;
       case 'runout':
         assert.equal(h.toAct, null);
@@ -1187,6 +1191,8 @@ class Fuzzer {
         assert.equal(h.toAct, null);
         assert.equal(st.deadlineKind, 'nextHand');
         assert.ok(h.results);
+        // an all-in runout (its streets carry a run index): every live hand ended up face up
+        if (h.log.some((e) => e.pid === null && e.run != null)) for (const pid of live) assert.ok(h.ps[pid].shown.every(Boolean), 'after an all-in runout every live hand is face up');
         const awarded = Object.values(h.results.awards).reduce((a, b) => a + b, 0);
         assert.equal(awarded, E.potTotal(h), 'the whole pot is awarded');
         for (const pid of h.order) assert.equal(h.ps[pid].bet, 0);
@@ -1207,21 +1213,22 @@ class Fuzzer {
   }
 
   checkEquity(h, live) {
-    assert.ok(h.equity, 'equity is computed during the vote / runout');
+    assert.ok(h.equity, 'equity is computed during the runout');
     const vals = live.map((pid) => h.equity.by[pid]);
     for (const v of vals) assert.ok(Number.isInteger(v) && v >= 0 && v <= 100, `equity value ${v}`);
     const sum = vals.reduce((a, b) => a + b, 0);
     assert.ok(Math.abs(sum - 100) <= live.length, `equity sums to about 100 (got ${sum})`);
     // Exact cross-check when the board is complete or one card is to come (brute force over the stub).
     const run = h.equity.run;
-    const board = h.phase === 'runout' ? h.runBoards[run] : h.board;
-    assert.equal(run, h.phase === 'runout' ? h.currentRun : 0, 'equity is for the run being dealt');
+    assert.equal(h.phase, 'runout');
+    const board = h.runBoards[run];
+    assert.equal(run, h.currentRun, 'equity is for the run being dealt');
     if (board.length < 4) return;
     const key = `${h.no}/${run}/${board.length}`;
     if (this.eqChecked === key) return;
     this.eqChecked = key;
     const used = new Set([...live.flatMap((pid) => h.ps[pid].hole), ...board]);
-    if (h.phase === 'runout') h.runBoards.forEach((b, r) => r !== run && b.slice(h.board.length).forEach((c) => used.add(c)));
+    h.runBoards.forEach((b, r) => r !== run && b.slice(h.board.length).forEach((c) => used.add(c)));
     // folded players' cards are unknown, so they stay in the stub
     const boards = board.length === 5 ? [board] : RANK.split('').flatMap((r) => 'shdc'.split('').map((x) => r + x)).filter((c) => !used.has(c)).map((c) => [...board, c]);
     const share = Object.fromEntries(live.map((pid) => [pid, 0]));
@@ -1339,6 +1346,19 @@ class Fuzzer {
       if (!h) {
         assert.equal(v.hand, null);
         continue;
+      }
+      if (h.phase === 'ritVote') {
+        // while the players vote on how many runs, no voter's hole card reaches anyone else, anywhere in the view
+        // (lastHand is the previous deal's archive, which reuses the same 52 card names: it is checked separately)
+        const json = JSON.stringify({ ...v, lastHand: null });
+        for (const pid of h.ritVoters) {
+          if (pid === viewer) continue;
+          for (const c of h.ps[pid].hole) assert.ok(!json.includes(`"${c}"`), `ritVote: ${viewer} can see ${pid}'s ${c}`);
+        }
+        for (const vp of v.hand.players) {
+          assert.equal(vp.equity, null, 'ritVote: no win chances in the view');
+          if (vp.pid !== viewer) assert.ok(vp.cards.every((c) => c === null), `ritVote: ${vp.pid}'s cards are face down for ${viewer}`);
+        }
       }
       const vh = v.hand;
       assert.equal(vh.potTotal, E.potTotal(h));

@@ -1,12 +1,12 @@
 {
- "name": "t-preflop-fold-ghosts",
- "title": "Fold preflop — all ghosts",
- "description": "Everyone folded preflop; the five would-have-come cards revealed as ghosts. Hero won.",
+ "name": "t-runout-start",
+ "title": "Runout starts (vote closed)",
+ "description": "Both voted twice: the vote just closed, so the all-in hands flipped and the win % appeared; run 1 has not dealt yet.",
  "view": {
   "code": "RVR-4821",
   "name": "Friday Night Game",
-  "version": 13,
-  "serverNow": 1790969457100,
+  "version": 17,
+  "serverNow": 1790969466900,
   "hostId": "maya",
   "isHost": false,
   "settings": {
@@ -17,7 +17,7 @@
    "minBuyIn": 100,
    "maxBuyIn": 600,
    "approveBuyIns": false,
-   "maxRuns": 2,
+   "maxRuns": 3,
    "revealRunout": "anyone",
    "showdownLosers": "choose",
    "actionTime": 25,
@@ -30,13 +30,13 @@
   "endAfterHand": false,
   "handNo": 1,
   "button": 0,
-  "deadline": 1790969463500,
-  "deadlineKind": "nextHand",
+  "deadline": 1790969468300,
+  "deadlineKind": "runout",
   "me": {
    "id": "alex",
    "name": "Alex",
    "seat": 3,
-   "stack": 239,
+   "stack": 0,
    "pendingChips": 0,
    "away": false,
    "awayBy": null,
@@ -49,10 +49,10 @@
    "inHand": true,
    "busted": false,
    "hole": [
-    "Ac",
-    "Ad"
+    "Ah",
+    "Kh"
    ],
-   "handName": null,
+   "handName": "Ace high",
    "request": null
   },
   "players": [
@@ -74,7 +74,7 @@
     "id": "dev",
     "name": "Dev",
     "seat": 1,
-    "stack": 519,
+    "stack": 284,
     "pendingChips": 0,
     "status": "seated",
     "away": false,
@@ -102,7 +102,7 @@
     "id": "alex",
     "name": "Alex",
     "seat": 3,
-    "stack": 239,
+    "stack": 0,
     "pendingChips": 0,
     "status": "seated",
     "away": false,
@@ -171,23 +171,33 @@
   ],
   "hand": {
    "no": 1,
-   "phase": "complete",
-   "street": "preflop",
+   "phase": "runout",
+   "street": "flop",
    "variant": "NLH",
    "sb": 1,
    "bb": 2,
    "button": 0,
    "sbSeat": 1,
    "bbSeat": 2,
-   "board": [],
-   "runs": 1,
+   "board": [
+    "Qh",
+    "7h",
+    "2c"
+   ],
+   "runs": 2,
    "currentRun": 0,
-   "runBoards": [],
+   "runBoards": [
+    [
+     "Qh",
+     "7h",
+     "2c"
+    ]
+   ],
    "runResults": [],
-   "potTotal": 9,
-   "potCenter": 9,
+   "potTotal": 474,
+   "potCenter": 474,
    "currentBet": 0,
-   "minRaise": 4,
+   "minRaise": 2,
    "toAct": null,
    "players": [
     {
@@ -221,25 +231,22 @@
      "seat": 1,
      "name": "Dev",
      "bet": 0,
-     "committed": 1,
-     "stack": 519,
-     "folded": true,
+     "committed": 236,
+     "stack": 284,
+     "folded": false,
      "allIn": false,
-     "lastAction": {
-      "type": "fold",
-      "amount": 0
-     },
+     "lastAction": null,
      "cards": [
-      null,
-      null
+      "Qs",
+      "Qd"
      ],
      "shown": [
-      false,
-      false
+      true,
+      true
      ],
-     "equity": null,
+     "equity": 74,
      "won": 0,
-     "handName": null,
+     "handName": "Three Queens",
      "isWinner": false
     },
     {
@@ -273,26 +280,26 @@
      "seat": 3,
      "name": "Alex",
      "bet": 0,
-     "committed": 6,
-     "stack": 239,
+     "committed": 236,
+     "stack": 0,
      "folded": false,
-     "allIn": false,
+     "allIn": true,
      "lastAction": {
-      "type": "raise",
-      "amount": 6
+      "type": "allin",
+      "amount": 230
      },
      "cards": [
-      "Ac",
-      "Ad"
+      "Ah",
+      "Kh"
      ],
      "shown": [
-      false,
-      false
+      true,
+      true
      ],
-     "equity": null,
-     "won": 9,
-     "handName": null,
-     "isWinner": true
+     "equity": 26,
+     "won": 0,
+     "handName": "Ace high",
+     "isWinner": false
     },
     {
      "pid": "kim",
@@ -323,42 +330,9 @@
    ],
    "legal": null,
    "ritVote": null,
-   "results": {
-    "endedBy": "fold",
-    "awards": {
-     "alex": 9
-    },
-    "runs": [],
-    "pots": [
-     {
-      "amount": 9,
-      "eligible": [
-       "alex"
-      ],
-      "winnersByRun": [
-       [
-        "alex"
-       ]
-      ],
-      "returned": false
-     }
-    ],
-    "winners": [
-     "alex"
-    ]
-   },
-   "runout": {
-    "cards": [
-     "Ks",
-     "Qd",
-     "4c",
-     "8h",
-     "2s"
-    ],
-    "by": "kim",
-    "name": "Kim"
-   },
-   "canShow": true,
+   "results": null,
+   "runout": null,
+   "canShow": false,
    "canRevealRunout": false,
    "log": [
     {
@@ -400,8 +374,8 @@
      "street": "preflop",
      "pid": "dev",
      "name": "Dev",
-     "text": "folds",
-     "amount": null
+     "text": "calls",
+     "amount": 6
     },
     {
      "street": "preflop",
@@ -411,24 +385,65 @@
      "amount": null
     },
     {
-     "street": "preflop",
-     "pid": "alex",
-     "name": "Alex",
-     "text": "wins",
-     "amount": 9
-    },
-    {
-     "street": "preflop",
-     "pid": "kim",
-     "name": "Kim",
-     "text": "reveals the runout",
+     "street": "flop",
+     "pid": null,
+     "name": null,
+     "text": "Flop",
      "amount": null,
      "cards": [
-      "Ks",
-      "Qd",
-      "4c",
-      "8h",
-      "2s"
+      "Qh",
+      "7h",
+      "2c"
+     ]
+    },
+    {
+     "street": "flop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "bets",
+     "amount": 12
+    },
+    {
+     "street": "flop",
+     "pid": "alex",
+     "name": "Alex",
+     "text": "all-in",
+     "amount": 230
+    },
+    {
+     "street": "flop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "calls",
+     "amount": 230
+    },
+    {
+     "street": "flop",
+     "pid": null,
+     "name": null,
+     "text": "Running it twice",
+     "amount": null
+    },
+    {
+     "street": "flop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "shows",
+     "amount": null,
+     "cards": [
+      "Qs",
+      "Qd"
+     ]
+    },
+    {
+     "street": "flop",
+     "pid": "alex",
+     "name": "Alex",
+     "text": "shows",
+     "amount": null,
+     "cards": [
+      "Ah",
+      "Kh"
      ]
     }
    ]
@@ -518,8 +533,32 @@
      "buyInCount": 1,
      "cashOuts": 0,
      "adjustments": 0,
-     "stack": 239,
-     "net": 3
+     "stack": 236,
+     "net": 0
+    },
+    {
+     "pid": "ari",
+     "name": "Ari",
+     "seat": 2,
+     "seated": true,
+     "buyIns": 210,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 210,
+     "net": 0
+    },
+    {
+     "pid": "dev",
+     "name": "Dev",
+     "seat": 1,
+     "seated": true,
+     "buyIns": 520,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 520,
+     "net": 0
     },
     {
      "pid": "kim",
@@ -544,30 +583,6 @@
      "adjustments": 0,
      "stack": 300,
      "net": 0
-    },
-    {
-     "pid": "dev",
-     "name": "Dev",
-     "seat": 1,
-     "seated": true,
-     "buyIns": 520,
-     "buyInCount": 1,
-     "cashOuts": 0,
-     "adjustments": 0,
-     "stack": 519,
-     "net": -1
-    },
-    {
-     "pid": "ari",
-     "name": "Ari",
-     "seat": 2,
-     "seated": true,
-     "buyIns": 210,
-     "buyInCount": 1,
-     "cashOuts": 0,
-     "adjustments": 0,
-     "stack": 208,
-     "net": -2
     }
    ],
    "totals": {
@@ -580,32 +595,9 @@
     "buyInCount": 5,
     "players": 5,
     "hands": 1,
-    "biggestWinner": {
-     "pid": "alex",
-     "name": "Alex",
-     "net": 3
-    }
+    "biggestWinner": null
    },
-   "settlement": [
-    {
-     "key": "ari>alex:2",
-     "from": "ari",
-     "fromName": "Ari",
-     "to": "alex",
-     "toName": "Alex",
-     "amount": 2,
-     "paid": false
-    },
-    {
-     "key": "dev>alex:1",
-     "from": "dev",
-     "fromName": "Dev",
-     "to": "alex",
-     "toName": "Alex",
-     "amount": 1,
-     "paid": false
-    }
-   ]
+   "settlement": []
   },
   "chat": []
  }

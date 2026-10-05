@@ -262,7 +262,7 @@ function VoteControls({ view, act, busy, mobile, now }) {
       ${!mobile && votes}
     </div>
     ${mobile && html`<${TimerBar} deadline=${rv.deadline} total=${12000} thin />`}
-    <div class="muted abar-sub">${opts.length > 1 ? 'Everyone all-in must pick the same number — otherwise it runs once.' : 'Running it once.'}</div>
+    <div class="muted abar-sub">${opts.length > 1 ? 'Everyone all-in must pick the same number — otherwise it runs once. Hands are shown once the vote is in.' : 'Running it once.'}</div>
     ${voter &&
     html`<div class=${cx('vote-opts', mobile && 'abar-grid')}>
       ${opts.map(
@@ -435,7 +435,7 @@ function Waiting({ view, mobile, now, title, sub, children, icon, pre }) {
         ${secs && html`<span class="mono muted">${secs}</span>`}
       </span>`
     : null;
-  const quiet = hand && (hand.phase === 'ritVote' || hand.phase === 'runout');
+  const quiet = hand && hand.phase === 'runout'; // the runout shows win % instead (the vote does not: hands are still down)
   const meBits = me && me.seat != null && hp
     ? html`<span class="abar-me">${hp.folded
         ? 'You folded'

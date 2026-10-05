@@ -252,12 +252,15 @@ Action `{ type:'act', move:'fold'|'check'|'call'|'raise', to? }` — `to` = tota
   is just part of the pot math — the winner gets everything). Nobody's cards are shown.
 - Betting closed with board < 5 and ≥ 2 players still in (all-in situations: at most one non-all-in player
   remaining and they have matched the highest commitment) → **all-in runout**:
-  1. All non-folded hole cards become `shown` (mandatory).
-  2. If `settings.maxRuns > 1`: `phase = 'ritVote'`, `ritVoters` = non-folded pids, `deadline = now + 12000`,
-     kind `'ritVote'`, compute `equity` for current board (run index 0). Votes via `{type:'vote', runs:1..maxRuns}`.
-     When every voter has voted or the deadline passes: if all votes present and identical → `runs = vote`, else `runs = 1`.
-     Else (maxRuns = 1) `runs = 1` directly.
-  3. `phase = 'runout'`: `runBoards = [board.slice()]` per run as they start; each runout STEP deals ONE street
+  1. If `settings.maxRuns > 1`: `phase = 'ritVote'`, `ritVoters` = non-folded pids, `deadline = now + 12000`,
+     kind `'ritVote'`. Votes via `{type:'vote', runs:1..maxRuns}`. During the vote every hole card stays face
+     down (`shown` all false, no `shows` log line) and `equity` stays `null` — win chances would give the hands
+     away. When every voter has voted or the deadline passes: if all votes present and identical → `runs = vote`,
+     else `runs = 1`; log `Running it once|twice|N times`. Else (maxRuns = 1) `runs = 1` directly, no vote.
+  2. Only then (right after the `Running it …` line, or straight away when maxRuns = 1): all non-folded hole
+     cards become `shown` (mandatory), one `shows` log line per player in hand order.
+  3. `phase = 'runout'`: `runBoards = [board.slice()]` per run as they start; `equity` is computed for the
+     current board (run index 0); each runout STEP deals ONE street
      (flop = 3 cards, turn 1, river 1) to the current run; after each step recompute `equity` for that run
      (dead cards = all cards on other runs' boards); `deadline = now + 1800`, kind `'runout'`.
      When a run's board reaches 5 cards, record `runResults[r]` (best hand among non-folded), then start the next
@@ -281,7 +284,7 @@ Action `{ type:'act', move:'fold'|'check'|'call'|'raise', to? }` — `to` = tota
 - `handName` (on `ps` and `runResults`) from the evaluator for players whose cards are visible at the end.
 - Showdown reveal rules (mandatory, sets `shown`): every winner of any run; the `lastAggressor` if still in the hand
   (else the first non-folded player clockwise from the button); if `settings.showdownLosers === 'show'`, every
-  non-folded player. All-in runouts already revealed everyone.
+  non-folded player. All-in runouts already revealed everyone (when the run-it vote closed).
 - After settlement: `phase = 'complete'`, `completedAt = now`, `toAct = null`, `results` filled,
   `deadline = now + nextHandDelay*1000` (+ 1500 per extra run), kind `'nextHand'`.
 - When the `nextHand` deadline fires: finish the hand →
@@ -490,7 +493,7 @@ View = {
       pid, seat, bet, committed, stack, folded, allIn, lastAction,
       cards: (string|null)[],                   // length 2/4; null = face down (not visible to this viewer)
       shown: boolean[],                         // which cards are public
-      equity: int | null,                       // during ritVote/runout only
+      equity: int | null,                       // during runout only — never during ritVote (hands are still face down)
       won: int,                                 // complete only
       handName: string | null,                  // only when all of this player's cards are visible to this viewer and board ≥ 3
       isWinner: bool,
@@ -554,13 +557,15 @@ Screens (one SPA, `public/index.html`):
   - Seats: empty seats show "Sit" (opens buy-in dialog with seat). Seat pods show avatar initials, name, stack,
     status tags (Folded, Check, Bet 60, Call 60, All-in, Away, Sitting out/Busted, SB/BB, "Rebuy pending", "Leaving"),
     D button chip, face-down card backs for players in the hand, face-up (flip animation, slightly larger) when shown,
-    the acting player's ring + countdown, win% under all-in players (number only, no hand descriptions),
+    the acting player's ring + countdown, win% under all-in players during the runout (number only, no hand
+    descriptions). During the run-it vote the all-in hands are still face-down backs with no win% (each player
+    sees only their own cards); they flip, and the win% appears, once the vote closes.
     winner gold ring + "+amount" tag, run labels.
   - Center: pot, board — or stacked boards when running it N times (each labelled with its winner when done),
     cards that make the winning hand lifted/others dimmed at complete; ghost "would have come" cards after a
     revealed runout (dashed outline, translucent), "Revealed by NAME".
   - Bottom bar states: your turn (Fold / Check|Call N / Raise slider + presets Min, ½ pot, ¾ pot, Pot, All-in;
-    PLO caps at pot), waiting (pre-action toggles — see Keyboard shortcuts below), run-it vote (Once/Twice/3× + others' votes + countdown),
+    PLO caps at pot), waiting (pre-action toggles — see Keyboard shortcuts below), run-it vote (Once/Twice/3× + others' votes + countdown; "Hands are shown once the vote is in"),
     hand complete (Show your hand: per-card toggle + Show both / Keep hidden; Reveal runout button when allowed;
     next hand countdown — also for AWAY players who were dealt in, with a "You're away · I'm back" notice on top),
     away banner ("You're away" + I'm back + wait for big blind checkbox + Leave seat),

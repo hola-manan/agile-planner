@@ -1,7 +1,7 @@
 {
  "name": "allin-vote",
  "title": "All-in — run it vote",
- "description": "Hero all-in on the flop against Dev; Dev voted twice, hero has not voted yet.",
+ "description": "Hero all-in on the flop against Dev; Dev voted twice, hero has not voted yet. Dev’s cards stay face down (and no win %) until the vote closes.",
  "view": {
   "code": "RVR-4821",
   "name": "Friday Night Game",
@@ -231,16 +231,16 @@
      "allIn": false,
      "lastAction": null,
      "cards": [
-      "Qs",
-      "Qd"
+      null,
+      null
      ],
      "shown": [
-      true,
-      true
+      false,
+      false
      ],
-     "equity": 74,
+     "equity": null,
      "won": 0,
-     "handName": "Three Queens",
+     "handName": null,
      "isWinner": false
     },
     {
@@ -287,10 +287,10 @@
       "Kh"
      ],
      "shown": [
-      true,
-      true
+      false,
+      false
      ],
-     "equity": 26,
+     "equity": null,
      "won": 0,
      "handName": "Ace high",
      "isWinner": false
@@ -421,28 +421,6 @@
      "name": "Dev",
      "text": "calls",
      "amount": 230
-    },
-    {
-     "street": "flop",
-     "pid": "dev",
-     "name": "Dev",
-     "text": "shows",
-     "amount": null,
-     "cards": [
-      "Qs",
-      "Qd"
-     ]
-    },
-    {
-     "street": "flop",
-     "pid": "alex",
-     "name": "Alex",
-     "text": "shows",
-     "amount": null,
-     "cards": [
-      "Ah",
-      "Kh"
-     ]
     }
    ]
   },

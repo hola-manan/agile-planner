@@ -1,7 +1,7 @@
 {
  "name": "t-vote-watching",
  "title": "Run-it vote (not a voter)",
- "description": "Hero folded; the two all-in players are voting.",
+ "description": "Hero folded; the two all-in players are voting — their cards stay face down until the vote closes.",
  "view": {
   "code": "RVR-4821",
   "name": "Friday Night Game",
@@ -43,6 +43,7 @@
    "waitForBB": false,
    "awayAfterHand": false,
    "leaveAfterHand": false,
+   "removedByHost": false,
    "timeouts": 0,
    "status": "seated",
    "inHand": true,
@@ -233,16 +234,16 @@
       "amount": 514
      },
      "cards": [
-      "Qs",
-      "Qd"
+      null,
+      null
      ],
      "shown": [
-      true,
-      true
+      false,
+      false
      ],
-     "equity": 74,
+     "equity": null,
      "won": 0,
-     "handName": "Three Queens",
+     "handName": null,
      "isWinner": false
     },
     {
@@ -285,16 +286,16 @@
       "amount": 230
      },
      "cards": [
-      "Ah",
-      "Kh"
+      null,
+      null
      ],
      "shown": [
-      true,
-      true
+      false,
+      false
      ],
-     "equity": 26,
+     "equity": null,
      "won": 0,
-     "handName": "Ace high",
+     "handName": null,
      "isWinner": false
     },
     {
@@ -437,28 +438,6 @@
      "name": "Alex",
      "text": "calls all-in",
      "amount": 230
-    },
-    {
-     "street": "flop",
-     "pid": "dev",
-     "name": "Dev",
-     "text": "shows",
-     "amount": null,
-     "cards": [
-      "Qs",
-      "Qd"
-     ]
-    },
-    {
-     "street": "flop",
-     "pid": "alex",
-     "name": "Alex",
-     "text": "shows",
-     "amount": null,
-     "cards": [
-      "Ah",
-      "Kh"
-     ]
     }
    ]
   },

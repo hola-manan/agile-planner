@@ -43,6 +43,7 @@
    "waitForBB": false,
    "awayAfterHand": false,
    "leaveAfterHand": false,
+   "removedByHost": false,
    "timeouts": 0,
    "status": "spectator",
    "inHand": false,
@@ -444,6 +445,13 @@
     },
     {
      "street": "flop",
+     "pid": null,
+     "name": null,
+     "text": "Running it 3 times",
+     "amount": null
+    },
+    {
+     "street": "flop",
      "pid": "dev",
      "name": "Dev",
      "text": "shows",
@@ -463,13 +471,6 @@
       "Ah",
       "Kh"
      ]
-    },
-    {
-     "street": "flop",
-     "pid": null,
-     "name": null,
-     "text": "Running it 3 times",
-     "amount": null
     },
     {
      "street": "turn",

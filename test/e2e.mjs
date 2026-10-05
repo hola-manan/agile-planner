@@ -812,14 +812,43 @@ step('hand 3: Cleo shoves with the All-in preset, Maya folds, Ben calls → run-
   await waitText(H, seatOf(H, 'Cleo'), 'All-in');
   await fold(H);
   await call(B);
-  // all-in and called: both hands are face up for everyone, then the vote
+  // all-in and called: the vote comes first, with every hand still face down — nobody sees the others'
+  // cards (or a win %) until the run count is decided
   for (const p of [H, B, C]) await waitText(p, bar(p), p === H ? 'voting' : 'Run it how many times?');
-  await until('Maya sees both all-in hands', async () => (await H.page.locator('.seat .seat-cards .card:not(.card-back)').count()) === 4);
-  assert((await H.page.locator('.seat .eq').count()) === 2, 'win % under both all-in players');
+  const allInHidden = async (label) => {
+    for (const [p, others] of [[H, ['Ben', 'Cleo']], [B, ['Cleo']], [C, ['Ben']]]) {
+      for (const name of others) {
+        const s = seatOf(p, name);
+        await until(`${p.name} sees ${name}'s backs (${label})`, async () => (await s.locator('.backs .card-back').count()) === 2);
+        assert((await s.locator('.card:not(.card-back)').count()) === 0, `${p.name} must not see ${name}'s cards while voting (${label})`);
+      }
+      assert((await p.page.locator('.eq').count()) === 0, `${p.name}: no win % while voting (${label})`);
+      assert(!/\d%/.test(await bar(p).innerText()), `${p.name}: no win % in the action bar while voting (${label})`);
+      const logText = (await p.page.locator('.handlog').allInnerTexts()).join('\n');
+      assert(!/\bshows?\b/.test(logText), `${p.name}: nobody shows while voting (${label}): ${logText}`);
+      const v = await viewOf(p);
+      assert(v.hand.phase === 'ritVote', `${p.name}: still voting (${label})`);
+      for (const hp of v.hand.players) {
+        if (hp.pid !== v.me.id) assert(hp.cards.every((c) => c === null), `${p.name}'s view leaks ${hp.name}'s cards while voting (${label})`);
+        assert(hp.equity === null, `${p.name}'s view has a win % for ${hp.name} while voting (${label})`);
+      }
+    }
+    // the voters still see their own two cards
+    for (const p of [B, C]) assert((await p.page.locator('.hero-cards .card:not(.card-back)').count()) === 2, `${p.name} sees their own cards`);
+  };
+  await allInHidden('nobody voted');
   await shot('11-vote', B, C);
   await act(B, btn(bar(B), 'Twice'));
   await waitText(C, bar(C), 'Ben'); // Ben's vote chip shows up on Cleo's phone
+  await allInHidden('Ben voted');
   await act(C, btn(bar(C), 'Twice'));
+  // the vote is in: both all-in hands flip for everyone, and the win % appears
+  await until('Maya sees both all-in hands', async () => (await H.page.locator('.seat .seat-cards .card:not(.card-back)').count()) === 4);
+  await until('Ben sees Cleo’s hand', async () => (await seatOf(B, 'Cleo').locator('.seat-cards .card:not(.card-back)').count()) === 2);
+  await until('Cleo sees Ben’s hand', async () => (await seatOf(C, 'Ben').locator('.seat-cards .card:not(.card-back)').count()) === 2);
+  await until('win % under both all-in players', async () => (await H.page.locator('.seat .eq').count()) === 2);
+  await waitText(H, H.page.locator('.handlog'), 'Cleo shows');
+  await waitText(H, H.page.locator('.handlog'), 'Ben shows');
 });
 
 step('hand 3: it runs twice — two boards, the pot is split between the runs', async () => {

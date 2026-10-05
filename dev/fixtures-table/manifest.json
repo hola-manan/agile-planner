@@ -12,7 +12,12 @@
   {
     "name": "t-vote-watching",
     "title": "Run-it vote (not a voter)",
-    "description": "Hero folded; the two all-in players are voting."
+    "description": "Hero folded; the two all-in players are voting — their cards stay face down until the vote closes."
+  },
+  {
+    "name": "t-runout-start",
+    "title": "Runout starts (vote closed)",
+    "description": "Both voted twice: the vote just closed, so the all-in hands flipped and the win % appeared; run 1 has not dealt yet."
   },
   {
     "name": "t-plo-showdown",

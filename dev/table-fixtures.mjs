@@ -121,7 +121,7 @@ fixture('t-three-runs', 'Running it three times', 'Three runs, run 2 dealing; he
   return g.view('priya');
 });
 
-fixture('t-vote-watching', 'Run-it vote (not a voter)', 'Hero folded; the two all-in players are voting.', () => {
+fixture('t-vote-watching', 'Run-it vote (not a voter)', 'Hero folded; the two all-in players are voting — their cards stay face down until the vote closes.', () => {
   const g = new Game({ seats: FIVE, stacks: FIVE_STACKS, settings: { maxRuns: 2, maxBuyIn: 600 }, seed: 3 });
   g.deal().rig({ alex: ['Ah', 'Kh'], dev: ['Qs', 'Qd'], kim: ['7c', '2d'] }, ['Qh', '7h', '2c', '5d', '9s']);
   // dev SB, ari BB, alex, kim, maya
@@ -132,6 +132,20 @@ fixture('t-vote-watching', 'Run-it vote (not a voter)', 'Hero folded; the two al
   g.do('dev', { type: 'vote', runs: 2 });
   g.ctx.now += 1_500;
   return g.view('kim');
+});
+
+fixture('t-runout-start', 'Runout starts (vote closed)', 'Both voted twice: the vote just closed, so the all-in hands flipped and the win % appeared; run 1 has not dealt yet.', () => {
+  const g = new Game({ seats: FIVE, stacks: FIVE_STACKS, settings: { maxRuns: 3, maxBuyIn: 600 }, seed: 3 });
+  g.deal().rig({ alex: ['Ah', 'Kh'], dev: ['Qs', 'Qd'] }, ['Qh', '7h', '2c', '5d', '9s', 'Th', 'Kc']);
+  g.play(['raise:6', 'fold', 'fold', 'cc', 'fold']);
+  g.play(['raise:12', 'allin', 'call']);
+  g.ctx.now += 1_500;
+  g.do('dev', { type: 'vote', runs: 2 });
+  g.ctx.now += 2_000;
+  g.do('alex', { type: 'vote', runs: 2 });
+  if (g.state.hand.phase !== 'runout') throw new Error('expected runout, got ' + g.state.hand.phase);
+  g.ctx.now += 400;
+  return g.view('alex');
 });
 
 fixture('t-plo-showdown', 'PLO showdown', 'Pot-Limit Omaha river showdown, hero wins with a straight.', () => {

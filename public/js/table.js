@@ -263,9 +263,13 @@ function SeatCards({ hp, mobile, holeWin }) {
   </div>`;
 }
 
-/** All-in run-it vote / runout: only equity numbers are shown, no hand descriptions. */
+/**
+ * All-in runout: only equity numbers are shown, no hand descriptions. Not the run-it vote before it:
+ * the all-in hands are still face down then (they flip when the vote closes) and there is no equity,
+ * so the hero keeps their own hand name like during the betting.
+ */
 export function equityPhase(hand) {
-  return !!hand && (hand.phase === 'ritVote' || hand.phase === 'runout');
+  return !!hand && hand.phase === 'runout';
 }
 
 function Tag({ tone, children, title }) {

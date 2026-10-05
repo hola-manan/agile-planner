@@ -32,7 +32,7 @@
   {
     "name": "allin-vote",
     "title": "All-in — run it vote",
-    "description": "Hero all-in on the flop against Dev; Dev voted twice, hero has not voted yet."
+    "description": "Hero all-in on the flop against Dev; Dev voted twice, hero has not voted yet. Dev’s cards stay face down (and no win %) until the vote closes."
   },
   {
     "name": "runout-2-boards",
