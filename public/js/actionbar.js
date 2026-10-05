@@ -3,16 +3,17 @@
 //   <ActionBar onBuyIn={() => …} onLeave={() => …} onSit={(seat|null) => …} />
 //
 // One component, one state at a time (first match wins):
-//   visitor → spectator (pick a seat / seat request pending) → away → my turn → run-it vote →
-//   runout → hand complete (show cards, reveal runout, next-hand countdown) → busted →
-//   waiting (someone else's turn / sitting out / no hand yet).
+//   visitor → spectator (pick a seat / seat request pending; + Reveal the runout when allowed) →
+//   away (unless a finished hand still offers me show / reveal — then hand complete with an
+//   away notice) → my turn → run-it vote → runout → hand complete (show cards, reveal runout,
+//   next-hand countdown) → busted → waiting (someone else's turn / sitting out / no hand yet).
 // A "leaving / going away after this hand" notice is stacked on top of any state.
 // Keyboard on my turn: F fold, C check/call, R focus the raise amount (ignored while typing).
 import { html, useState, useEffect, useRef, useMemo, Fragment } from './h.js';
 import { useRoom, useClock, serverNow } from './room.js';
 import { Button, Avatar, Icon, cx, fmt, cardText, countdownText, useIsMobile } from './ui.js';
 import { useShowPick, runWord } from './table.js';
-import { useBackPref } from './side.js';
+import { useBackPref, useShowdownPref } from './side.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const VOTE_LABEL = { 1: 'Once', 2: 'Twice', 3: '3×' };
@@ -295,14 +296,39 @@ function resultLine(view) {
   return html`${names.slice(0, -1).join(', ')} & ${names[names.length - 1]} split <span class="mono brass">${fmt(total)}</span>${runs.length > 1 ? ' over ' + runs.length + ' runs' : ''}`;
 }
 
+function RevealButton({ view, act, busy, mobile, now }) {
+  const hand = view.hand;
+  if (!hand || hand.phase !== 'complete' || !hand.canRevealRunout) return null;
+  const nextIn = view.deadlineKind === 'nextHand' ? countdownText(view.deadline, now) : '';
+  return html`<${Button} class=${cx('reveal-btn', mobile && 'btn-block btn-ghost reveal-m')} disabled=${busy} onClick=${() => act('revealRunout')}>
+    <${Icon} name="eye" size=${18} />Reveal the runout${mobile && nextIn ? html` · <span class="mono">${nextIn}</span>` : ''}
+  <//>`;
+}
+
+// Hands the "Always show" preference already showed (one automatic show per hand).
+const autoShown = new Set();
+
 function CompleteControls({ view, act, busy, mobile, now }) {
   const hand = view.hand;
   const me = view.me;
-  const pick = useShowPick(view.code + ':' + hand.no);
+  const handKey = view.code + ':' + hand.no;
+  const pick = useShowPick(handKey);
+  const [sdPref] = useShowdownPref();
   const hp = me ? hand.players.find((p) => p.pid === me.id) : null;
   const hole = (me && me.hole) || [];
   const unshown = hp ? hole.map((_, i) => i).filter((i) => !hp.shown[i]) : [];
-  const showPrompt = !!(hand.canShow && hp && !pick.hidden && unshown.length);
+  // "At showdown, when I lose" (session box): muck = no prompt, show = show them for me.
+  const lostShowdown = !!(hp && !hp.folded && !hp.isWinner && hand.results && hand.results.endedBy === 'showdown');
+  const canShowNow = !!(hand.canShow && hp && unshown.length);
+  useEffect(() => {
+    if (sdPref === 'muck' && lostShowdown && canShowNow && !pick.hidden) pick.hide();
+  }, [sdPref, lostShowdown, canShowNow, pick.hidden]);
+  useEffect(() => {
+    if (sdPref !== 'show' || !lostShowdown || !canShowNow || autoShown.has(handKey)) return;
+    autoShown.add(handKey);
+    act('show', { cards: unshown });
+  }, [sdPref, lostShowdown, canShowNow, handKey]);
+  const showPrompt = !!(canShowNow && !pick.hidden && !(lostShowdown && sdPref !== 'ask'));
   const sel = pick.sel.filter((i) => unshown.includes(i));
   const won = !!(hp && hp.isWinner);
   const nextIn = view.deadlineKind === 'nextHand' ? countdownText(view.deadline, now) : '';
@@ -316,11 +342,7 @@ function CompleteControls({ view, act, busy, mobile, now }) {
   const allWord = hole.length === 2 ? 'both' : 'all';
   const selText = sel.map((i) => cardText(hole[i])).join(' ');
 
-  const reveal = hand.canRevealRunout
-    ? html`<${Button} class=${cx('reveal-btn', mobile && 'btn-block btn-ghost reveal-m')} disabled=${busy} onClick=${() => act('revealRunout')}>
-        <${Icon} name="eye" size=${18} />Reveal the runout${mobile && nextIn ? html` · <span class="mono">${nextIn}</span>` : ''}
-      <//>`
-    : null;
+  const reveal = html`<${RevealButton} view=${view} act=${act} busy=${busy} mobile=${mobile} now=${now} />`;
 
   const next = html`<div class="next-hand">
     ${after ? html`<span class="muted">${after}</span>` : nextIn ? html`<span class="muted">Next hand</span><span class="mono next-secs">${nextIn}</span>` : null}
@@ -400,7 +422,7 @@ function Waiting({ view, mobile, now, title, sub, children, icon }) {
   let main = false;
   if (!line && toAct) {
     main = true;
-    line = html`<span class="abar-who"><${Avatar} name=${actorName} seed=${seatOf(view, toAct)} size=${mobile ? 22 : 26} />${actorName} is thinking</span>`;
+    line = html`<span class="abar-who"><${Avatar} name=${actorName} seed=${seatOf(view, toAct)} size=${mobile ? 22 : 26} /><span class="abar-who-name">${actorName}</span><span class="abar-who-rest"> is thinking</span></span>`;
   }
   const chip = !main && toAct
     ? html`<span class="actor-chip" title=${actorName + ' to act'}>
@@ -488,6 +510,7 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
   const mobile = useIsMobile();
   const view = room && room.view;
   const now = useClock(view);
+  const [waitBB] = useBackPref();
   if (!view || view.ended) return null;
   const act = room.act;
   const busy = !!room.acting;
@@ -500,7 +523,10 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
   let body;
   const notices = [];
 
-  if (me && me.seat != null && me.leaveAfterHand) {
+  if (me && me.seat != null && me.leaveAfterHand && me.removedByHost) {
+    // The host's removal can't be undone by the player — no "Stay seated" here.
+    notices.push(html`<${Notice} key="leave" icon="leave">The host removed you — you’ll be cashed out when this hand ends.<//>`);
+  } else if (me && me.seat != null && me.leaveAfterHand) {
     notices.push(html`<${Notice}
       key="leave"
       icon="leave"
@@ -520,15 +546,24 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
     <//>`;
   } else if (me.seat == null) {
     const req = me.request;
+    // Joined but not seated (spectator, or a host running the game without sitting): the runout
+    // reveal is still theirs when the setting allows it.
+    const reveal = hand && hand.phase === 'complete' && hand.canRevealRunout ? html`<${RevealButton} key="reveal" ...${props} />` : null;
+    const kids = (list) => {
+      const k = list.filter(Boolean);
+      return k.length ? k : null;
+    };
     if (req) {
       body = html`<${Waiting}
         ...${props}
         icon="clock"
         title=${html`Seat request sent${req.seat != null ? html` · seat <span class="mono">${req.seat + 1}</span>` : ''} · <span class="mono brass">${fmt(req.amount)}</span>`}
         sub="Waiting for the host to approve it."
-      >
-        <${Button} size=${mobile ? 'sm' : 'md'} disabled=${busy} onClick=${() => act('cancelRequest', { id: req.id })}>Cancel request<//>
-      <//>`;
+        children=${kids([
+          html`<${Button} key="cancel" size=${mobile ? 'sm' : 'md'} disabled=${busy} onClick=${() => act('cancelRequest', { id: req.id })}>Cancel request<//>`,
+          reveal,
+        ])}
+      />`;
     } else {
       const open = view.seats.filter((s) => !s.pid && !s.reservedBy).length;
       body = html`<${Waiting}
@@ -536,11 +571,13 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
         icon="seat"
         title=${open ? 'Pick an empty seat to sit down' : 'The table is full'}
         sub=${open ? (mobile ? 'Tap Sit on any open seat.' : 'Tap “Sit” on any open seat to choose your buy-in.') : 'You can watch and chat until a seat opens up.'}
-      >
-        ${open > 0 && !mobile && html`<${Button} kind="primary" onClick=${() => onSit && onSit(null)}>Take a seat<//>`}
-      <//>`;
+        children=${kids([
+          open > 0 && !mobile && html`<${Button} key="sit" kind="primary" onClick=${() => onSit && onSit(null)}>Take a seat<//>`,
+          reveal,
+        ])}
+      />`;
     }
-  } else if (me.away) {
+  } else if (me.away && !(hand && hand.phase === 'complete' && (hand.canShow || hand.canRevealRunout))) {
     tone = 'away';
     body = html`<${AwayControls} ...${props} onLeave=${onLeave} />`;
   } else if (hand && hand.phase === 'betting' && hand.toAct === me.id && hand.legal) {
@@ -559,6 +596,15 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
       sub=${eq != null ? html`You have <span class="mono brass">${eq}%</span> on this board.` : null}
     />`;
   } else if (hand && hand.phase === 'complete') {
+    if (me.away) {
+      // Away players keep the after-hand choices (show my cards / reveal the runout).
+      tone = 'away';
+      notices.push(html`<${Notice}
+        key="away-now"
+        icon="clock"
+        action=${html`<${Button} size="sm" kind="primary" disabled=${busy} onClick=${() => act('away', { on: false, waitForBB: waitBB })}>I’m back<//>`}
+      >You’re away — you won’t be dealt in until you’re back.<//>`);
+    }
     body = html`<${CompleteControls} ...${props} />`;
   } else if (me.busted) {
     const req = me.request;

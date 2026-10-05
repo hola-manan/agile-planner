@@ -88,5 +88,20 @@
     "name": "paused-between-hands",
     "title": "Paused",
     "description": "Host paused the game between hands; hero is seated."
+  },
+  {
+    "name": "away-hand-complete",
+    "title": "Away — hand over",
+    "description": "Hero went away mid-hand and was folded; the hand ended by fold. Hero can still show and reveal the runout."
+  },
+  {
+    "name": "spectator-fold-ending",
+    "title": "Spectator — fold ending",
+    "description": "Joined but not seated; the hand ended by fold and anyone may reveal the runout."
+  },
+  {
+    "name": "removed-by-host",
+    "title": "Removed by the host (all-in)",
+    "description": "Hero is all-in; the host removed them, so they are cashed out when the hand ends (no “Stay seated”)."
   }
 ]

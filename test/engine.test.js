@@ -1251,7 +1251,7 @@ describe('leaving', () => {
     assert.equal(lastLog(g).text, 'folds (removed by host)');
     const e = g.state.ledger[g.state.ledger.length - 1];
     assert.deepEqual([e.type, e.pid, e.amount, e.by, e.reason], ['cashout', 'p2', 198, 'p0', 'Removed by host']);
-    fails(g, 'p0', { type: 'remove', pid: 'p2' }, 'conflict', /isn’t seated/);
+    fails(g, 'p0', { type: 'setAway', pid: 'p2', on: true }, 'conflict', /isn’t seated/);
 
     act(g, 'p0', { type: 'act', move: 'raise', to: 200 });
     act(g, 'p1', { type: 'act', move: 'call' });
@@ -1440,10 +1440,14 @@ describe('host tools', () => {
     fails(g, 'p1', { type: 'sit', seat: 1, amount: 100 }, 'conflict', /ended/);
     fails(g, 'p0', { type: 'pause', on: false }, 'conflict', /ended/);
     act(g, 'p1', { type: 'chat', text: 'gg' });
-    act(g, 'p0', { type: 'markPaid', key: 'p1>p0:5', paid: true });
-    assert.deepEqual(g.state.paid, { 'p1>p0:5': true });
-    act(g, 'p0', { type: 'markPaid', key: 'p1>p0:5', paid: false });
-    assert.deepEqual(g.state.paid, {});
+    const row = sum.settlement[0];
+    act(g, 'p0', { type: 'markPaid', key: row.key, paid: true });
+    assert.equal(g.state.payments.length, 1);
+    const ticked = summarize(g.state).settlement[0];
+    assert.ok(ticked.paid && ticked.key.startsWith(row.key + '#'));
+    act(g, 'p0', { type: 'markPaid', key: ticked.key, paid: false });
+    assert.deepEqual(g.state.payments, []);
+    fails(g, 'p0', { type: 'markPaid', key: 'p1>p0:12345', paid: true }, 'conflict', /settle-up list/);
   });
 
   test('endGame with no hand running (or a finished one) ends at once', () => {
@@ -1633,4 +1637,140 @@ describe('randomized play', () => {
       );
     });
   }
+});
+
+// ─── review regressions ──────────────────────────────────────────────────────
+
+describe('review regressions', () => {
+  test('a side pot fed by a folded player’s chips is WON (winner marked), only the unmatched part is an uncalled bet', () => {
+    // p0 button 500, p1 SB 50, p2 BB 500. p0 raises to 50, p1 calls all-in, p2 raises to 200,
+    // p0 calls. Flop: p2 bets 100, p0 folds → pots [150: p1/p2] and [400: p2 only].
+    const g = newGame({ n: 3, stacks: [500, 50, 500], settings: { sb: 1, bb: 2, maxRuns: 1 } });
+    const h = deal(g);
+    assert.deepEqual([h.button, h.sbSeat, h.bbSeat, toAct(g)], [0, 1, 2, 'p0']);
+    rig(g, { p0: ['7c', '2d'], p1: ['As', 'Ad'], p2: ['Kc', 'Qd'] }, ['3h', '8s', '9d', '4c', 'Jh']);
+    act(g, 'p0', { type: 'act', move: 'raise', to: 50 });
+    act(g, 'p1', { type: 'act', move: 'call' });
+    act(g, 'p2', { type: 'act', move: 'raise', to: 200 });
+    act(g, 'p0', { type: 'act', move: 'call' });
+    assert.equal(hand(g).street, 'flop');
+    act(g, 'p2', { type: 'act', move: 'raise', to: 100 });
+    act(g, 'p0', { type: 'act', move: 'fold' });
+    runOut(g);
+    const r = hand(g).results;
+    assert.equal(r.endedBy, 'showdown');
+    assert.deepEqual(r.pots.map((p) => [p.amount, p.eligible, !!p.returned, p.uncalled ?? null]), [
+      [150, ['p1', 'p2'], false, null],
+      [400, ['p2'], false, 100],
+    ]);
+    assert.deepEqual(r.awards, { p1: 150, p2: 400 });
+    assert.deepEqual(r.winners, ['p1', 'p2'], 'p2 won 300 of that pot (150 of it p0’s) — a winner');
+    const texts = hand(g).log.filter((e) => e.pid === 'p2' && e.amount).map((e) => [e.text, e.amount]);
+    assert.deepEqual(texts.slice(-2), [
+      ['gets back an uncalled bet', 100],
+      ['wins the side pot', 300],
+    ]);
+  });
+
+  test('a pot nobody else reached at all is still just an uncalled bet (not a win)', () => {
+    const g = newGame({ n: 2, stacks: [3, 500], settings: { sb: 5, bb: 10, maxRuns: 1 } });
+    deal(g);
+    rig(g, { p0: ['2c', '7d'], p1: ['As', 'Ad'] }, ['Kh', 'Qh', '9s', '5c', '3d']);
+    runOut(g);
+    const r = hand(g).results;
+    assert.deepEqual(r.pots.map((p) => [p.amount, !!p.returned, p.uncalled ?? null]), [
+      [6, false, null],
+      [7, true, 7],
+    ]);
+    assert.deepEqual(r.winners, ['p1']);
+    assert.ok(!hand(g).log.some((e) => e.text === 'wins the side pot'));
+  });
+
+  test('host remove on a joined player without a seat removes them from the game (frees the cap and the name)', () => {
+    const g = newGame({ n: 2 });
+    E.addPlayer(g.state, { id: 'troll', name: 'Troll', tokenHash: 'th-troll' }, g.ctx);
+    fails(g, 'p1', { type: 'remove', pid: 'troll' }, 'forbidden', /host/);
+    fails(g, 'p0', { type: 'setAway', pid: 'troll', on: true }, 'conflict', /isn’t seated/);
+    act(g, 'troll', { type: 'chat', text: 'spam' });
+    act(g, 'troll', { type: 'sit', seat: 5, amount: 100 }); // approveBuyIns off in newGame → seated at once
+    act(g, 'troll', { type: 'leave' }); // a ledger trail: buy-in + cash-out
+    act(g, 'p0', { type: 'remove', pid: 'troll' });
+    // referenced by the ledger → a tombstone that can't act and isn't listed
+    assert.equal(player(g, 'troll').kicked, true);
+    assert.equal(player(g, 'troll').tokenHash, null);
+    fails(g, 'troll', { type: 'chat', text: 'still here?' }, 'forbidden', /Join/);
+    fails(g, 'p0', { type: 'remove', pid: 'troll' }, 'not_found');
+    fails(g, 'p0', { type: 'transferHost', pid: 'troll' }, 'not_found');
+    assert.deepEqual(E.activePlayers(g.state).map((p) => p.id).sort(), ['p0', 'p1']);
+    // a player nothing refers to is deleted outright
+    E.addPlayer(g.state, { id: 'ghost', name: 'Ghost', tokenHash: 'th-ghost' }, g.ctx);
+    act(g, 'ghost', { type: 'sit', seat: 6, amount: 100 });
+    act(g, 'p0', { type: 'remove', pid: 'ghost' }); // seated → stood up (cash-out on the ledger)
+    assert.equal(player(g, 'ghost').seat, null);
+    E.addPlayer(g.state, { id: 'lurker', name: 'Lurker', tokenHash: 'th-lurk' }, g.ctx);
+    act(g, 'p0', { type: 'remove', pid: 'lurker' });
+    assert.equal(g.state.players.lurker, undefined);
+    // the host can't remove themselves this way
+    act(g, 'p0', { type: 'leave' });
+    fails(g, 'p0', { type: 'remove', pid: 'p0' }, 'bad_request', /yourself/);
+  });
+
+  test('a pending seat request is dropped when its owner is removed; removed players free the 30-player cap', () => {
+    const g = newGame({ n: 2, settings: { approveBuyIns: true } });
+    for (let i = 0; i < 28; i++) E.addPlayer(g.state, { id: 'x' + i, name: 'X' + i, tokenHash: 'th' + i }, g.ctx);
+    assert.throws(() => E.addPlayer(g.state, { id: 'late', name: 'Late', tokenHash: 'th-late' }, g.ctx), /full/);
+    act(g, 'x0', { type: 'sit', seat: 4, amount: 100 });
+    assert.equal(g.state.requests.filter((r) => r.pid === 'x0').length, 1);
+    act(g, 'p0', { type: 'remove', pid: 'x0' });
+    assert.equal(g.state.requests.filter((r) => r.pid === 'x0').length, 0);
+    assert.equal(g.state.players.x0, undefined, 'nothing refers to x0, so they are gone');
+    E.addPlayer(g.state, { id: 'late', name: 'Late', tokenHash: 'th-late' }, g.ctx); // a slot is free again
+  });
+
+  test('names: invisible characters are stripped, invisible-only names and "You" are refused, lookalikes share a key', () => {
+    const ctx = { now: T0, rng: mulberry32(1) };
+    const s = E.createRoom({ code: 'NAM-0001', hostName: 'Alice', hostId: 'h', hostTokenHash: 'x' }, ctx);
+    assert.equal(E.addPlayer(s, { id: 'a', name: 'Ali‍ce⁠', tokenHash: 'y' }, ctx).name, 'Alice');
+    for (const bad of ['ㅤ', '‌', 'ᅟᅠ', '⠀', '  ­ ']) {
+      assert.throws(() => E.addPlayer(s, { id: 'b', name: bad, tokenHash: 'z' }, ctx), /required/, JSON.stringify(bad));
+    }
+    for (const bad of ['You', 'you', ' YOU ', 'Ｙｏｕ']) {
+      assert.throws(() => E.addPlayer(s, { id: 'b', name: bad, tokenHash: 'z' }, ctx), /reserved/, bad);
+    }
+    assert.throws(() => E.createRoom({ code: 'NAM-0002', hostName: 'you', hostId: 'h', hostTokenHash: 'x' }, ctx), /reserved/);
+    assert.equal(E.nameKey('ＡＬＩＣＥ'), E.nameKey('alice'));
+    assert.equal(E.nameKey('Ali‍ce'), 'alice');
+    assert.equal(E.addPlayer(s, { id: 'c', name: 'Young', tokenHash: 'w' }, ctx).name, 'Young');
+  });
+
+  test('markPaid records the payment: it survives later hands and is subtracted from what is still owed', () => {
+    // Ana, Bo, Cy buy in for 200; Bo loses 100 to Ana and leaves; Bo pays Ana (ticked); then Cy wins 150 from Ana.
+    const g = newGame({ n: 4, settings: { approveBuyIns: false } }); // p0 = host (Ana), p1 Bo, p2 Cy, p3 Dee
+    act(g, 'p3', { type: 'leave' }); // just three
+    const adjust = (pid, mode, amount) => act(g, 'p0', { type: 'adjust', pid, mode, amount, reason: 'test', countAsBuyIn: false });
+    // move chips between players with uncounted adjustments that net to zero (stand-ins for hands)
+    const move = (from, to, n) => {
+      adjust(from, 'remove', n);
+      adjust(to, 'add', n);
+    };
+    move('p1', 'p0', 100);
+    act(g, 'p1', { type: 'leave' }); // Bo cashes out 100
+    let L = summarize(g.state);
+    const boToAna = L.settlement.find((s) => s.from === 'p1');
+    assert.deepEqual([boToAna.to, boToAna.amount, boToAna.paid], ['p0', 100, false]);
+    act(g, 'p0', { type: 'markPaid', key: boToAna.key, paid: true });
+    move('p0', 'p2', 150);
+    L = summarize(g.state);
+    const rows = L.settlement.map((s) => [s.from, s.to, s.amount, s.paid]);
+    assert.deepEqual(rows, [
+      ['p1', 'p0', 100, true], // the payment Bo made stays recorded
+      ['p0', 'p2', 150, false], // Ana received Bo's 100, so she now owes Cy 150
+    ]);
+    // unticking brings the debt back
+    act(g, 'p0', { type: 'markPaid', key: L.settlement[0].key, paid: false });
+    assert.deepEqual(summarize(g.state).settlement.map((s) => [s.from, s.to, s.amount, s.paid]), [
+      ['p1', 'p2', 100, false],
+      ['p0', 'p2', 50, false],
+    ]);
+  });
 });

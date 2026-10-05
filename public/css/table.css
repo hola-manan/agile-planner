@@ -947,6 +947,25 @@
 }
 .tbl-m .se-main {
   font-size: 11px;
+  white-space: nowrap;
+}
+/* side-rail seats: labels hug the pod's inner edge instead of centring past the screen edge */
+.tbl-m .seat-edge-r .seat-below {
+  left: auto;
+  right: 0;
+  transform: none;
+  align-items: flex-end;
+}
+.tbl-m .seat-edge-l .seat-below {
+  left: 0;
+  transform: none;
+  align-items: flex-start;
+}
+.tbl-m .seat-empty-wrap.seat-edge-r {
+  transform: translate(calc(-100% + 25px), -50%);
+}
+.tbl-m .seat-empty-wrap.seat-edge-l {
+  transform: translate(-25px, -50%);
 }
 .tbl-m .seat-sit .se-main {
   font-size: 14px;
@@ -1056,6 +1075,20 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+}
+/* a long name gives way (ellipsis) before the clock next to it does */
+.abar-who-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.abar-who-rest {
+  flex: none;
+  white-space: pre;
+  margin-left: -10px; /* the flex gap sits between avatar and name only */
 }
 .abar-icon {
   width: 40px;
@@ -1621,6 +1654,16 @@
   .tbl-m .seat-empty {
     width: 40px;
     height: 40px;
+  }
+  .tbl-m .seat-reserved {
+    width: auto;
+    height: auto;
+  }
+  .tbl-m .seat-empty-wrap.seat-edge-r {
+    transform: translate(calc(-100% + 20px), -50%);
+  }
+  .tbl-m .seat-empty-wrap.seat-edge-l {
+    transform: translate(-20px, -50%);
   }
   .tbl-m .seat-quiet {
     width: 28px;

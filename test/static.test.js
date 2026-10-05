@@ -56,7 +56,7 @@ function callbacks(src, name) {
   return out;
 }
 
-const PURE = ['lib/cards.js', 'lib/evaluator.js', 'lib/equity.js', 'lib/engine.js', 'lib/view.js', 'lib/ledger.js'];
+const PURE = ['lib/cards.js', 'lib/evaluator.js', 'lib/equity.js', 'lib/engine.js', 'lib/view.js', 'lib/ledger.js', 'lib/ratelimit.js'];
 
 test('api/ and lib/ import only hatchable, lib/… (api) and relative modules', () => {
   for (const f of [...list('api'), ...list('lib')]) {

@@ -54,6 +54,7 @@ const post = (p, body, token) => call('POST', p, { body, token });
 const get = (p, token) => call('GET', p, { token });
 const act = (code, token, type, args = {}) => post('/api/act', { code, type, ...args }, token);
 const advanceClock = (ms) => post('/__dev/time', { advance: ms });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Open an SSE stream for `channel`; returns { events, close, waitFor(pred) }. */
 async function openSse(code) {
@@ -409,4 +410,75 @@ test('static: public, vendor MIME types, design and dev paths, traversal blocked
   assert.equal(r.status, 404);
   r = await fetch(BASE + '/%2e%2e/SPEC.md');
   assert.equal(r.status, 404);
+});
+
+// ─── review regressions ──────────────────────────────────────────────────────
+
+async function freshRoom(hostName = 'Host') {
+  const r = await post('/api/create', { hostName, gameName: 'Review', settings: SETTINGS });
+  assert.equal(r.status, 200, r.text);
+  return { code: r.json.code, host: { pid: r.json.pid, token: r.json.token } };
+}
+
+test('one client looping chat is rate limited (429) instead of using up the project-wide publish budget', async () => {
+  const a = await freshRoom();
+  const b = await freshRoom();
+  const troll = await post('/api/join', { code: a.code, name: 'Troll' });
+  assert.equal(troll.status, 200);
+  const sse = await openSse(a.code);
+  const statuses = [];
+  for (let i = 0; i < 40; i++) statuses.push((await act(a.code, troll.json.token, 'chat', { text: 'spam ' + i })).status);
+  const ok = statuses.filter((s) => s === 200).length;
+  assert.ok(ok >= 5 && ok <= 12, `a short burst gets through, then it stops (${ok} accepted)`);
+  assert.ok(statuses.slice(ok).every((s) => s === 429), 'the rest are 429: ' + statuses.join(','));
+  const last = await act(a.code, troll.json.token, 'chat', { text: 'again' });
+  assert.equal(last.json.code, 'rate_limited');
+  assert.match(last.json.error, /Slow down/);
+  // other people in the room still chat; another room is untouched
+  assert.equal((await act(a.code, a.host.token, 'chat', { text: 'host here' })).status, 200);
+  assert.equal((await act(b.code, b.host.token, 'chat', { text: 'other table' })).status, 200);
+  await sleep(150);
+  const published = sse.events.filter((e) => e && e.data && typeof e.data.v === 'number').length;
+  assert.ok(published >= ok && published <= ok + 2, `one publish per accepted change, none for refused ones (${published})`);
+  sse.close();
+  // the bucket refills over time
+  await advanceClock(20_000);
+  assert.equal((await act(a.code, troll.json.token, 'chat', { text: 'calm now' })).status, 200);
+});
+
+test('join: lookalike names (zero-width / case / full-width), invisible names and "You" are refused', async () => {
+  const { code } = await freshRoom('Alice');
+  for (const name of ['Ali‍ce', 'ALICE⁠', 'Ａｌｉｃｅ']) {
+    const r = await post('/api/join', { code, name });
+    assert.equal(r.status, 409, `${JSON.stringify(name)} → ${r.status} ${r.text}`);
+  }
+  for (const name of ['ㅤ', '‌', 'You', ' you ']) {
+    const r = await post('/api/join', { code, name });
+    assert.equal(r.status, 400, `${JSON.stringify(name)} → ${r.status} ${r.text}`);
+  }
+  assert.equal((await post('/api/create', { hostName: 'YOU', settings: SETTINGS })).status, 400);
+  const ok = await post('/api/join', { code, name: 'Al​ex' });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.json.view.me.name, 'Alex');
+});
+
+test('the host can remove a joined player without a seat: their token stops working, the slot and name free up', async () => {
+  const { code, host } = await freshRoom();
+  const joins = [];
+  for (let i = 0; i < 29; i++) {
+    const r = await post('/api/join', { code, name: 'G' + i });
+    assert.equal(r.status, 200, r.text);
+    joins.push(r.json);
+    if (i % 20 === 19) await advanceClock(20_000); // the room bucket also paces joins
+  }
+  const full = await post('/api/join', { code, name: 'Friend' });
+  assert.equal(full.status, 409);
+  assert.match(full.json.error, /full/);
+  const r = await act(code, host.token, 'remove', { pid: joins[0].pid });
+  assert.equal(r.status, 200, r.text);
+  assert.ok(!r.json.view.players.some((p) => p.id === joins[0].pid));
+  assert.equal((await act(code, joins[0].token, 'chat', { text: 'hi' })).status, 403);
+  assert.equal((await get('/api/state?code=' + code, joins[0].token)).json.view.me, null);
+  const again = await post('/api/join', { code, name: 'G0' }); // the slot and the name are free
+  assert.equal(again.status, 200, again.text);
 });

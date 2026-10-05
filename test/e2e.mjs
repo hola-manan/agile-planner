@@ -368,6 +368,138 @@ step('lobby renders on desktop and phone', async () => {
   await shot('01-lobby', H, C);
 });
 
+// ─── review regressions on engine-generated states (dev preview harness) ────────
+// Real viewFor() fixtures (dev/make-fixtures.mjs) rendered by the real UI; the harness's act()
+// only reports "Preview — would send …" in a toast, so we can check what a button would do.
+
+async function preview(fixture, { mobile = false, width, height, pref, page: pagePath = 'preview.html', rename, query = '' } = {}) {
+  const ctx = await browser.newContext({
+    viewport: mobile ? { width: width || 390, height: height || 844 } : { width: width || 1440, height: height || 1000 },
+    deviceScaleFactor: mobile ? 2 : 1,
+    isMobile: mobile,
+    hasTouch: mobile,
+  });
+  if (pref) await ctx.addInitScript((v) => localStorage.setItem('felt:showdownPref', v), pref);
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('pageerror', (e) => errs.push(e.message));
+  page.on('console', (m) => {
+    if (m.type() === 'error' && !isFontNoise(m.text(), (m.location() || {}).url)) errs.push(m.text());
+  });
+  if (rename) {
+    await page.route('**/' + fixture + '.json', async (route) => {
+      const r = await route.fetch();
+      let t = await r.text();
+      for (const [from, to] of Object.entries(rename)) t = t.split('"' + from + '"').join('"' + to + '"');
+      await route.fulfill({ response: r, body: t });
+    });
+  }
+  await page.goto(`${BASE}/__dev/${pagePath}?fixture=${fixture}&embed=1${query}`);
+  await page.locator(pagePath === 'preview.html' ? 'section.abar' : '.tbl').first().waitFor({ timeout: T });
+  await page.evaluate(() => document.fonts && document.fonts.ready);
+  await sleep(300);
+  const done = async (label) => {
+    if (label) await page.screenshot({ path: path.join(SHOTS, `e2e-00-${label}-${mobile ? 'mobile' + (width && width !== 390 ? width : '') : 'desktop'}.png`) });
+    await ctx.close();
+    assert(!errs.length, `${fixture}: page errors: ${errs.join(' | ')}`);
+  };
+  return { page, done, bar: page.locator('section.abar') };
+}
+
+async function wouldSend(page, type) {
+  await until(`preview toast "would send ${type}"`, async () => (await page.locator('.toast').allInnerTexts()).some((t) => t.includes('would send ' + type)), 5000);
+}
+
+/** Every visible element matching `sel` lies inside [0, viewport width]. */
+async function insideViewport(page, sel, what) {
+  const out = await page.$$eval(sel, (els) =>
+    els.filter((e) => e.offsetParent !== null).map((e) => {
+      const r = e.getBoundingClientRect();
+      return { t: e.innerText.slice(0, 30), l: r.left, r: r.right };
+    }),
+  );
+  const w = await page.evaluate(() => window.innerWidth);
+  for (const x of out) assert(x.l >= -0.5 && x.r <= w + 0.5, `${what}: "${x.t}" spans ${Math.round(x.l)}–${Math.round(x.r)} in a ${w}px viewport`);
+  return out.length;
+}
+
+step('review: an away player still gets show-your-cards and reveal-the-runout after the hand', async () => {
+  for (const mobile of [false, true]) {
+    const { page, bar: b, done } = await preview('away-hand-complete', { mobile });
+    await waitText({ name: 'preview' }, b, 'You’re away');
+    await waitText({ name: 'preview' }, b, 'Show your hand?');
+    await b.getByRole('button', { name: /^Reveal the runout/ }).waitFor();
+    await b.getByRole('button', { name: 'I’m back' }).waitFor();
+    await done(mobile ? 'away-complete' : null);
+    const again = await preview('away-hand-complete', { mobile });
+    await (mobile ? again.bar.getByRole('button', { name: 'Both' }).tap() : again.bar.getByRole('button', { name: 'Show both' }).click());
+    await wouldSend(again.page, 'show');
+    await again.done(mobile ? null : 'away-complete');
+  }
+});
+
+step('review: a joined player without a seat can reveal the runout', async () => {
+  for (const mobile of [false, true]) {
+    const { page, bar: b, done } = await preview('spectator-fold-ending', { mobile });
+    const reveal = b.getByRole('button', { name: /^Reveal the runout/ });
+    await reveal.waitFor();
+    await (mobile ? reveal.tap() : reveal.click());
+    await wouldSend(page, 'revealRunout');
+    await done('spectator-reveal');
+  }
+});
+
+step('review: a player the host removed is told so and never offered "Stay seated"', async () => {
+  for (const mobile of [false, true]) {
+    const { page, bar: b, done } = await preview('removed-by-host', { mobile, query: mobile ? '&dialog=menu' : '' });
+    await waitText({ name: 'preview' }, b, 'The host removed you');
+    if (mobile) await page.getByRole('dialog', { name: 'Menu' }).getByText('The host removed you').waitFor();
+    else await page.locator('.side-session').getByText('The host removed you').waitFor();
+    assert((await page.getByRole('button', { name: 'Stay seated' }).count()) === 0, '"Stay seated" must not be offered after a host removal');
+    await done('removed-by-host');
+    const d = await preview('removed-by-host', { mobile, query: '&dialog=leave' });
+    const dlg = d.page.getByRole('dialog', { name: 'Leave your seat?' });
+    await dlg.getByText('The host removed you').waitFor();
+    assert((await dlg.getByRole('button', { name: 'Stay seated' }).count()) === 0, 'leave dialog: no "Stay seated"');
+    await d.done(mobile ? null : 'removed-leave-dialog');
+  }
+});
+
+step('review: the "At showdown, when I lose" preference (session box) drives the show prompt', async () => {
+  // showdown-complete: hero lost the showdown with cards nobody has seen
+  const ask = await preview('showdown-complete');
+  await waitText({ name: 'preview' }, ask.bar, 'Show your hand?');
+  const sel = ask.page.locator('.side-session').getByLabel('At showdown, when I lose');
+  assert((await sel.inputValue()) === 'ask', 'default: ask me each time');
+  await sel.selectOption('muck');
+  await until('the prompt goes away once "Always muck" is picked', async () => !(await ask.bar.innerText()).includes('Show your hand?'), 5000);
+  assert((await ask.page.evaluate(() => localStorage.getItem('felt:showdownPref'))) === 'muck', 'the preference is remembered');
+  await ask.done('showdown-pref');
+  const muck = await preview('showdown-complete', { mobile: true, pref: 'muck' });
+  await waitText({ name: 'preview' }, muck.bar, 'wins');
+  await sleep(500);
+  assert(!(await muck.bar.innerText()).includes('Show your hand?'), '"Always muck": no prompt');
+  await muck.done('showdown-muck');
+  const show = await preview('showdown-complete', { pref: 'show' });
+  await wouldSend(show.page, 'show');
+  await show.done();
+});
+
+step('review: nothing spills past a 360px screen (reserved seat, seat tags, a 20-letter name)', async () => {
+  const a = await preview('t-spectator-requested', { mobile: true, width: 360, height: 740, page: 'table-preview.html' });
+  assert((await insideViewport(a.page, '.se-main', 'reserved seat label')) >= 1, 'the "Requested" seat is drawn');
+  await noHorizontalScroll({ name: 'preview', page: a.page }, '360px');
+  await a.done('360-requested');
+  const long = 'W'.repeat(20);
+  const b = await preview('host-with-requests', { mobile: true, width: 360, height: 740, rename: { Ari: long } });
+  assert((await insideViewport(b.page, '.seat .tag', 'seat tags')) >= 3, 'seat tags are drawn');
+  const who = await b.page.locator('.abar-who').boundingBox();
+  const secs = await b.page.locator('.abar-secs').boundingBox();
+  assert(who && secs && who.x + who.width <= secs.x + 0.5, `the acting name (${Math.round(who.x + who.width)}) runs into the clock (${Math.round(secs.x)})`);
+  await insideViewport(b.page, '.abar-who', 'acting name');
+  await b.done('360-long-name');
+});
+
 step('host creates a game in the lobby', async () => {
   const pg = H.page;
   // Submitting without a name shows the validation message and stays put.
@@ -986,6 +1118,26 @@ step('ledger: balanced, settle-up ticked by the host shows up for everyone', asy
   await closeTop(H);
   await closeTop(B);
   await closeTop(C);
+});
+
+step('host removes Ben (watching, no seat) from the game: his spot and his name are free again', async () => {
+  const dlg = await openHostTools();
+  await dlg.getByRole('button', { name: 'Remove Ben from the game' }).click();
+  const confirm = H.page.getByRole('dialog', { name: 'Remove Ben from the game?' });
+  await confirm.getByText('frees their spot').waitFor();
+  await act(H, confirm.getByRole('button', { name: 'Remove', exact: true }));
+  await confirm.waitFor({ state: 'detached' });
+  await until('Ben is gone from the host’s players table', async () => (await dlg.locator('.tbl-name', { hasText: /^Ben$/ }).count()) === 0);
+  await closeTop(H);
+  // realtime: Ben's token no longer works, so his page drops back to a visitor's view
+  await until('Ben is a visitor now', async () => (await sessionOf(B)) === null);
+  await waitText(B, bar(B), 'You’re watching');
+  const v = await viewOf(H);
+  assert(!v.players.some((x) => x.name === 'Ben'), 'Ben is not in the player list');
+  assert(v.ledger.players.some((r) => r.name === 'Ben'), 'Ben’s ledger rows stay');
+  // the name is free again: a new "Ben" can join
+  const r = await fetch(BASE + '/api/join', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: CODE, name: 'ben' }) });
+  assert(r.status === 200, 'joining as "ben" after the removal → ' + r.status);
 });
 
 step('host ends the game: everyone sees the final ledger', async () => {

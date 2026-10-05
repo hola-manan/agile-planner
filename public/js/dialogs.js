@@ -301,7 +301,13 @@ export function LeaveDialog({ open, onClose }) {
 
   let options = null;
   let actions;
-  if (me.leaveAfterHand) {
+  if (me.leaveAfterHand && me.removedByHost) {
+    // The host's removal can't be cancelled by the player, so there's no "Stay seated".
+    options = html`<div class="note"><${Icon} name="clock" />The host removed you — you’ll be cashed out when hand #${handNo} ends.</div>`;
+    actions = html`<div class="dlg-actions">
+      <${Button} onClick=${onClose}>OK<//>
+    </div>`;
+  } else if (me.leaveAfterHand) {
     options = html`<div class="note"><${Icon} name="clock" />You’re standing up when hand #${handNo} ends. Your stack is cashed out then.</div>`;
     actions = html`<div class="dlg-actions">
       <${Button} disabled=${busy} onClick=${cancelLeave}>Stay seated<//>

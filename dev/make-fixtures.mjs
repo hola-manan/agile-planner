@@ -481,6 +481,48 @@ fixture('paused-between-hands', 'Paused', 'Host paused the game between hands; h
   return g.view('alex');
 });
 
+// ─── states found in review (each must keep working; test/e2e.mjs checks them in the preview) ─────
+
+/** Everyone still in folds until one player is left. */
+function foldOut(g) {
+  for (let i = 0; i < 20 && g.hand && g.hand.phase === 'betting'; i++) g.play(['fold']);
+  if (!g.hand || g.hand.phase !== 'complete' || g.hand.results.endedBy !== 'fold') throw new Error('expected a fold ending');
+}
+
+fixture('away-hand-complete', 'Away — hand over', 'Hero went away mid-hand and was folded; the hand ended by fold. Hero can still show and reveal the runout.', () => {
+  const g = sixGame({ seed: 12 });
+  g.deal();
+  g.ctx.now += 2_000;
+  g.do('alex', { type: 'away', on: true });
+  foldOut(g);
+  g.ctx.now += 1_500;
+  const v = g.view('alex');
+  if (!v.me.away || !v.hand.canShow || !v.hand.canRevealRunout) throw new Error('away hero should be able to show and reveal');
+  return v;
+});
+
+fixture('spectator-fold-ending', 'Spectator — fold ending', 'Joined but not seated; the hand ended by fold and anyone may reveal the runout.', () => {
+  const g = sixGame({ extra: ['priya'], seed: 13 });
+  g.deal();
+  foldOut(g);
+  g.ctx.now += 1_500;
+  const v = g.view('priya');
+  if (v.me.seat != null || !v.hand.canRevealRunout) throw new Error('spectator should be able to reveal the runout');
+  return v;
+});
+
+fixture('removed-by-host', 'Removed by the host (all-in)', 'Hero is all-in; the host removed them, so they are cashed out when the hand ends (no “Stay seated”).', () => {
+  const g = new Game({ seats: { maya: 0, alex: 1, dev: 2, ari: 3 }, stacks: { maya: 300, alex: 40, dev: 300, ari: 300 }, settings: { minBuyIn: 20 }, seed: 14 });
+  g.deal();
+  g.until('alex');
+  g.play(['allin']);
+  g.ctx.now += 1_000;
+  g.do('maya', { type: 'remove', pid: 'alex' });
+  const v = g.view('alex');
+  if (!v.me.leaveAfterHand || !v.me.removedByHost) throw new Error('expected a deferred host removal');
+  return v;
+});
+
 // ─── write ───────────────────────────────────────────────────────────────────
 
 mkdirSync(OUT, { recursive: true });

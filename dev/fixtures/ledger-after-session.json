@@ -43,6 +43,7 @@
    "waitForBB": false,
    "awayAfterHand": false,
    "leaveAfterHand": false,
+   "removedByHost": false,
    "timeouts": 0,
    "status": "seated",
    "inHand": false,
@@ -1595,7 +1596,7 @@
    },
    "settlement": [
     {
-     "key": "dev>alex:1400",
+     "key": "dev>alex:1400#70",
      "from": "dev",
      "fromName": "Dev",
      "to": "alex",

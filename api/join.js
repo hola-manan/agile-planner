@@ -1,7 +1,8 @@
 // POST /api/join  { code, name } → { pid, token, view }
 // If the x-felt-token header already belongs to a player in this room, that player is returned
 // (idempotent rejoin) and `name` is ignored.
-import { addPlayer } from 'lib/engine.js';
+import { addPlayer, activePlayers, nameKey } from 'lib/engine.js';
+import { rateWait, spendRate } from 'lib/ratelimit.js';
 import { viewFor } from 'lib/view.js';
 import { cryptoRng } from 'lib/cards.js';
 import {
@@ -32,7 +33,7 @@ export default async function (req, res) {
       });
     }
 
-    const name = cleanName(body.name, { max: 20, label: 'Your name' });
+    const name = cleanName(body.name, { max: 20, label: 'Your name', player: true });
     const pid = newPid();
     const token = newToken();
     const tokenHash = await sha256Hex(token);
@@ -41,15 +42,19 @@ export default async function (req, res) {
 
     const out = await mutateRoom(code, (state) => {
       now = Date.now();
-      const players = Object.values(state.players || {});
+      // Players the host removed don't count: their spot and their name are free again.
+      const players = activePlayers(state);
       if (players.length >= MAX_PLAYERS) {
         throw new StoreError('This game is full (' + MAX_PLAYERS + ' players).', 'conflict');
       }
-      const lower = name.toLocaleLowerCase();
-      if (players.some((p) => String(p.name).toLocaleLowerCase() === lower)) {
+      const key = nameKey(name); // lookalikes (case, full-width, ligatures) count as the same name
+      if (players.some((p) => nameKey(p.name) === key)) {
         throw new StoreError('Someone at this table is already called “' + name + '”. Pick another name.', 'conflict');
       }
+      const wait = rateWait(state, null, now);
+      if (wait > 0) throw new StoreError(`Lots of people are joining — try again in ${Math.ceil(wait / 1000)}s.`, 'rate_limited');
       addPlayer(state, { id: pid, name, tokenHash }, { now, rng });
+      spendRate(state, null, now);
     });
 
     return res.json({ pid, token, view: viewFor(out.state, pid, out.version, now) });

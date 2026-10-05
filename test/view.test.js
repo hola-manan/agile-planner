@@ -469,3 +469,37 @@ test('random play: no viewer ever sees a hidden card in any phase (property)', (
     assert.ok(g.state.handNo >= 1);
   }
 });
+
+describe('review regressions', () => {
+  test('me.removedByHost: true only when the host (not the player) deferred their leave', () => {
+    const g = game({ n: 3, spectators: 0, stacks: [200, 30, 200] });
+    deal(g);
+    // play until p1 is all-in
+    for (let i = 0; i < 10 && !g.state.hand.ps.p1.allIn; i++) {
+      const pid = g.state.hand.toAct;
+      const L = E.legalActions(g.state, pid);
+      if (pid === 'p1') act(g, pid, { type: 'act', move: 'raise', to: L.maxTo });
+      else act(g, pid, { type: 'act', move: L.check ? 'check' : 'call' });
+    }
+    assert.ok(g.state.hand.ps.p1.allIn);
+    act(g, 'p2', { type: 'leave', afterHand: true });
+    assert.equal(view(g, 'p2').me.removedByHost, false, 'a self-leave can be cancelled');
+    act(g, 'p0', { type: 'remove', pid: 'p1' });
+    const me = view(g, 'p1').me;
+    assert.deepEqual([me.leaveAfterHand, me.removedByHost], [true, true]);
+    assert.throws(() => act(g, 'p1', { type: 'cancelLeave' }), /host/);
+  });
+
+  test('players the host removed from the game are not in anyone’s view, and can’t view as themselves', () => {
+    const g = game({ n: 2, spectators: 1 });
+    act(g, 'p2', { type: 'chat', text: 'hello' });
+    act(g, 'p2', { type: 'sit', seat: 5, amount: 50 });
+    act(g, 'p2', { type: 'leave' });
+    act(g, 'p0', { type: 'remove', pid: 'p2' });
+    assert.equal(g.state.players.p2.kicked, true);
+    for (const v of [view(g, 'p0'), view(g, null)]) assert.ok(!v.players.some((p) => p.id === 'p2'));
+    assert.equal(view(g, 'p2').me, null);
+    // their ledger rows keep their name
+    assert.ok(view(g, 'p0').ledger.players.some((r) => r.pid === 'p2' && r.name === 'Player 2'));
+  });
+});

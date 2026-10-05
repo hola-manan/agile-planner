@@ -478,6 +478,15 @@
   flex: none;
   font-size: 13px;
 }
+.session-pref {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+.session-pref .field {
+  height: 42px;
+}
 .session-hint {
   font-size: 13px;
   line-height: 1.45;
@@ -1601,4 +1610,9 @@ button.prow:active {
 }
 .sheet-full .plist > .log-title {
   justify-content: flex-end;
+}
+
+/* Host tools (phone): remove a spectator from the game. */
+.prow-x {
+  flex: none;
 }

@@ -152,7 +152,10 @@ function useRemove() {
   const [target, setTarget] = useState(null);
   const p = target ? playerOf(view, target) : null;
   let body = null;
-  if (p) {
+  const seated = !!(p && p.seat != null);
+  if (p && !seated) {
+    body = html`${p.name} leaves this game, which frees their spot and their name. They can only come back by joining again with the invite link.`;
+  } else if (p) {
     const hp = view.hand && view.hand.phase !== 'complete' ? (view.hand.players || []).find((x) => x.pid === p.id) : null;
     const row = ledgerRowOf(view, p.id);
     body = html`${p.name} is cashed out for <b class="mono">${fmt(p.stack + p.pendingChips)}</b> chips and goes back to watching.
@@ -161,15 +164,16 @@ function useRemove() {
   }
   const dialog = html`<${ConfirmDialog}
     open=${!!p}
-    title=${p ? `Remove ${p.name} from the table?` : ''}
+    title=${p ? (seated ? `Remove ${p.name} from the table?` : `Remove ${p.name} from the game?`) : ''}
     body=${body}
     confirmLabel="Remove"
     danger=${true}
     onConfirm=${async () => {
       const name = p.name;
+      const wasSeated = p.seat != null;
       const v = await act('remove', { pid: p.id });
       if (!v) return false;
-      toast(`${name} was removed from the table.`, 'default');
+      toast(wasSeated ? `${name} was removed from the table.` : `${name} was removed from the game.`, 'default');
       return true;
     }}
     onClose=${() => setTarget(null)}
@@ -232,6 +236,13 @@ function PlayersTable({ selected, onAdjust, onRemove }) {
                       <//>`
                     : html`<span class="tbl-btn-gap" aria-hidden="true"></span>`}
                 </div>`}
+                ${!seated &&
+                !mine &&
+                html`<div class="tbl-btns">
+                  <${Button} size="sm" kind="danger" class="btn-icon" aria-label=${'Remove ' + p.name + ' from the game'} title="Remove from the game" onClick=${() => onRemove(p.id)}>
+                    <${Icon} name="close" size=${15} />
+                  <//>
+                </div>`}
               </td>
             </tr>`;
           })}
@@ -242,8 +253,9 @@ function PlayersTable({ selected, onAdjust, onRemove }) {
 }
 
 /** Phone: compact rows (design/HostMobile.dc.html); tap a seated player for the adjust sheet. */
-function PlayersListM({ onAdjust }) {
+function PlayersListM({ onAdjust, onRemove }) {
   const { view } = useRoom();
+  const me = view.me;
   const list = (view.players || []).slice().sort((a, b) => (a.seat ?? 99) - (b.seat ?? 99));
   return html`<section class="panel host-card host-plist-m" aria-label="Players">
     <div class="host-card-head">
@@ -265,7 +277,13 @@ function PlayersListM({ onAdjust }) {
         ${seated && html`<${Icon} name="chevron" size=${16} class="prow-go" />`}`;
       return seated
         ? html`<button type="button" key=${p.id} class="prow" onClick=${() => onAdjust(p.id)} aria-label=${'Manage ' + p.name}>${inner}</button>`
-        : html`<div key=${p.id} class="prow is-out">${inner}</div>`;
+        : html`<div key=${p.id} class="prow is-out">
+            ${inner}
+            ${!(me && p.id === me.id) &&
+            html`<${Button} size="sm" kind="danger" class="btn-icon prow-x" aria-label=${'Remove ' + p.name + ' from the game'} title="Remove from the game" onClick=${() => onRemove(p.id)}>
+              <${Icon} name="close" size=${15} />
+            <//>`}
+          </div>`;
     })}
   </section>`;
 }
@@ -706,7 +724,7 @@ export function HostTools() {
   if (mobile) {
     return html`<div class="host host-m">
       <${Requests} mobile=${true} />
-      <${PlayersListM} onAdjust=${setAdjustPid} />
+      <${PlayersListM} onAdjust=${setAdjustPid} onRemove=${remove} />
       <section class="panel host-card host-game" aria-label="Game">
         <div class="host-card-head"><h3>Game</h3><span class="muted host-chips">${status}</span></div>
         <div class="host-game-grid">

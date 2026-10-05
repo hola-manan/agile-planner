@@ -289,3 +289,23 @@ describe('with the engine', () => {
     assert.ok(L.settlement.slice(1).every((s) => !s.paid));
   });
 });
+
+describe('settle with recorded payments (review regression)', () => {
+  test('a ticked payment stays listed and is subtracted from what is still owed, whatever happens later', () => {
+    const payments = [{ id: 9, key: 'bo>ana:100#9', from: 'bo', fromName: 'Bo', to: 'ana', toName: 'Ana', amount: 100 }];
+    // later hands: Ana is now −50, Bo −100, Cy +150
+    const out = settle(
+      [
+        { pid: 'cy', name: 'Cy', net: 150 },
+        { pid: 'ana', name: 'Ana', net: -50 },
+        { pid: 'bo', name: 'Bo', net: -100 },
+      ],
+      {},
+      payments,
+    );
+    assert.deepEqual(out.map((s) => [s.key, s.from, s.to, s.amount, s.paid]), [
+      ['bo>ana:100#9', 'bo', 'ana', 100, true],
+      ['ana>cy:150', 'ana', 'cy', 150, false],
+    ]);
+  });
+});

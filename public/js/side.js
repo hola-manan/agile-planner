@@ -98,6 +98,40 @@ export function playerStatus(view, p, { long = false } = {}) {
 let backWaitBB = false;
 const backSubs = new Set();
 
+// "At showdown, when I lose": 'ask' (prompt each time) | 'muck' (keep them hidden, no prompt) |
+// 'show' (show them automatically). Per browser (localStorage), shared by the session box and the
+// action bar, which applies it when a showdown I lost completes.
+const SHOWDOWN_KEY = 'felt:showdownPref';
+export const SHOWDOWN_PREFS = [
+  { value: 'ask', label: 'Ask me each time' },
+  { value: 'muck', label: 'Always muck' },
+  { value: 'show', label: 'Always show' },
+];
+let showdownPref = null;
+const showdownSubs = new Set();
+function readShowdownPref() {
+  if (showdownPref == null) {
+    const v = store.get(SHOWDOWN_KEY);
+    showdownPref = v === 'muck' || v === 'show' ? v : 'ask';
+  }
+  return showdownPref;
+}
+
+export function useShowdownPref() {
+  const [v, setV] = useState(readShowdownPref);
+  useEffect(() => {
+    showdownSubs.add(setV);
+    setV(readShowdownPref());
+    return () => showdownSubs.delete(setV);
+  }, []);
+  const set = useCallback((next) => {
+    showdownPref = next === 'muck' || next === 'show' ? next : 'ask';
+    store.set(SHOWDOWN_KEY, showdownPref);
+    showdownSubs.forEach((fn) => fn(showdownPref));
+  }, []);
+  return [v, set];
+}
+
 export function useBackPref() {
   const [v, setV] = useState(backWaitBB);
   useEffect(() => {
@@ -451,6 +485,7 @@ export function SessionBox({ onBuyIn, onLeave }) {
   const me = view.me;
   const [busy, setBusy] = useState('');
   const [waitBB, setWaitBB] = useBackPref();
+  const [sdPref, setSdPref] = useShowdownPref();
 
   if (!me) {
     if (view.ended) return null;
@@ -514,8 +549,16 @@ export function SessionBox({ onBuyIn, onLeave }) {
 
   const buyLabel = me.busted ? (needsApproval ? 'Request a buy-in' : 'Buy back in') : needsApproval ? 'Request a buy-in' : 'Add chips';
 
+  const showdownSelect = html`<label class="session-pref">
+    <span class="muted">At showdown, when I lose</span>
+    <select class="field" value=${sdPref} onChange=${(e) => setSdPref(e.target.value)}>
+      ${SHOWDOWN_PREFS.map((o) => html`<option key=${o.value} value=${o.value}>${o.label}</option>`)}
+    </select>
+  </label>`;
+
   return html`<div class="session">
     ${money}
+    ${showdownSelect}
     ${me.pendingChips > 0 &&
     html`<div class="note note-plain session-note"><${Icon} name="chips" /><span class="session-note-text"><span class="mono">${fmt(me.pendingChips)}</span> chips arrive when this hand ends.</span></div>`}
     ${reqNote || (!me.leaveAfterHand && html`<${Button} kind=${me.busted ? 'primary' : 'default'} class="btn-block" onClick=${onBuyIn}>${buyLabel}<//>`)}
@@ -534,9 +577,11 @@ export function SessionBox({ onBuyIn, onLeave }) {
     ${me.leaveAfterHand
       ? html`<div class="note note-danger session-note">
             <${Icon} name="leave" />
-            <span class="session-note-text">You’ll stand up when hand <span class="mono">#${handNo}</span> ends.</span>
+            <span class="session-note-text">${me.removedByHost
+              ? html`The host removed you — you’ll be cashed out when hand <span class="mono">#${handNo}</span> ends.`
+              : html`You’ll stand up when hand <span class="mono">#${handNo}</span> ends.`}</span>
           </div>
-          <${Button} class="btn-block" disabled=${!!busy} onClick=${() => run('stay', 'cancelLeave', {})}>Stay seated<//>`
+          ${!me.removedByHost && html`<${Button} class="btn-block" disabled=${!!busy} onClick=${() => run('stay', 'cancelLeave', {})}>Stay seated<//>`}`
       : html`<div class="session-pair">
           ${me.away
             ? html`<${Button} kind="primary" disabled=${!!busy} aria-pressed="true" onClick=${() => run('away', 'away', { on: false, waitForBB: waitBB })}>

@@ -410,7 +410,7 @@ function referee(hand, partial = false) {
     }
   }
   const paid = {};
-  while (log[i] && log[i].pid && (log[i].text === 'gets back an uncalled bet' || /^wins( run \d)? with /.test(log[i].text))) {
+  while (log[i] && log[i].pid && (log[i].text === 'gets back an uncalled bet' || log[i].text === 'wins the side pot' || /^wins( run \d)? with /.test(log[i].text))) {
     const e = next('a payout');
     paid[e.pid] = (paid[e.pid] || 0) + e.amount;
   }
@@ -1256,22 +1256,39 @@ class Fuzzer {
     const sumNet = L.players.reduce((a, r) => a + r.net, 0);
     assert.equal(sumNet, T.diff - orphan, 'Σ net = diff (minus pot chips of players who left)');
     for (const r of L.players) assert.equal(r.net, r.cashOuts + r.stack - r.buyIns);
+    // Recorded payments (ticked: paid, key from>to:amount#id) come first, then what is still owed
+    // after them (key from>to:amount, paid only via a legacy tick).
     const paidOut = {};
     const received = {};
+    const owed = {}; // outstanding only
+    const owes = {};
+    const recorded = L.settlement.filter((s) => /#\d+$/.test(s.key));
+    assert.deepEqual(L.settlement.slice(0, recorded.length), recorded, 'recorded payments are listed first');
+    assert.equal(recorded.length, (st.payments || []).length);
     for (const s of L.settlement) {
       assert.ok(Number.isInteger(s.amount) && s.amount > 0, 'settlement payments are positive');
       assert.notEqual(s.from, s.to);
-      assert.equal(s.key, `${s.from}>${s.to}:${s.amount}`);
-      assert.equal(s.paid, !!st.paid[s.key]);
+      if (recorded.includes(s)) {
+        assert.ok(s.key.startsWith(`${s.from}>${s.to}:${s.amount}#`));
+        assert.equal(s.paid, true);
+      } else {
+        assert.equal(s.key, `${s.from}>${s.to}:${s.amount}`);
+        assert.equal(s.paid, !!st.paid[s.key]);
+        owes[s.from] = (owes[s.from] || 0) + s.amount;
+        owed[s.to] = (owed[s.to] || 0) + s.amount;
+      }
       paidOut[s.from] = (paidOut[s.from] || 0) + s.amount;
       received[s.to] = (received[s.to] || 0) + s.amount;
     }
-    const nonzero = L.players.filter((r) => r.net !== 0);
-    assert.ok(L.settlement.length <= Math.max(0, nonzero.length - 1), 'at most n − 1 payments');
+    // what each player still owes / is owed once the recorded payments are counted
+    const left = (r) => r.net + recorded.reduce((a, s) => a + (s.from === r.pid ? s.amount : 0) - (s.to === r.pid ? s.amount : 0), 0);
+    const nonzero = L.players.filter((r) => left(r) !== 0);
+    assert.ok(L.settlement.length - recorded.length <= Math.max(0, nonzero.length - 1), 'at most n − 1 outstanding payments');
     for (const r of L.players) {
-      if (r.net < 0) assert.ok((paidOut[r.pid] || 0) <= -r.net && !received[r.pid]);
-      if (r.net > 0) assert.ok((received[r.pid] || 0) <= r.net && !paidOut[r.pid]);
-      if (r.net === 0) assert.ok(!paidOut[r.pid] && !received[r.pid]);
+      const x = left(r);
+      if (x < 0) assert.ok((owes[r.pid] || 0) <= -x && !owed[r.pid]);
+      if (x > 0) assert.ok((owed[r.pid] || 0) <= x && !owes[r.pid]);
+      if (x === 0) assert.ok(!owes[r.pid] && !owed[r.pid]);
       if (T.balanced && !orphan) assert.equal((received[r.pid] || 0) - (paidOut[r.pid] || 0), r.net, `settle-up squares ${r.pid}`);
     }
     if (T.balanced) this.stats.balancedSettles++;

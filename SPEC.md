@@ -13,10 +13,13 @@ read them for colors, spacing, layout; ignore the `<x-dc>`/`{{hole}}` template m
 - Shared server code lives in root `lib/`. Inside `lib/`, files import each other with RELATIVE paths
   (`./cards.js`) so Node can run them locally. `api/` files import `lib/...` with the bare
   namespace `'lib/engine.js'` and the SDK with `import { db, events } from 'hatchable'`.
-- `lib/cards.js`, `lib/evaluator.js`, `lib/equity.js`, `lib/engine.js`, `lib/view.js`, `lib/ledger.js` are
-  PURE (no `hatchable` import, no Date.now / Math.random inside — time and randomness are passed in).
+- `lib/cards.js`, `lib/evaluator.js`, `lib/equity.js`, `lib/engine.js`, `lib/view.js`, `lib/ledger.js`,
+  `lib/ratelimit.js` are PURE (no `hatchable` import, no Date.now / Math.random inside — time and randomness are passed in).
   Only `lib/store.js` and `api/*` touch the SDK.
 - Realtime: server `events.publish('room:' + code, 'update', { v: version })` after every committed change.
+  The platform limits publishes PER PROJECT (burst ~60 per 10 s, shared by every room): a publish refused with
+  `err.code === 'rate_limited'` is retried after `retryAfter` (capped, 3 tries), and cheap repeatable player
+  actions are rate limited per player and per room (§9) so one client can't use the budget up.
   Browser: `<script src="/__hatchable/events.js">` then
   `hatchable.events.connect({ authUrl: '/api/events-token?code=' + code }).channel('room:' + code).on('update', ev => ...)`
   and `.on('$reset', ...)`. On any event with `ev.data.v > localVersion`, refetch `/api/state`.
@@ -39,6 +42,7 @@ lib/evaluator.js                hand evaluation (Hold'em 7-card best-of, Omaha 2
 lib/equity.js                   win-probability (exact enumeration / Monte Carlo)
 lib/engine.js                   game state machine (pure)
 lib/ledger.js                   ledger summary + settlement (pure)
+lib/ratelimit.js                per-player / per-room token buckets for cheap actions (pure)
 lib/view.js                     per-viewer redacted view (pure)
 lib/store.js                    DB load/save w/ optimistic version, auth, publish
 api/create.js                   POST create room
@@ -123,12 +127,18 @@ state = {
       awayAfterHand: false,       // go away when current hand ends
       pendingChips: 0,            // approved chips waiting for current hand to end
       joinedAt: ms,
+      leaveBy: null | pid,        // host pid when the HOST removed them (deferred leave the player can't cancel)
+      kicked?: true,              // host removed this unseated player from the game: tokenHash null, not listed,
+                                  // not counted toward the 30-player cap, name free again (kept only while the
+                                  // ledger / hand / last hand / payments still mention them; otherwise deleted)
     }
   },
   requests: [ { id, pid, kind: 'sit'|'rebuy', amount, seat: null|n, createdAt } ],
   pendingAdjust: [ { pid, mode: 'add'|'remove'|'set', amount, reason, countAsBuyIn, by } ],  // applied at hand end
   ledger: [ { id, t, type: 'buyin'|'cashout'|'adjust', pid, name, amount /*signed for adjust*/, countAsBuyIn, reason, by /*pid*/ } ],
-  paid: { [settlementKey]: true },
+  paid: { [settlementKey]: true },          // legacy ticks (rooms created before `payments`)
+  payments: [ { id, key /*from>to:amount#id*/, from, fromName, to, toName, amount, t, by } ],  // ticked settle-ups
+  rate: { room: {n,t}, players: { [pid]: {n,t} } },   // rate-limit buckets (lib/ratelimit.js), server-only
   chat: [ { id, t, pid, name, text } ],     // keep last 60, text 1..280 chars
   handNo: 0,
   button: null | seat,
@@ -260,7 +270,10 @@ Action `{ type:'act', move:'fold'|'check'|'call'|'raise', to? }` — `to` = tota
   sort distinct commitment levels of non-folded players; each layer's amount = Σ over all players of
   `min(committed, level) - min(committed, prevLevel)`; eligible = non-folded players with committed ≥ level.
   Chips committed by folded players above the top non-folded level go to the top pot. A pot with exactly one
-  eligible player is returned to that player (uncalled bet).
+  eligible player (always the top one) goes to that player: the part of their own bet in that layer that nobody
+  else matched is an uncalled bet RETURNED (`pot.uncalled`, log `gets back an uncalled bet`); the rest — chips
+  folded players put into that layer — is WON (log `wins the side pot`, the player is in `results.winners`;
+  no mandatory show, nobody contested it). `pot.returned` is true only when the whole pot was returned.
 - Each pot is split into `runs` equal parts (`floor(amount / runs)`; remainder to run 0). For each run, winners =
   eligible players with the highest score on that run's board; the run-part is split equally; odd chips go to the
   winner(s) closest clockwise to the LEFT of the button, one chip at a time.
@@ -310,7 +323,11 @@ Action `{ type:'act', move:'fold'|'check'|'call'|'raise', to? }` — `to` = tota
   turn is allowed for leaving: mark folded, then re-evaluate street end/turn), then cash out. Not in a hand → cash out now:
   ledger `cashout` (amount = stack + pendingChips), seat = null, stack = 0, pendingChips = 0, away=false,
   cancel their pending requests. `{type:'cancelLeave'}` clears `leaveAfterHand`.
-- Host `{type:'remove', pid}`: same as leave-now for that player (deferred to hand end if they are all-in).
+- Host `{type:'remove', pid}`: for a seated player, same as leave-now for that player (deferred to hand end if they
+  are all-in / betting has closed; `leaveBy = host`, so their own `cancelLeave` is refused). For a joined player
+  WITHOUT a seat (spectator, pending seat request): remove them from the game — drop their requests, then delete
+  the player, or (if the ledger / hand / last hand / payments mention them) keep a `kicked` tombstone with
+  `tokenHash = null`. Their token stops working; the slot and the name are free. The host can't remove themselves.
 
 ### 6.6 Host tools
 
@@ -324,7 +341,10 @@ Action `{ type:'act', move:'fold'|'check'|'call'|'raise', to? }` — `to` = tota
   `variant`, blinds, etc. take effect from the next hand (hand keeps its snapshot).
 - `{type:'pause', on}`: on → if a hand is running `pauseAfterHand = true` else `paused = true`; off → both false,
   maybe schedule next hand.
-- `{type:'markPaid', key, paid}`; `{type:'transferHost', pid}` (pid must be a joined player).
+- `{type:'markPaid', key, paid}`: `paid` true with an outstanding settlement key (`from>to:amount`) RECORDS the
+  payment in `state.payments` (conflict if the key isn't on the current list); `paid` false with a recorded key
+  (`from>to:amount#id`) removes it (a legacy `state.paid` key is deleted). `{type:'transferHost', pid}` (pid must
+  be a joined player).
 - `{type:'endGame'}`: if a hand is running → finish it immediately is NOT allowed; instead set `pauseAfterHand`
   and `endAfterHand` (`state.endAfterHand = true`); at hand end (or immediately if no hand) cash out every
   seated player (ledger cashouts), `ended = true`, `paused = true`. Ended rooms reject all actions except `chat`
@@ -343,6 +363,7 @@ Action `{ type:'act', move:'fold'|'check'|'call'|'raise', to? }` — `to` = tota
 ### 6.8 Chat
 
 `{type:'chat', text}` — any joined player (including spectators). Trim, 1..280 chars. Keep last 60.
+Rate limited per player and per room (§9).
 
 ## 7. Ledger (`lib/ledger.js`)
 
@@ -354,9 +375,11 @@ Action `{ type:'act', move:'fold'|'check'|'call'|'raise', to? }` — `to` = tota
 - totals: `{ buyIns, chipsOnTable (Σ stack as above), cashedOut, uncountedAdjust (Σ adjust where !countAsBuyIn), balanced, diff }`
   where `diff = chipsOnTable + cashedOut − buyIns` and `balanced = diff === uncountedAdjust`... i.e. report `diff`
   and `balanced = (diff === 0)`.
-- settlement: minimal-ish payments — repeatedly match the largest debtor with the largest creditor:
-  `[{ key: from+'>'+to+':'+amount, from, fromName, to, toName, amount, paid: !!state.paid[key] }]`.
-  Players with net 0 excluded. If Σ net ≠ 0 (unbalanced), settle what can be settled and stop.
+- settlement: first every recorded payment (`state.payments`, `paid: true`, key `from>to:amount#id`), then what is
+  still owed AFTER those payments (net + paid out − received) as minimal-ish payments — repeatedly match the
+  largest debtor with the largest creditor: `[{ key: from+'>'+to+':'+amount, from, fromName, to, toName, amount,
+  paid: !!state.paid[key] }]`. A tick therefore survives later hands and is never routed again.
+  Players with nothing left to settle excluded. If Σ net ≠ 0 (unbalanced), settle what can be settled and stop.
 - entries returned newest-first, last 200.
 
 ## 8. Action list (POST /api/act body `{ code, type, ...args }`)
@@ -378,7 +401,7 @@ Action `{ type:'act', move:'fold'|'check'|'call'|'raise', to? }` — `to` = tota
 | `approve` / `deny` | host | `id, amount?` |
 | `adjust` | host | `pid, mode, amount, reason, countAsBuyIn` |
 | `setAway` | host | `pid, on` |
-| `remove` | host | `pid` |
+| `remove` | host | `pid` (seated: stand up; unseated: remove from the game) |
 | `settings` | host | `patch` |
 | `pause` | host | `on` |
 | `markPaid` | host | `key, paid` |
@@ -389,11 +412,23 @@ Action `{ type:'act', move:'fold'|'check'|'call'|'raise', to? }` — `to` = tota
 
 All JSON. Auth: header `x-felt-token: <token>` (secret returned at create/join; client stores it in
 `localStorage['felt:' + code] = JSON.stringify({ pid, token })`). Errors: `{ error: 'Human message', code }`
-with status 400 (bad_request), 403 (forbidden), 404 (not_found), 409 (conflict / not_your_turn).
+with status 400 (bad_request), 403 (forbidden), 404 (not_found), 409 (conflict / not_your_turn),
+429 (rate_limited).
+
+Rate limits (`lib/ratelimit.js`, buckets in `state.rate`): the actions `chat, away, leave, cancelLeave, sit, buyin,
+cancelRequest, show, revealRunout` cost one token from the player's bucket (burst 10, +1 per 1.5 s) and the room's
+bucket (burst 30, +1 per 0.4 s) when they change the room; new joins cost a room token. An empty bucket → 429
+`{ code: 'rate_limited' }`. Game moves (`act`, `vote`), `tick` and host tools are not limited.
+
+Names (player and game): control / format / invisible characters (zero-width joiners, bidi, word joiner, soft
+hyphen, Hangul fillers, braille blank, variation selectors) are stripped, whitespace collapsed; something visible
+must remain. Player names can't be "You" (the UI's label for the viewer). Join compares names by
+`NFKC + lower case`, so lookalikes of a taken name are refused.
 
 - `POST /api/create` `{ hostName, gameName, settings }` → `{ code, pid, token, view }`
 - `POST /api/join` `{ code, name }` → `{ pid, token, view }` (if the header token is valid for this room,
-  returns that existing player instead of creating a new one). Max 30 players per room.
+  returns that existing player instead of creating a new one). Max 30 players per room (players the host removed
+  from the game don't count).
 - `GET /api/state?code=XXX` (token optional) → `{ view }`. Also runs `tick` (and saves+publishes if it changed).
 - `POST /api/act` `{ code, type, ... }` → `{ view }`
 - `GET /api/events-token?code=XXX` → `events.grant(['room:' + code])` result (404 if room missing).
@@ -433,12 +468,13 @@ View = {
   deadline, deadlineKind,                       // for the client tick timer + countdowns
   me: null | {
     id, name, seat, stack, pendingChips, away, awayBy, waitForBB, awayAfterHand, leaveAfterHand, timeouts,
+    removedByHost,                              // leaveAfterHand was set by the host (no "Stay seated")
     status: 'spectator'|'seated', inHand: bool, busted: bool,
     hole: string[] | null,                      // my cards in the current hand (also after I fold)
     handName: string | null,                    // my best hand with the current board (board ≥ 3), else null
     request: null | Request,                    // my pending request
   },
-  players: [ PublicPlayer ],                    // every joined player
+  players: [ PublicPlayer ],                    // every joined player (not ones the host removed from the game)
   seats: [ { seat, pid: pid|null, reservedBy: pid|null } ],   // length = settings.seats
   PublicPlayer = { id, name, seat, stack, pendingChips, status, away, awayBy, isHost, inHand, busted, leaveAfterHand },
   hand: null | {
@@ -526,15 +562,24 @@ Screens (one SPA, `public/index.html`):
   - Bottom bar states: your turn (Fold / Check|Call N / Raise slider + presets Min, ½ pot, ¾ pot, Pot, All-in;
     PLO caps at pot), waiting (pre-action toggles optional), run-it vote (Once/Twice/3× + others' votes + countdown),
     hand complete (Show your hand: per-card toggle + Show both / Keep hidden; Reveal runout button when allowed;
-    next hand countdown), away banner ("You're away" + I'm back + wait for big blind checkbox + Leave seat),
-    spectator (pick a seat), busted (Request a buy-in).
+    next hand countdown — also for AWAY players who were dealt in, with a "You're away · I'm back" notice on top),
+    away banner ("You're away" + I'm back + wait for big blind checkbox + Leave seat),
+    spectator (pick a seat; + Reveal runout when `canRevealRunout`, e.g. a host running the game without a seat),
+    busted (Request a buy-in). A leave the host set (`me.removedByHost`) shows "The host removed you" and never a
+    "Stay seated" button (bar, session box, leave dialog).
+  - "At showdown, when I lose" (session box select, per browser `localStorage['felt:showdownPref']`): Ask me each
+    time (prompt) / Always muck (no prompt) / Always show (sends `show` for my unshown cards once) — applies when a
+    showdown I was in (not folded) completes and I didn't win.
   - Host tools (panel / sheet): requests (approve/edit amount/deny, auto-approve toggle = settings.approveBuyIns
-    inverse), players table (status, bought in, stack, net, Adjust chips, Set away/Bring back, Remove), adjust-chips
+    inverse), players table (status, bought in, stack, net, Adjust chips, Set away/Bring back, Remove; spectators:
+    Remove from the game), adjust-chips
     form (Add/Remove/Set to, amount, before→after preview, reason chips: Cash rebuy, Miscount fix, Move from player,
     Bounty, + "Count as a buy-in on the ledger", note when hand in progress), table rules editor, pause after hand,
     copy invite link, end game, transfer host.
   - Ledger (panel / sheet): tiles (Total bought in, Chips on table + Balanced/Off by N, Biggest winner, hands played),
     players table with net bars, settle-up list (host can tick paid), activity feed, Export CSV, Copy summary.
+    CSV text cells starting with `= + - @`, tab or CR get a leading `'` (no spreadsheet formulas from names /
+    reasons); `public/js/csv.js` holds the export (no React, unit-tested).
   - Dialogs: buy-in (amount within range, slider + presets min/max), leave seat (cash out summary + After this hand /
     Right now), confirm end game.
 - Toasts for errors from the API (`error` message).
@@ -592,6 +637,7 @@ js/side.js             export function SidePanel()                          // t
                        export function HandLog(), Chat(), PlayersList(), SessionBox()   // reused in mobile sheets
 js/host.js             export function HostTools()                          // full host panel content
 js/ledger.js           export function Ledger()                             // full ledger content
+js/csv.js              export function csvCell(v), ledgerCsv(view, now?)    // CSV export (pure)
 js/main.js             App: router (lobby vs room), RoomPage layout (desktop grid: header / table+actionbar / side panel;
                        mobile: header + table + action sheet + menu sheets), mounts Toasts, dialogs state.
                        Header buttons open Ledger / Host tools in a Modal(wide) on desktop, full sheets on mobile.

@@ -3,6 +3,7 @@
 import { apply, tick } from 'lib/engine.js';
 import { viewFor } from 'lib/view.js';
 import { cryptoRng } from 'lib/cards.js';
+import { RATE_LIMITED, rateWait, spendRate } from 'lib/ratelimit.js';
 import {
   loadRoom, mutateRoom, resolvePlayer, requireCode, sendError, StoreError, ERROR_STATUS,
 } from 'lib/store.js';
@@ -49,7 +50,16 @@ export default async function (req, res) {
         if (!pid) throw new StoreError('Join this game first.', 'forbidden');
         now = Date.now();
         dueBeforeAction = state.deadline != null && state.deadline <= now;
+        // Cheap repeatable actions are rate limited per player and per room (lib/ratelimit.js):
+        // each committed change costs one realtime publish from a project-wide budget.
+        const limited = RATE_LIMITED.has(action.type);
+        if (limited) {
+          const wait = rateWait(state, pid, now);
+          if (wait > 0) throw new StoreError(`Slow down a little — try again in ${Math.ceil(wait / 1000)}s.`, 'rate_limited');
+        }
+        const before = limited ? JSON.stringify(state) : null;
         apply(state, pid, action, { now, rng });
+        if (limited && JSON.stringify(state) !== before) spendRate(state, pid, now);
       });
     } catch (err) {
       // apply() ticks before validating the action, but a rejected action rolls the tick back too.

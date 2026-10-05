@@ -15,7 +15,7 @@ const DEFAULT_GAME_NAME = 'Home Game';
 export default async function (req, res) {
   try {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
-    const hostName = cleanName(body.hostName, { max: 20, label: 'Your name' });
+    const hostName = cleanName(body.hostName, { max: 20, label: 'Your name', player: true });
     const gameName =
       body.gameName == null || (typeof body.gameName === 'string' && body.gameName.trim() === '')
         ? DEFAULT_GAME_NAME

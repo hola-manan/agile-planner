@@ -209,6 +209,12 @@ function polarXY(deg, rx, ry) {
 
 const at = (p) => ({ left: p.x.toFixed(2) + '%', top: p.y.toFixed(2) + '%' });
 
+/**
+ * Phones: seats on the side rails anchor their labels (tags, the reserved pill) to the inner edge
+ * of the pod so nothing wider than the pod spills past the screen edge.
+ */
+const edgeClass = (p, mobile) => (!mobile ? null : p.x >= 70 ? 'seat-edge-r' : p.x <= 30 ? 'seat-edge-l' : null);
+
 // ─── countdown arc (CSS-animated, keyed on the deadline) ─────────────────────
 
 function useDrain(deadline, total) {
@@ -268,7 +274,7 @@ function Tag({ tone, children, title }) {
 
 function EmptySeat({ seat, pos, canSit, reservedName, mine, onSit, mobile }) {
   if (reservedName) {
-    return html`<div class="seat seat-empty-wrap" style=${at(pos)}>
+    return html`<div class=${cx('seat', 'seat-empty-wrap', edgeClass(pos, mobile))} style=${at(pos)}>
       <div class=${cx('seat-empty', 'seat-reserved', mine && 'seat-mine')} title=${mine ? 'Your seat request is waiting for the host' : 'Reserved for ' + reservedName}>
         <span class="se-main">${mine ? 'Requested' : 'Reserved'}</span>
         ${!mobile && html`<span class="se-sub">${mine ? 'by you' : reservedName}</span>`}
@@ -360,7 +366,7 @@ function Seat({ pos, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin 
 
   const label = [pp.name, fmt(pp.stack) + ' chips', ...(hp && hp.cards.some(Boolean) ? [hp.cards.map((c) => (c ? cardText(c) : 'hidden')).join(' ')] : [])].join(', ');
 
-  return html`<div class=${cx('seat', acting && 'seat-acting', winner && 'seat-win')} style=${at(pos)} role="group" aria-label=${label}>
+  return html`<div class=${cx('seat', acting && 'seat-acting', winner && 'seat-win', edgeClass(pos, mobile))} style=${at(pos)} role="group" aria-label=${label}>
     ${above && html`<div class="seat-above">${above}</div>`}
     <div class=${cx('pod', folded && 'pod-folded', out && 'pod-out', allIn && 'pod-allin', acting && 'pod-acting', winner && 'pod-win')}>
       <div class="pod-av">
