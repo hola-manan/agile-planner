@@ -10,7 +10,7 @@
 //                     openBuyIn(seat|null), openLeave(), openLedger(), openHostTools(), openJoin(),
 //                     openPanel('log'|'chat'|'players'|'ledger'|'host'), closePanel(),
 //                     openShortcuts() (the keyboard cheat sheet; actionbar.js opens it on "?")
-import { html, useState, useEffect, useMemo, useCallback, Fragment, ReactDOM } from './h.js';
+import { html, useState, useEffect, useRef, useMemo, useCallback, Fragment, ReactDOM } from './h.js';
 import { useRoomData, useRoom, RoomContext } from './room.js';
 import { clearSession, getSession, normalizeCode, isValidCode } from './api.js';
 import { Button, Pill, Icon, Logo, Modal, Switch, Toasts, useIsMobile, useFourColor, toast, copyText, inviteUrl, navigate, cx, fmt } from './ui.js';
@@ -18,7 +18,7 @@ import { BuyInDialog, LeaveDialog, JoinPrompt, ShortcutsDialog } from './dialogs
 import { Lobby } from './lobby.js';
 import { Table } from './table.js';
 import { ActionBar } from './actionbar.js';
-import { SidePanel, HandLog, Chat, PlayersList, SessionBox } from './side.js';
+import { SidePanel, HandLog, Chat, PlayersList, SessionBox, ChatDock, ChatFab } from './side.js';
 import { HostTools } from './host.js';
 import { Ledger } from './ledger.js';
 
@@ -358,6 +358,14 @@ export function RoomLayout({ initialPanel = null, initialDialog = null } = {}) {
   const [panel, setPanel] = useState(initialPanel); // 'ledger' | 'host' | 'log' | 'chat' | 'players' | null
   const [joinOpen, setJoinOpen] = useState(initialDialog === 'join' || !room.joined);
   const [keysOpen, setKeysOpen] = useState(initialDialog === 'keys');
+  const chatFocusRef = useRef(null);
+  const registerChatFocus = useCallback((fn) => {
+    chatFocusRef.current = fn;
+  }, []);
+  const openChat = useCallback(() => {
+    if (chatFocusRef.current) chatFocusRef.current();
+    else setPanel('chat');
+  }, []);
 
   useDocTitle(view);
 
@@ -388,8 +396,21 @@ export function RoomLayout({ initialPanel = null, initialDialog = null } = {}) {
   const openShortcuts = useCallback(() => setKeysOpen(true), []);
 
   const value = useMemo(
-    () => ({ ...room, openBuyIn, openLeave, openJoin, openPanel, closePanel, openLedger, openHostTools, openShortcuts, isMobile: mobile }),
-    [room, openBuyIn, openLeave, openJoin, openPanel, closePanel, openLedger, openHostTools, openShortcuts, mobile],
+    () => ({
+      ...room,
+      openBuyIn,
+      openLeave,
+      openJoin,
+      openPanel,
+      closePanel,
+      openLedger,
+      openHostTools,
+      openShortcuts,
+      openChat,
+      registerChatFocus,
+      isMobile: mobile,
+    }),
+    [room, openBuyIn, openLeave, openJoin, openPanel, closePanel, openLedger, openHostTools, openShortcuts, openChat, registerChatFocus, mobile],
   );
 
   const onSit = (seat) => openBuyIn(seat);
@@ -404,7 +425,7 @@ export function RoomLayout({ initialPanel = null, initialDialog = null } = {}) {
     panelBody = view.isHost ? html`<${HostTools} />` : html`<p class="muted">Only the host can use these tools.</p>`;
     panelSub = view.name + ' · room ' + view.code;
   } else if (effectivePanel === 'log') panelBody = html`<${HandLog} />`;
-  else if (effectivePanel === 'chat') panelBody = html`<${Chat} />`;
+  else if (effectivePanel === 'chat') panelBody = html`<${Chat} autoFocus=${true} />`;
   else if (effectivePanel === 'players') panelBody = html`<${PlayersList} />`;
 
   const overlays = html`
@@ -443,7 +464,10 @@ export function RoomLayout({ initialPanel = null, initialDialog = null } = {}) {
               <${Ledger} />
             </div>`
           : html`
-              <div class="room-m-table"><${Table} onSit=${onSit} /></div>
+              <div class="room-m-table">
+                <${Table} onSit=${onSit} />
+                <${ChatFab} onOpen=${() => openPanel('chat')} chatOpen=${effectivePanel === 'chat'} />
+              </div>
               <div class="room-m-dock"><${ActionBar} onBuyIn=${onBuyIn} onLeave=${openLeave} onSit=${onSit} /></div>
             `}
       </div>
@@ -461,9 +485,12 @@ export function RoomLayout({ initialPanel = null, initialDialog = null } = {}) {
             ? html`<${EndedBanner} view=${view} />
                 <div class="panel room-ended-ledger"><${Ledger} /></div>`
             : html`<${Table} onSit=${onSit} />
-                <${ActionBar} onBuyIn=${onBuyIn} onLeave=${openLeave} onSit=${onSit} />`}
+                <div class="room-bottom">
+                  <${ChatDock} />
+                  <div class="room-bottom-act"><${ActionBar} onBuyIn=${onBuyIn} onLeave=${openLeave} onSit=${onSit} /></div>
+                </div>`}
         </section>
-        <aside class="room-side" aria-label="Hand log, chat and players">
+        <aside class="room-side" aria-label="Hand log, players and your session">
           <${SidePanel} onBuyIn=${onBuyIn} onLeave=${openLeave} />
         </aside>
       </main>

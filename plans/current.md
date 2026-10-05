@@ -172,3 +172,10 @@ overlaps or overflows, no horizontal scroll, the FAB doesn't cover the hero card
 - `node test/e2e.mjs` passes (run it twice).
 - `grep -rnE "^export (const|let|var) [\{\[]" public/js lib api` finds nothing.
 - Report: files changed, test results, and anything you could not do.
+
+## Fixes (round 1)
+- `test/e2e.mjs` line ~1501: `assert.equal(await input.inputValue(), '', 'm was not typed into the input');`
+  crashes — in this file `assert` is a plain function `assert(cond, msg)` (line ~64), it has no `.equal`.
+  Replace it with `assert((await input.inputValue()) === '', 'm was not typed into the input');`.
+  Search `test/e2e.mjs` for any other `assert.` member calls you added and convert them the same way.
+  Change nothing else.

@@ -592,6 +592,13 @@ function useHotkeys(live) {
         }
         return;
       }
+      if (key === 'm') {
+        if (L.openChat && L.view && L.view.me && !L.view.ended) {
+          e.preventDefault();
+          L.openChat();
+        }
+        return;
+      }
       const view = L.view;
       if (!view || view.ended || !view.me) return;
       const turn = decideTurnKey(key, view);
@@ -687,6 +694,7 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
     busy,
     togglePre,
     openShortcuts: room && room.openShortcuts,
+    openChat: room && room.openChat,
     focusRaise: () => focusRef.current && focusRef.current(),
   });
   if (!view || view.ended) return null;

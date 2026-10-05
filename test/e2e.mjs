@@ -635,31 +635,27 @@ step('Cleo joins on her phone and asks for seat 5', async () => {
 });
 
 step('chat between the three players (realtime)', async () => {
-  // Ben, desktop side panel
-  await B.page.getByRole('tab', { name: /^Chat/ }).click();
-  const input = B.page.locator('.side').getByRole('textbox', { name: 'Message' });
-  await input.fill('gl all');
-  await act(B, B.page.locator('.side').getByRole('button', { name: 'Send' }));
-  await waitText(B, B.page.locator('.chat-list'), 'gl all');
-  // Cleo, phone: menu → Chat sheet
-  await press(C, C.page.getByRole('button', { name: /^Menu/ }));
-  await press(C, dialog(C).getByRole('button', { name: /^Chat/ }));
+  // Ben, desktop chat dock
+  const bInput = B.page.locator('.chat-dock').getByRole('textbox', { name: 'Message' });
+  await bInput.fill('gl all');
+  await act(B, B.page.locator('.chat-dock').getByRole('button', { name: 'Send' }));
+  await waitText(B, B.page.locator('.chat-dock .chat-list'), 'gl all');
+  // Cleo, phone: FAB shows unread dot, click opens Chat sheet
+  await C.page.locator('.chat-fab-dot').waitFor({ timeout: T });
+  const fab = C.page.locator('.room-m-table').getByRole('button', { name: /^Chat/ });
+  await press(C, fab);
   const sheet = dialog(C);
   await waitText(C, sheet.locator('.chat-list'), 'gl all');
   await sheet.getByRole('textbox', { name: 'Message' }).fill('ty, you too');
   await act(C, sheet.getByRole('button', { name: 'Send' }));
   await waitText(C, sheet.locator('.chat-list'), 'ty, you too');
   await shot('04-chat', C);
-  // realtime to Ben (chat tab open) and Maya (unread dot on the Chat tab, then the message)
-  await waitText(B, B.page.locator('.chat-list'), 'ty, you too');
-  await H.page.locator('.side-tab .side-dot').waitFor({ timeout: T });
-  await H.page.getByRole('tab', { name: /^Chat/ }).click();
-  await waitText(H, H.page.locator('.chat-list'), 'ty, you too');
+  // realtime to Ben and Maya in their docks
+  await waitText(B, B.page.locator('.chat-dock .chat-list'), 'ty, you too');
+  await waitText(H, H.page.locator('.chat-dock .chat-list'), 'ty, you too');
   await shot('04-chat', B);
   await press(C, sheet.getByRole('button', { name: 'Back to table' }));
   await sheet.waitFor({ state: 'detached' });
-  await H.page.getByRole('tab', { name: 'Hand' }).click();
-  await B.page.getByRole('tab', { name: 'Hand' }).click();
 });
 
 step('host approves both requests from Host tools (one with an edited amount) and resumes', async () => {
@@ -1473,7 +1469,7 @@ step('keys: hand 2 — F does nothing before my turn; Ben folds with F; Maya (bi
   await H.page.keyboard.press('Shift+Slash');
   const sheet = H.page.getByRole('dialog', { name: 'Keyboard shortcuts' });
   await sheet.getByText('Before your turn').waitFor();
-  for (const t of ['Fold', 'Call any', 'Call current', 'Check/Fold', 'Show all your cards']) await sheet.getByText(t, { exact: true }).first().waitFor();
+  for (const t of ['Fold', 'Call any', 'Call current', 'Check/Fold', 'Show all your cards', 'Message the table']) await sheet.getByText(t, { exact: true }).first().waitFor();
   await hotShot('cheatsheet-desktop', H);
   await closeTop(H);
   await H.page.getByRole('button', { name: 'Keyboard shortcuts' }).click();
@@ -1484,22 +1480,27 @@ step('keys: hand 2 — F does nothing before my turn; Ben folds with F; Maya (bi
   await C.page.keyboard.press('Shift+Slash');
   const cs = C.page.getByRole('dialog', { name: 'Keyboard shortcuts' });
   await cs.getByText('After the hand').waitFor();
+  await cs.getByText('Message the table').waitFor();
   await hotShot('cheatsheet-mobile', C);
   await keyIdle(C, 'f', 'a sheet is open');
   await closeTop(C);
   await check(C);
   // …and while typing: Maya writes "fold" in the chat on her turn — nothing is sent but the message
   await waitTurn(H);
-  await H.page.getByRole('tab', { name: /^Chat/ }).click();
-  const input = H.page.locator('.side').getByRole('textbox', { name: 'Message' });
+  const input = H.page.locator('.chat-dock').getByRole('textbox', { name: 'Message' });
   await input.click();
   const n = H.sent.length;
   await H.page.keyboard.type('fold');
   await sleep(300);
   assert(H.sent.length === n, 'typing in the chat sends no move: ' + JSON.stringify(H.sent.slice(n)));
   await input.fill('');
-  await H.page.getByRole('tab', { name: 'Hand' }).click();
-  await H.page.evaluate(() => document.activeElement && document.activeElement.blur());
+  await H.page.keyboard.press('Escape');
+  assert(await H.page.evaluate(() => document.activeElement !== document.querySelector('.chat-dock [data-chat-input="1"]')), 'Escape blurs the chat input');
+  await H.page.keyboard.press('m');
+  assert(await H.page.evaluate(() => document.activeElement === document.querySelector('.chat-dock [data-chat-input="1"]')), 'm key focuses the chat input');
+  assert.equal(await input.inputValue(), '', 'm was not typed into the input');
+  await H.page.keyboard.press('Escape');
+  assert(await H.page.evaluate(() => document.activeElement !== document.querySelector('.chat-dock [data-chat-input="1"]')), 'Escape blurs again');
   const k = await keyAct(H, 'k');
   assert(k.move === 'check', 'K checks');
 });

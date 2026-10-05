@@ -146,7 +146,7 @@ test('the SPEC §12 module exports exist', async () => {
     'hotkeys.js': ['decideTurnKey', 'togglePreAction', 'decidePreAction', 'showKey', 'HOTKEYS'],
     'table.js': ['Table'],
     'actionbar.js': ['ActionBar'],
-    'side.js': ['SidePanel', 'HandLog', 'Chat', 'PlayersList', 'SessionBox'],
+    'side.js': ['SidePanel', 'HandLog', 'Chat', 'PlayersList', 'SessionBox', 'ChatDock', 'ChatFab'],
     'host.js': ['HostTools'],
     'ledger.js': ['Ledger'],
     'main.js': ['App'],

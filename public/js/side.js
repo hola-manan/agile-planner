@@ -1,9 +1,11 @@
-// public/js/side.js — the desktop side panel (tabs Hand / Chat / Players + "your session") and its
+// public/js/side.js — the desktop side panel (tabs Hand / Players + "your session") and its
 // parts, which the mobile menu sheets reuse (SPEC §11, §12; design/Main.dc.html, design/Away.dc.html).
 //
 //   SidePanel({ onBuyIn, onLeave })   tabs + SessionBox
 //   HandLog()                         current hand grouped by street (+ the previous hand)
 //   Chat()                            messages, input, auto-scroll
+//   ChatDock()                        desktop bottom-left chat dock with M shortcut
+//   ChatFab({ onOpen, chatOpen })     mobile floating chat button
 //   PlayersList()                     seat, avatar, name, stack, status, host crown
 //   SessionBox({ onBuyIn, onLeave })  bought in / net / buy-in / away / leave
 //
@@ -346,7 +348,7 @@ export function HandLog() {
 
 // ─── Chat ────────────────────────────────────────────────────────────────────
 
-export function Chat({ autoFocus = false } = {}) {
+export function Chat({ autoFocus = false, inputRef = null, escBlurs = false, hint = false } = {}) {
   const { view, act } = useRoom();
   const me = view.me;
   const msgs = view.chat || [];
@@ -414,15 +416,23 @@ export function Chat({ autoFocus = false } = {}) {
     ${me
       ? html`<form class="chat-form" onSubmit=${send}>
           <input
+            ref=${inputRef}
+            data-chat-input="1"
             class="field"
             aria-label="Message"
-            placeholder="Message the table"
+            placeholder=${hint ? 'Message the table (M)' : 'Message the table'}
             maxlength="280"
             autocomplete="off"
             enterkeyhint="send"
             autoFocus=${autoFocus}
             value=${text}
             onInput=${(e) => setText(e.target.value)}
+            onKeyDown=${(e) => {
+              if (escBlurs && e.key === 'Escape') {
+                e.stopPropagation();
+                e.currentTarget.blur();
+              }
+            }}
           />
           <button type="submit" class="btn btn-primary btn-icon" aria-label="Send" disabled=${busy || !text.trim()}>
             <${Icon} name="arrow" size=${18} />
@@ -430,6 +440,60 @@ export function Chat({ autoFocus = false } = {}) {
         </form>`
       : html`<div class="note note-plain chat-note"><${Icon} name="info" /><span>Join the game to chat.</span></div>`}
   </div>`;
+}
+
+export function ChatDock() {
+  const room = useRoom();
+  const view = room.view;
+  const msgs = (view && view.chat) || [];
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (room.registerChatFocus) {
+      room.registerChatFocus(() => {
+        if (ref.current) ref.current.focus();
+      });
+      return () => {
+        room.registerChatFocus && room.registerChatFocus(null);
+      };
+    }
+  }, [room.registerChatFocus]);
+
+  return html`<section class="panel chat-dock" aria-label="Chat">
+    <div class="chat-dock-head">
+      <${Icon} name="chat" size=${16} />
+      <span>Chat</span>
+      <kbd class="kc" aria-hidden="true">M</kbd>
+      <span class="muted">${msgs.length} ${msgs.length === 1 ? 'message' : 'messages'}</span>
+    </div>
+    <${Chat} inputRef=${ref} escBlurs=${true} hint=${true} />
+  </section>`;
+}
+
+let mobileChatSeenId = 0;
+
+export function ChatFab({ onOpen, chatOpen = false }) {
+  const room = useRoom();
+  const view = room && room.view;
+  const msgs = (view && view.chat) || [];
+  const meId = view && view.me ? view.me.id : null;
+  const lastId = msgs.length ? msgs[msgs.length - 1].id : 0;
+  const [seen, setSeen] = useState(() => Math.max(mobileChatSeenId, lastId));
+
+  useEffect(() => {
+    if (chatOpen) {
+      mobileChatSeenId = lastId;
+      setSeen(lastId);
+    }
+  }, [chatOpen, lastId]);
+
+  const unreadCount = chatOpen ? 0 : msgs.filter((m) => m.id > seen && m.pid !== meId).length;
+  const label = unreadCount > 0 ? `Chat, ${unreadCount} unread` : 'Chat';
+
+  return html`<button type="button" class="chat-fab" aria-label=${label} onClick=${onOpen}>
+    <${Icon} name="chat" size=${20} />
+    ${unreadCount > 0 && html`<span class="chat-fab-dot" aria-hidden="true"></span>`}
+  </button>`;
 }
 
 // ─── PlayersList ─────────────────────────────────────────────────────────────
@@ -615,7 +679,6 @@ export function SessionBox({ onBuyIn, onLeave }) {
 
 const TABS = [
   { key: 'hand', label: 'Hand' },
-  { key: 'chat', label: 'Chat' },
   { key: 'players', label: 'Players' },
 ];
 
@@ -630,16 +693,6 @@ export function SidePanel({ onBuyIn, onLeave }) {
     store.set('felt:sideTab', t);
   };
 
-  // Unread chat: messages from others newer than what was on screen while the Chat tab was open.
-  const msgs = view.chat || [];
-  const lastId = msgs.length ? msgs[msgs.length - 1].id : 0;
-  const [seen, setSeen] = useState(lastId);
-  useEffect(() => {
-    if (tab === 'chat') setSeen(lastId);
-  }, [tab, lastId]);
-  const meId = view.me ? view.me.id : null;
-  const unread = tab !== 'chat' && msgs.some((m) => m.id > seen && m.pid !== meId);
-
   const tablist = useRef(null);
   const onKey = (e) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
@@ -651,8 +704,7 @@ export function SidePanel({ onBuyIn, onLeave }) {
   };
 
   let body;
-  if (tab === 'chat') body = html`<${Chat} />`;
-  else if (tab === 'players') body = html`<${PlayersList} />`;
+  if (tab === 'players') body = html`<${PlayersList} />`;
   else body = html`<${HandLog} />`;
 
   return html`<div class=${cx('panel', 'side', 'side-' + tab)}>
@@ -671,7 +723,6 @@ export function SidePanel({ onBuyIn, onLeave }) {
           onClick=${() => setTab(t.key)}
         >
           ${t.label}
-          ${t.key === 'chat' && unread && html`<span class="side-dot" aria-label="unread messages"></span>`}
           ${t.key === 'players' && html`<span class="side-count mono">${(view.players || []).filter((p) => p.seat != null).length}</span>`}
         </button>`,
       )}

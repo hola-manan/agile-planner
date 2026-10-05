@@ -547,10 +547,9 @@ Screens (one SPA, `public/index.html`):
   join by code. Mobile layout per `design/LobbyMobile.dc.html`.
 - `/?room=CODE` → **Table**. If no stored token for CODE → join prompt (name) over a spectator view of the table.
   - Desktop ≥ 900px wide: header (logo "Felt", game name, variant · blinds · hand #, room code pill + copy invite link,
-    Ledger, Host tools (host only, badge = pending requests), 4-color toggle), landscape oval table, action bar under the
-    table, right side panel (tabs Hand / Chat / Players + "your session": bought in, net, at-showdown pref, Request a
-    buy-in, Away, Leave seat).
-  - Mobile < 900px: compact header, portrait oval, bottom sheet action bar; Ledger/Host/Chat/Log via a menu → full-screen sheets.
+    Ledger, Host tools (host only, badge = pending requests), 4-color toggle), landscape oval table, side panel tabs
+    Hand / Players + session box; chat dock bottom-left under the table beside the action bar (bottom-right).
+  - Mobile < 900px: compact header, portrait oval, bottom sheet action bar; chat via the menu sheet or the floating chat button (bottom-left of the table, unread dot); Ledger/Host/Chat/Log via a menu → full-screen sheets.
     As in design/Mobile.dc.html, other seats show their street amount in their tag (`Bet 60`, `BB · 2`) instead
     of chips on the felt (only my own bet is drawn as a chip); short phones (height ≤ 740px) use a compact
     table, and a phone on its side scrolls with the action bar pinned.
@@ -610,6 +609,7 @@ Screens (one SPA, `public/index.html`):
     (the API error toast explains).
   - After the hand (`hand.phase 'complete'` and `hand.canShow`): `s` shows all my not-yet-shown cards, `1` / `2` my
     first / second card (PLO `1`–`4`) — only cards not shown yet, otherwise nothing.
+  - `m` focuses the chat box (desktop) / opens the chat sheet (phone); Esc leaves it.
   - `?` (Shift+/) opens the "Keyboard shortcuts" cheat sheet (a Modal listing every key, `HOTKEYS` in hotkeys.js); the
     desktop header has a keyboard icon button that opens it too.
   - Desktop shows tiny keycap hints (`<kbd class="kc">`, JetBrains Mono, muted, small rounded box, `aria-hidden` so the
@@ -672,15 +672,15 @@ js/actionbar.js        export function ActionBar()                          // e
 js/hotkeys.js          (pure, no imports) decideTurnKey(key, view) → {move}|{focus:'raise'}|{toast}|null,
                        togglePreAction(pre, kind, view), decidePreAction(pre, view) → {fire:{move}}|{cancel:reason}|null,
                        showKey(key, view) → number[]|null, canPreAct, preLabel, normKey, ignoreKeyEvent, HOTKEYS
-js/side.js             export function SidePanel()                          // tabs Hand log / Chat / Players + session box
-                       export function HandLog(), Chat(), PlayersList(), SessionBox()   // reused in mobile sheets
+js/side.js             export function SidePanel()                          // tabs Hand / Players + session box
+                       export function HandLog(), Chat(), ChatDock(), ChatFab(), PlayersList(), SessionBox()
 js/host.js             export function HostTools()                          // full host panel content
 js/ledger.js           export function Ledger()                             // full ledger content
 js/csv.js              export function csvCell(v), ledgerCsv(view, now?)    // CSV export (pure)
 js/main.js             App: router (lobby vs room), RoomPage layout (desktop grid: header / table+actionbar / side panel;
                        mobile: header + table + action sheet + menu sheets), mounts Toasts, dialogs state.
                        Header buttons open Ledger / Host tools in a Modal(wide) on desktop, full sheets on mobile.
-                       Adds openShortcuts() to RoomContext (the cheat sheet; desktop header keyboard button, "?" key).
+                       Adds openShortcuts(), openChat(), registerChatFocus() to RoomContext.
 css/base.css           tokens (§11) as CSS vars, reset, body bg, buttons, pills, panels, inputs, switches, cards, modal/sheet, toasts
 css/table.css          table, seats, boards, chips, action bar, keycaps / pre-actions / cheat sheet
 css/panels.css         side panel, host tools, ledger, dialogs content

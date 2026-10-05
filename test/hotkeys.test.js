@@ -128,6 +128,14 @@ describe('decideTurnKey — my turn', () => {
     legalOnCopy(g, other, { move: 'call' });
   });
 
+  test('decideTurnKey returns null for m on my turn', () => {
+    const g = game();
+    const actor = toAct(g);
+    const v = view(g, actor);
+    assert.equal(isMyTurn(v), true);
+    assert.equal(decideTurnKey('m', v), null);
+  });
+
   test('not my turn (or no seat): f, c, k, r, a, g, i do nothing', () => {
     const g = game();
     const waiting = after(g, toAct(g));
@@ -470,6 +478,6 @@ describe('key events', () => {
 
   test('the cheat sheet lists every key', () => {
     const listed = new Set(HOTKEYS.flatMap((g) => g.keys.flatMap((k) => k.keys)));
-    for (const k of ['F', 'C', 'K', 'R', 'A', 'G', 'I', 'S', '1', '2', '?']) assert.ok(listed.has(k), k);
+    for (const k of ['F', 'C', 'K', 'R', 'A', 'G', 'I', 'S', '1', '2', '?', 'M']) assert.ok(listed.has(k), k);
   });
 });

@@ -47,6 +47,7 @@ export const HOTKEYS = [
   {
     title: 'Anywhere',
     keys: [
+      { keys: ['M'], label: 'Message the table', note: 'Esc to leave the chat box' },
       { keys: ['?'], label: 'This list' },
       { keys: ['Esc'], label: 'Close a dialog' },
     ],

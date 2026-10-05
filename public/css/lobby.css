@@ -625,6 +625,25 @@
   flex-direction: column;
   gap: 18px;
 }
+.room-bottom {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+.room-bottom-act {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.room-bottom-act > * {
+  flex: 1;
+}
+@media (max-width: 1099px) {
+  .room-bottom {
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  }
+}
 .room-side {
   flex: 1 1 300px;
   max-width: 380px;
