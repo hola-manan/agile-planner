@@ -256,6 +256,8 @@ async function main() {
       await sleep(300);
       continue;
     }
+    // wait for the turn buttons: while waiting, the bar's pre-actions ("Call any", "Call 60") also start with "Call"
+    await bar(q).getByRole('button', { name: 'Fold', exact: true }).waitFor({ timeout: T });
     await act(q, bar(q).getByRole('button', { name: /^Call/ }));
   }
   await until('vote or runout', async () => ['ritVote', 'runout', 'complete'].includes((await viewOf(ps[0])).hand.phase));

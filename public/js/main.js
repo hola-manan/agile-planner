@@ -8,12 +8,13 @@
 //                   it with a fixture view. Owns UI state only: dialogs, modals, the mobile menu.
 //                   Re-provides RoomContext with openers added:
 //                     openBuyIn(seat|null), openLeave(), openLedger(), openHostTools(), openJoin(),
-//                     openPanel('log'|'chat'|'players'|'ledger'|'host'), closePanel()
+//                     openPanel('log'|'chat'|'players'|'ledger'|'host'), closePanel(),
+//                     openShortcuts() (the keyboard cheat sheet; actionbar.js opens it on "?")
 import { html, useState, useEffect, useMemo, useCallback, Fragment, ReactDOM } from './h.js';
 import { useRoomData, useRoom, RoomContext } from './room.js';
 import { clearSession, getSession, normalizeCode, isValidCode } from './api.js';
 import { Button, Pill, Icon, Logo, Modal, Switch, Toasts, useIsMobile, useFourColor, toast, copyText, inviteUrl, navigate, cx, fmt } from './ui.js';
-import { BuyInDialog, LeaveDialog, JoinPrompt } from './dialogs.js';
+import { BuyInDialog, LeaveDialog, JoinPrompt, ShortcutsDialog } from './dialogs.js';
 import { Lobby } from './lobby.js';
 import { Table } from './table.js';
 import { ActionBar } from './actionbar.js';
@@ -165,7 +166,7 @@ function CodePill({ code }) {
   </button>`;
 }
 
-function DesktopHeader({ view, onLedger, onHost }) {
+function DesktopHeader({ view, onLedger, onHost, onKeys }) {
   const pending = view.isHost ? (view.requests || []).length : 0;
   const no = handLabel(view);
   return html`<header class="room-head">
@@ -198,6 +199,9 @@ function DesktopHeader({ view, onLedger, onHost }) {
       html`<${Button} onClick=${onHost} aria-label=${'Host tools' + (pending ? ', ' + pending + ' pending' : '')}>
         <${Icon} name="crown" />Host tools${pending > 0 && html`<span class="badge">${pending}</span>`}
       <//>`}
+      <button type="button" class="btn btn-icon keys-btn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick=${onKeys}>
+        <${Icon} name="keyboard" size=${20} />
+      </button>
       <${FourColorToggle} />
     </nav>
   </header>`;
@@ -340,7 +344,7 @@ const PANEL_TITLES = { ledger: 'Ledger', host: 'Host tools', log: 'Hand log', ch
 
 /**
  * The whole room screen. Reads { view, act, joined, ... } from RoomContext; owns only UI state.
- * Props (all optional, used by the dev preview): initialPanel, initialDialog ('buyin'|'leave'|'menu'|'join').
+ * Props (all optional, used by the dev preview): initialPanel, initialDialog ('buyin'|'leave'|'menu'|'join'|'keys').
  */
 export function RoomLayout({ initialPanel = null, initialDialog = null } = {}) {
   const room = useRoom();
@@ -353,6 +357,7 @@ export function RoomLayout({ initialPanel = null, initialDialog = null } = {}) {
   const [menuOpen, setMenuOpen] = useState(initialDialog === 'menu');
   const [panel, setPanel] = useState(initialPanel); // 'ledger' | 'host' | 'log' | 'chat' | 'players' | null
   const [joinOpen, setJoinOpen] = useState(initialDialog === 'join' || !room.joined);
+  const [keysOpen, setKeysOpen] = useState(initialDialog === 'keys');
 
   useDocTitle(view);
 
@@ -380,10 +385,11 @@ export function RoomLayout({ initialPanel = null, initialDialog = null } = {}) {
   const closePanel = useCallback(() => setPanel(null), []);
   const openLedger = useCallback(() => setPanel('ledger'), []);
   const openHostTools = useCallback(() => setPanel('host'), []);
+  const openShortcuts = useCallback(() => setKeysOpen(true), []);
 
   const value = useMemo(
-    () => ({ ...room, openBuyIn, openLeave, openJoin, openPanel, closePanel, openLedger, openHostTools, isMobile: mobile }),
-    [room, openBuyIn, openLeave, openJoin, openPanel, closePanel, openLedger, openHostTools, mobile],
+    () => ({ ...room, openBuyIn, openLeave, openJoin, openPanel, closePanel, openLedger, openHostTools, openShortcuts, isMobile: mobile }),
+    [room, openBuyIn, openLeave, openJoin, openPanel, closePanel, openLedger, openHostTools, openShortcuts, mobile],
   );
 
   const onSit = (seat) => openBuyIn(seat);
@@ -422,6 +428,7 @@ export function RoomLayout({ initialPanel = null, initialDialog = null } = {}) {
     />`}
     <${BuyInDialog} open=${!!buyIn} seat=${buyIn ? buyIn.seat : null} onClose=${() => setBuyIn(null)} />
     <${LeaveDialog} open=${leaveOpen} onClose=${() => setLeaveOpen(false)} />
+    <${ShortcutsDialog} open=${keysOpen} onClose=${() => setKeysOpen(false)} />
     ${!room.joined && !view.ended && html`<${JoinPrompt} open=${joinOpen} onClose=${() => setJoinOpen(false)} />`}
   `;
 
@@ -446,7 +453,7 @@ export function RoomLayout({ initialPanel = null, initialDialog = null } = {}) {
 
   return html`<${RoomContext.Provider} value=${value}>
     <div class=${cx('room', 'room-d', view.ended && 'room-is-ended')}>
-      <${DesktopHeader} view=${view} onLedger=${openLedger} onHost=${openHostTools} />
+      <${DesktopHeader} view=${view} onLedger=${openLedger} onHost=${openHostTools} onKeys=${openShortcuts} />
       <main class="room-main">
         <section class="room-play" aria-label="Table">
           <${StatusBanner} view=${view} act=${act} />

@@ -8,10 +8,17 @@
 //   away notice) → my turn → run-it vote → runout → hand complete (show cards, reveal runout,
 //   next-hand countdown) → busted → waiting (someone else's turn / sitting out / no hand yet).
 // A "leaving / going away after this hand" notice is stacked on top of any state.
-// Keyboard on my turn: F fold, C check/call, R focus the raise amount (ignored while typing).
-import { html, useState, useEffect, useRef, useMemo, Fragment } from './h.js';
+//
+// Keyboard (one document listener here; the decisions are pure, in hotkeys.js — SPEC §11):
+//   my turn      F fold · C call/check · K check · R raise amount · A/G call/check · I check/fold
+//   waiting      I Check/Fold · A Call any · G Call current — pre-actions, also buttons (desktop + phone)
+//   hand over    S show all my cards · 1–4 show one
+//   anywhere     ? the cheat sheet (room.openShortcuts)
+// Ignored while typing, while a dialog/sheet is open, with Ctrl/Meta/Alt and on key repeat.
+import { html, useState, useEffect, useRef, useMemo, useCallback, Fragment } from './h.js';
 import { useRoom, useClock, serverNow } from './room.js';
-import { Button, Avatar, Icon, cx, fmt, cardText, countdownText, useIsMobile } from './ui.js';
+import { Button, Avatar, Icon, cx, fmt, cardText, countdownText, useIsMobile, toast } from './ui.js';
+import { PRE_KEYS, PRE_KINDS, canPreAct, decidePreAction, decideTurnKey, ignoreKeyEvent, normKey, preLabel, showKey, togglePreAction } from './hotkeys.js';
 import { useShowPick, runWord } from './table.js';
 import { useBackPref, useShowdownPref } from './side.js';
 
@@ -45,15 +52,14 @@ function TimerBar({ deadline, total, thin }) {
   </div>`;
 }
 
-function isTyping(el) {
-  if (!el) return false;
-  const tag = el.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+/** A tiny keycap hint on a desktop button (not part of the button's accessible name). */
+function Kc({ k }) {
+  return html`<kbd class="kc" aria-hidden="true">${k}</kbd>`;
 }
 
 // ─── my turn ─────────────────────────────────────────────────────────────────
 
-function TurnControls({ view, act, busy, mobile, now }) {
+function TurnControls({ view, act, busy, mobile, now, focusRef }) {
   const hand = view.hand;
   const me = view.me;
   const legal = hand.legal;
@@ -102,24 +108,21 @@ function TurnControls({ view, act, busy, mobile, now }) {
   const checkCall = () => !busy && act('act', legal.check ? { move: 'check' } : { move: 'call' });
   const raise = () => !busy && canRaise && act('act', { move: 'raise', to });
 
-  // keyboard: F / C / R
-  const keys = useRef({});
-  keys.current = { fold, checkCall, focus: () => inputRef.current && (inputRef.current.focus(), inputRef.current.select && inputRef.current.select()) };
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
-      if (isTyping(e.target) || document.documentElement.classList.contains('modal-open')) return;
-      const k = e.key.toLowerCase();
-      if (k === 'f') keys.current.fold();
-      else if (k === 'c') keys.current.checkCall();
-      else if (k === 'r') keys.current.focus();
-      else return;
-      e.preventDefault();
+  // R (the bar's key handler): focus + select the amount; with only an all-in left, the button.
+  const rootRef = useRef(null);
+  if (focusRef) {
+    focusRef.current = () => {
+      const input = inputRef.current;
+      if (input && !input.disabled) {
+        input.focus();
+        if (input.select) input.select();
+        return;
+      }
+      const root = rootRef.current;
+      const go = root && root.querySelector('.raise-go, .abar-grid .btn-primary');
+      if (go && !go.disabled) go.focus();
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, []);
-
+  }
   const deadline = view.deadlineKind === 'action' ? view.deadline : null;
   const total = (view.settings.actionTime || 25) * 1000;
   const secs = countdownText(deadline, now);
@@ -184,7 +187,7 @@ function TurnControls({ view, act, busy, mobile, now }) {
   />`;
 
   if (mobile) {
-    return html`<div class="abar-body">
+    return html`<div class="abar-body" ref=${rootRef}>
       <div class="abar-mline">
         <span class="abar-me"><b>You</b> · <span class="mono brass">${fmt(me.stack)}</span>${me.handName && html` · ${me.handName}`}</span>
         <span class=${cx('mono', 'muted', low && 'abar-low')}>${secs}</span>
@@ -202,7 +205,7 @@ function TurnControls({ view, act, busy, mobile, now }) {
     </div>`;
   }
 
-  return html`<div class="abar-body">
+  return html`<div class="abar-body" ref=${rootRef}>
     <div class="abar-top">
       <div class="abar-turn">
         <span class="abar-title">Your turn</span>
@@ -212,14 +215,14 @@ function TurnControls({ view, act, busy, mobile, now }) {
       ${presetBtns.length > 0 && html`<div class="presets">${presetBtns}</div>`}
     </div>
     <div class="abar-acts">
-      <${Button} kind="danger" class="act-btn act-fold" disabled=${busy} onClick=${fold} title="Fold (F)">Fold<//>
-      <${Button} class="act-btn act-call" disabled=${busy} onClick=${checkCall} title=${(legal.check ? 'Check' : 'Call') + ' (C)'}>${callLabel}<//>
+      <${Button} kind="danger" class="act-btn act-fold" disabled=${busy} onClick=${fold} title="Fold (F)" aria-keyshortcuts="F">Fold<${Kc} k="F" /><//>
+      <${Button} class="act-btn act-call" disabled=${busy} onClick=${checkCall} title=${legal.check ? 'Check (K)' : 'Call (C)'} aria-keyshortcuts=${legal.check ? 'K C' : 'C'}>${callLabel}<${Kc} k=${legal.check ? 'K' : 'C'} /><//>
       ${canRaise
         ? html`<div class="raise-box">
             <span class="label raise-label">${opening ? 'Bet' : 'Raise to'}</span>
             ${slider || html`<span class="raise-only muted">Only an all-in raise is possible</span>`}
             ${numInput}
-            <${Button} kind="primary" class="raise-go" disabled=${busy} onClick=${raise} title="Focus amount (R) · Enter to confirm">${raiseWord}<//>
+            <${Button} kind="primary" class="raise-go" disabled=${busy} onClick=${raise} title="R jumps to the amount · Enter confirms" aria-keyshortcuts="R">${raiseWord}<${Kc} k="R" /><//>
           </div>`
         : html`<div class="raise-box raise-box-off"><span class="muted">${hand.players.some((p) => p.pid !== me.id && !p.folded && !p.allIn) ? 'You can’t re-raise a short all-in' : 'Everyone else is all-in — call or fold'}</span></div>`}
     </div>
@@ -374,8 +377,9 @@ function CompleteControls({ view, act, busy, mobile, now }) {
         ? html`<div class="abar-title">${won && hand.results && hand.results.endedBy === 'fold' ? 'You won — show your cards?' : 'Show your hand?'}</div>
             <div class="muted abar-sub">
               ${won && hand.results && hand.results.endedBy === 'fold'
-                ? 'Nobody called, so you don’t have to. Tap a card to pick one.'
-                : 'Anyone can show once the hand is over, even after folding. Tap a card to pick one.'}
+                ? 'Nobody called, so you don’t have to. Tap a card to pick one'
+                : 'Anyone can show once the hand is over, even after folding. Tap a card to pick one'}${unshown.length > 1 &&
+              html`<span class="kc-hint">, or press ${unshown.map((i, n) => html`<${Fragment} key=${i}>${n > 0 ? ' ' : ''}<kbd class="kc kc-inline">${i + 1}</kbd><//>`)}</span>`}.
             </div>`
         : html`<div class="abar-title abar-result">${resultLine(view)}</div>
             ${hand.runout
@@ -387,7 +391,7 @@ function CompleteControls({ view, act, busy, mobile, now }) {
     ${showPrompt &&
     html`<div class="abar-btns">
       <${Button} disabled=${busy} onClick=${() => pick.hide()}>Keep hidden<//>
-      <${Button} kind=${sel.length ? 'default' : 'primary'} disabled=${busy} onClick=${() => show(unshown)}>Show ${allWord}<//>
+      <${Button} kind=${sel.length ? 'default' : 'primary'} disabled=${busy} onClick=${() => show(unshown)} aria-keyshortcuts="S">Show ${allWord}<${Kc} k="S" /><//>
       ${sel.length > 0 && html`<${Button} kind="primary" disabled=${busy} onClick=${() => show(sel)}>Show ${selText}<//>`}
     </div>`}
     ${reveal}
@@ -406,7 +410,7 @@ function Notice({ icon, children, action }) {
   </div>`;
 }
 
-function Waiting({ view, mobile, now, title, sub, children, icon }) {
+function Waiting({ view, mobile, now, title, sub, children, icon, pre }) {
   const hand = view.hand;
   const me = view.me;
   const toAct = hand && hand.phase === 'betting' ? hand.toAct : null;
@@ -454,7 +458,169 @@ function Waiting({ view, mobile, now, title, sub, children, icon }) {
     ${sub && html`<div class=${cx('muted', 'abar-sub', icon && 'abar-sub-indent')}>${sub}</div>`}
     ${mobile && children && html`<div class="abar-mactions">${children}</div>`}
     ${mobile && (meBits || chip) && html`<div class="abar-mline">${meBits || html`<span></span>`}${chip}</div>`}
+    ${pre}
   </div>`;
+}
+
+// ─── pre-actions (before my turn) ────────────────────────────────────────────
+
+const PRE_KEY_OF = { checkFold: 'I', callAny: 'A', callCurrent: 'G' };
+const PRE_TITLE = {
+  checkFold: 'Check if it’s free when your turn comes, otherwise fold',
+  callAny: 'Call whatever it costs when your turn comes (check if free)',
+  callCurrent: 'Call this amount when your turn comes — cancelled if the bet changes',
+};
+
+function PreActions({ view, pre, onToggle, mobile }) {
+  return html`<div class=${cx('pre-acts', mobile && 'pre-acts-m')} role="group" aria-label="Act before your turn">
+    ${!mobile && html`<span class="label pre-label">Before your turn</span>`}
+    ${PRE_KINDS.map((kind) => {
+      const on = !!(pre && pre.kind === kind);
+      return html`<button
+        type="button"
+        key=${kind}
+        class=${cx('pre-btn', 'pre-' + kind, on && 'on')}
+        aria-pressed=${on}
+        aria-keyshortcuts=${PRE_KEY_OF[kind]}
+        title=${PRE_TITLE[kind] + ' (' + PRE_KEY_OF[kind] + ')'}
+        onClick=${() => onToggle(kind)}
+      >
+        <span class="pre-box" aria-hidden="true">${on && html`<${Icon} name="check" size=${12} stroke=${3} />`}</span>
+        <span class="pre-text">${preLabel(kind, view)}</span>
+        ${!mobile && html`<${Kc} k=${PRE_KEY_OF[kind]} />`}
+      </button>`;
+    })}
+  </div>`;
+}
+
+let preSeq = 0;
+
+// The pending pick lives outside the component, per room: the phone and desktop layouts mount
+// different ActionBars (useIsMobile), so a rotation or resize across the breakpoint must not drop it.
+const preStores = new Map();
+function preStoreFor(code) {
+  let st = preStores.get(code);
+  if (!st) {
+    st = {
+      pre: null,
+      fired: 0, // id of the pick already sent (maybe still in flight)
+      subs: new Set(),
+      set(next) {
+        if (next === st.pre) return;
+        st.pre = next;
+        for (const f of st.subs) f(next);
+      },
+    };
+    preStores.set(code, st);
+  }
+  return st;
+}
+
+/**
+ * The pending pre-action and the effect that fires it. Fires at most once per pick (each pick has
+ * an id, so repeated renders, realtime refetches, a request still in flight or a remount can't send
+ * it twice), and is dropped when the street or hand moves on, I'm out of the round, or Call
+ * current's bet changed.
+ */
+function usePreAction(view, act) {
+  const store = preStoreFor((view && view.code) || '');
+  const [pre, setLocal] = useState(store.pre);
+  useEffect(() => {
+    store.subs.add(setLocal);
+    setLocal(store.pre);
+    return () => {
+      store.subs.delete(setLocal);
+    };
+  }, [store]);
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  const toggle = useCallback(
+    (kind) => {
+      const cur = store.pre;
+      const next = togglePreAction(cur, kind, viewRef.current);
+      if (next === cur) return;
+      store.set(next ? { ...next, id: ++preSeq } : null);
+    },
+    [store],
+  );
+  useEffect(() => {
+    if (!pre || pre !== store.pre) return;
+    const d = decidePreAction(pre, view);
+    if (!d) return;
+    if (d.cancel) {
+      store.set(null);
+      if (d.cancel === 'changed') toast('The bet changed — choose again', 'default');
+      return;
+    }
+    if (store.fired === pre.id) return; // already sent (maybe still in flight)
+    store.fired = pre.id;
+    const id = pre.id;
+    // Accepted or refused (room.act toasts the server's reason), the pick is used up either way.
+    Promise.resolve(act('act', d.fire)).finally(() => {
+      if (store.pre && store.pre.id === id) store.set(null);
+    });
+  }, [view, pre, store]);
+  return [pre, toggle];
+}
+
+/** The one document keydown listener for the room's shortcuts; `live` is read at key time. */
+function useHotkeys(live) {
+  const ref = useRef(live);
+  ref.current = live;
+  // Show keys pressed while a request is in flight wait here ({ no: hand number, keys }) and are
+  // re-read against the fresh view once it lands — so 1 then 2 shows both cards.
+  const showQueue = useRef(null);
+  useEffect(() => {
+    const q = showQueue.current;
+    if (!q || live.busy) return;
+    showQueue.current = null;
+    const view = live.view;
+    if (!view || !view.hand || view.hand.no !== q.no) return;
+    const cards = new Set();
+    for (const k of q.keys) for (const i of showKey(k, view) || []) cards.add(i);
+    if (cards.size) live.act('show', { cards: [...cards].sort((a, b) => a - b) });
+  }, [live.busy, live.view]);
+  useEffect(() => {
+    const onKey = (e) => {
+      if (ignoreKeyEvent(e, document.documentElement.classList.contains('modal-open'))) return;
+      const L = ref.current;
+      const key = normKey(e);
+      if (key === '?') {
+        if (L.openShortcuts) {
+          e.preventDefault();
+          L.openShortcuts();
+        }
+        return;
+      }
+      const view = L.view;
+      if (!view || view.ended || !view.me) return;
+      const turn = decideTurnKey(key, view);
+      if (turn) {
+        e.preventDefault();
+        if (turn.toast) toast(turn.toast, 'default');
+        else if (turn.focus) L.focusRaise();
+        else if (!L.busy) L.act('act', turn);
+        return;
+      }
+      if (PRE_KEYS[key] && canPreAct(view)) {
+        e.preventDefault();
+        L.togglePre(PRE_KEYS[key]);
+        return;
+      }
+      const cards = showKey(key, view);
+      if (cards) {
+        e.preventDefault();
+        if (!L.busy) L.act('show', { cards });
+        else {
+          const q = showQueue.current;
+          if (q && q.no === view.hand.no) q.keys.push(key);
+          else showQueue.current = { no: view.hand.no, keys: [key] };
+        }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 }
 
 function AwayControls({ view, act, busy, mobile, onLeave }) {
@@ -511,9 +677,19 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
   const view = room && room.view;
   const now = useClock(view);
   const [waitBB] = useBackPref();
+  const act = room && room.act;
+  const busy = !!(room && room.acting);
+  const [pre, togglePre] = usePreAction(view, act);
+  const focusRef = useRef(null);
+  useHotkeys({
+    view,
+    act,
+    busy,
+    togglePre,
+    openShortcuts: room && room.openShortcuts,
+    focusRaise: () => focusRef.current && focusRef.current(),
+  });
   if (!view || view.ended) return null;
-  const act = room.act;
-  const busy = !!room.acting;
   const me = view.me;
   const hand = view.hand;
   const hp = me && hand ? hand.players.find((p) => p.pid === me.id) : null;
@@ -582,7 +758,7 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
     body = html`<${AwayControls} ...${props} onLeave=${onLeave} />`;
   } else if (hand && hand.phase === 'betting' && hand.toAct === me.id && hand.legal) {
     tone = 'turn';
-    body = html`<${TurnControls} key=${hand.no} ...${props} />`;
+    body = html`<${TurnControls} key=${hand.no} ...${props} focusRef=${focusRef} />`;
   } else if (hand && hand.phase === 'ritVote' && hand.ritVote) {
     tone = hand.ritVote.voters.includes(me.id) && hand.ritVote.votes[me.id] == null ? 'turn' : null;
     body = html`<${VoteControls} ...${props} />`;
@@ -625,7 +801,8 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
         ? 'You’ll be dealt in when the big blind reaches you.'
         : 'You’re in from the next hand.'
       : null;
-    body = html`<${Waiting} ...${props} sub=${sub} />`;
+    const preBar = canPreAct(view) ? html`<${PreActions} view=${view} pre=${pre} onToggle=${togglePre} mobile=${mobile} />` : null;
+    body = html`<${Waiting} ...${props} sub=${sub} pre=${preBar} />`;
   } else {
     // no hand
     let title;

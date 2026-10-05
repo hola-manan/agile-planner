@@ -1384,6 +1384,213 @@
   min-width: 0;
 }
 
+/* ─── keyboard: keycap hints, pre-actions, the cheat sheet ───────────────── */
+
+/* tiny keycap on a desktop button: the button's own colour, quiet */
+.kc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  margin-left: 2px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: 0;
+  text-transform: uppercase;
+  opacity: 0.5;
+  box-sizing: border-box;
+}
+.btn-primary .kc {
+  opacity: 0.45;
+}
+.kc-inline {
+  margin: 0 1px;
+  vertical-align: 1px;
+  opacity: 0.85;
+  color: var(--soft);
+  border-color: var(--pill-border);
+  background: var(--input);
+}
+/* touch screens have no keyboard to hint at */
+@media (pointer: coarse) {
+  .kc:not(.kc-lg),
+  .kc-hint {
+    display: none;
+  }
+}
+
+/* pre-actions: picked while someone else decides, sent when my turn comes */
+.pre-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.pre-label {
+  margin-right: 6px;
+}
+.pre-btn {
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--btn-border);
+  background: var(--input);
+  color: var(--soft);
+  font: 600 14px/1 var(--font-ui);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.12s, color 0.12s, background-color 0.12s;
+}
+.pre-btn:hover {
+  border-color: #6a6a6a;
+  color: var(--text);
+}
+.pre-btn.on {
+  border-color: var(--brass);
+  background: var(--brass-tint);
+  color: var(--brass-hi);
+}
+.pre-box {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  border: 1.5px solid #6a6a6a;
+  box-sizing: border-box;
+}
+.pre-btn.on .pre-box {
+  background: var(--brass);
+  border-color: var(--brass);
+  color: var(--brass-ink);
+}
+.pre-text {
+  font-variant-numeric: tabular-nums;
+}
+.pre-btn .kc {
+  margin-left: 0;
+}
+.pre-btn.on .kc {
+  opacity: 0.7;
+}
+/* phone: three equal 44px buttons at the bottom of the dock */
+.pre-acts-m {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 0;
+  border-top: 0;
+}
+.pre-acts-m .pre-btn {
+  height: 44px;
+  padding: 0 6px;
+  justify-content: center;
+  font-size: 13px;
+  gap: 6px;
+  min-width: 0;
+}
+.pre-acts-m .pre-box {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+.pre-acts-m .pre-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* narrow phones: the brass highlight alone marks the pick, so the label keeps its room */
+@media (max-width: 380px) {
+  .pre-acts-m .pre-box {
+    display: none;
+  }
+}
+
+/* header: the keyboard button opens the cheat sheet */
+.keys-btn {
+  color: var(--soft);
+}
+
+/* the cheat sheet ("?") */
+.modal.keys-modal {
+  width: min(700px, 100%);
+}
+.keys {
+  columns: 2;
+  column-gap: 32px;
+}
+.keys-group {
+  break-inside: avoid;
+  padding-bottom: 20px;
+}
+.keys-group:last-child {
+  padding-bottom: 0;
+}
+.keys-title {
+  margin-bottom: 10px;
+}
+.keys-note {
+  font-size: 13px;
+  line-height: 1.45;
+  margin: -4px 0 10px;
+}
+.keys-list {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px 12px;
+  align-items: start;
+  margin: 0;
+}
+.keys-list dt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.keys-list dd {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+  padding-top: 3px;
+}
+.keys-label {
+  font-weight: 600;
+}
+.keys-sub {
+  display: block;
+  font-size: 12.5px;
+  margin-top: 1px;
+}
+.keys-or {
+  color: var(--muted);
+  font-size: 12px;
+}
+.kc.kc-lg {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  margin: 0;
+  border-radius: 7px;
+  border: 1px solid var(--pill-border);
+  border-bottom-width: 2px;
+  background: var(--input);
+  color: var(--text);
+  font-size: 12px;
+  opacity: 1;
+  text-transform: none;
+}
+.sheet .keys {
+  columns: 1;
+}
+
 /* ─── action bar: phone dock ───────────────────────────────────────────── */
 
 .abar-m {
@@ -1696,6 +1903,9 @@
   }
   .abar-grid .btn {
     height: 46px;
+  }
+  .pre-acts-m .pre-btn {
+    height: 40px;
   }
 }
 

@@ -560,7 +560,7 @@ Screens (one SPA, `public/index.html`):
     cards that make the winning hand lifted/others dimmed at complete; ghost "would have come" cards after a
     revealed runout (dashed outline, translucent), "Revealed by NAME".
   - Bottom bar states: your turn (Fold / Check|Call N / Raise slider + presets Min, ½ pot, ¾ pot, Pot, All-in;
-    PLO caps at pot), waiting (pre-action toggles optional), run-it vote (Once/Twice/3× + others' votes + countdown),
+    PLO caps at pot), waiting (pre-action toggles — see Keyboard shortcuts below), run-it vote (Once/Twice/3× + others' votes + countdown),
     hand complete (Show your hand: per-card toggle + Show both / Keep hidden; Reveal runout button when allowed;
     next hand countdown — also for AWAY players who were dealt in, with a "You're away · I'm back" notice on top),
     away banner ("You're away" + I'm back + wait for big blind checkbox + Leave seat),
@@ -582,6 +582,34 @@ Screens (one SPA, `public/index.html`):
     reasons); `public/js/csv.js` holds the export (no React, unit-tested).
   - Dialogs: buy-in (amount within range, slider + presets min/max), leave seat (cash out summary + After this hand /
     Right now), confirm end game.
+- Keyboard shortcuts (`public/js/hotkeys.js` holds the pure decisions — no imports, unit-tested in node with real
+  `viewFor()` views; `actionbar.js` owns the one document `keydown` listener). Keys read `e.key` lower-cased (Shift
+  doesn't matter); digits also come from `e.code` (`Digit1` / `Numpad1`). Every shortcut is ignored while typing in an
+  input / textarea / select / contenteditable, while any modal or sheet is open (`<html class="modal-open">`), with
+  Ctrl / Meta / Alt held, and on key repeat.
+  - My turn (`hand.phase 'betting'`, `hand.toAct === me.id`, `hand.legal`): `f` fold · `c` call (check when there is
+    nothing to call) · `k` check — only when `legal.check`, otherwise nothing is sent and a toast says
+    "Can’t check — 60 to call" · `r` focus + select the raise amount (typing a number and Enter raises; with only an
+    all-in raise left it focuses the raise button; no raise possible → a toast) · `a` / `g` call (check if free) ·
+    `i` check if free, else fold. `f c k r` do nothing when it isn't my turn (no pre-fold).
+  - Pre-actions, before my turn (I'm dealt in, not folded, not all-in, not away, phase `betting`, someone else to act):
+    `i` **Check/Fold** (check if free, else fold — survives raises) · `a` **Call any** (check if free, else call any
+    amount incl. all-in — survives raises) · `g` **Call current** (remembers `hand.currentBet` when picked; calls —
+    or checks when there's nothing to call — if it is unchanged; as soon as it changes the pick is cancelled with a
+    toast "The bet changed — choose again"). One at a time: the same key again turns it off, another key switches.
+    The waiting bar shows them as toggle buttons on desktop and phone ("Check/Fold", "Call any", "Call 60" / "Check" —
+    the label follows the current amount to call), the picked one brass with `aria-pressed`. A pick belongs to one
+    betting round (hand no + street) and is dropped when the street or hand changes, I fold, go all-in, go away, or the
+    hand completes. It fires exactly once (each pick has an id; repeated renders, realtime refetches and a request still
+    in flight can't send it twice), immediately when the view shows it is my turn; refused by the server → dropped
+    (the API error toast explains).
+  - After the hand (`hand.phase 'complete'` and `hand.canShow`): `s` shows all my not-yet-shown cards, `1` / `2` my
+    first / second card (PLO `1`–`4`) — only cards not shown yet, otherwise nothing.
+  - `?` (Shift+/) opens the "Keyboard shortcuts" cheat sheet (a Modal listing every key, `HOTKEYS` in hotkeys.js); the
+    desktop header has a keyboard icon button that opens it too.
+  - Desktop shows tiny keycap hints (`<kbd class="kc">`, JetBrains Mono, muted, small rounded box, `aria-hidden` so the
+    button names stay "Fold" / "Call 60") on Fold F, Call C / Check K, Raise R, Check/Fold I, Call any A, Call current G,
+    Show both S (+ "or press 1 2" in the show prompt). No keycaps on the phone (nor on any coarse pointer).
 - Toasts for errors from the API (`error` message).
 - Sounds: none. Animations: card flip on reveal (0.55s rotateY), chips slide optional, acting ring pulse.
 - Accessibility: real buttons, aria-labels on icon buttons, focus-visible rings, 44px touch targets.
@@ -624,15 +652,21 @@ js/ui.js               export function cx(...classes) → string
                        export function Toasts()                             // render once in main
                        export function Countdown({ deadline, now }) → '14s' text
                        export function Icon({ name, size=18 })              // inline stroke SVGs: spade(logo), ledger, crown, gear,
-                                                                            // clock, leave, close, copy, menu, back, eye, check, chat, users, history
+                                                                            // clock, leave, close, copy, menu, back, eye, check, chat, users, history,
+                                                                            // keyboard (cheat-sheet button)
 js/lobby.js            export function Lobby()                              // create + join; navigates to /?room=CODE
 js/dialogs.js          export function BuyInDialog({ open, onClose, seat|null })   // sit or rebuy (decides by me.seat)
                        export function LeaveDialog({ open, onClose })
                        export function JoinPrompt()                         // name entry for a visitor with no session
                        export function ConfirmDialog({ open, title, body, confirmLabel, danger, onConfirm, onClose })
+                       export function ShortcutsDialog({ open, onClose })   // the keyboard cheat sheet (§11)
 js/table.js            export function Table()                              // oval, seats, center (pot/boards/runout), dealer btn,
                                                                             // bet chips, hero cards; desktop landscape / mobile portrait
-js/actionbar.js        export function ActionBar()                          // every bottom-bar state from §11
+js/actionbar.js        export function ActionBar()                          // every bottom-bar state from §11 + the keyboard
+                                                                            // shortcuts listener and the pre-action state
+js/hotkeys.js          (pure, no imports) decideTurnKey(key, view) → {move}|{focus:'raise'}|{toast}|null,
+                       togglePreAction(pre, kind, view), decidePreAction(pre, view) → {fire:{move}}|{cancel:reason}|null,
+                       showKey(key, view) → number[]|null, canPreAct, preLabel, normKey, ignoreKeyEvent, HOTKEYS
 js/side.js             export function SidePanel()                          // tabs Hand log / Chat / Players + session box
                        export function HandLog(), Chat(), PlayersList(), SessionBox()   // reused in mobile sheets
 js/host.js             export function HostTools()                          // full host panel content
@@ -641,8 +675,9 @@ js/csv.js              export function csvCell(v), ledgerCsv(view, now?)    // C
 js/main.js             App: router (lobby vs room), RoomPage layout (desktop grid: header / table+actionbar / side panel;
                        mobile: header + table + action sheet + menu sheets), mounts Toasts, dialogs state.
                        Header buttons open Ledger / Host tools in a Modal(wide) on desktop, full sheets on mobile.
+                       Adds openShortcuts() to RoomContext (the cheat sheet; desktop header keyboard button, "?" key).
 css/base.css           tokens (§11) as CSS vars, reset, body bg, buttons, pills, panels, inputs, switches, cards, modal/sheet, toasts
-css/table.css          table, seats, boards, chips, action bar
+css/table.css          table, seats, boards, chips, action bar, keycaps / pre-actions / cheat sheet
 css/panels.css         side panel, host tools, ledger, dialogs content
 css/lobby.css          lobby
 ```

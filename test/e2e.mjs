@@ -9,6 +9,8 @@
 // Cast: Maya hosts at 1440×1000, Ben joins from the invite link at 1440×1000, Cleo joins on a phone
 // (390×844, touch). Every game action is a real click/tap in the UI; the HTTP API is only read
 // (GET /api/state) to make assertions and to pick a branch where the cards decide (e.g. who busted).
+// After the game ends, a second table plays two hands with the keyboard shortcuts (real key presses on
+// the desktops, pre-action taps on the phone) and writes dev/shots/hotkeys-*.png.
 //
 // Time: each browser context runs a Playwright fake clock that keeps ticking in real time. To skip
 // ahead we move the server clock (POST /__dev/time) and every browser clock by the same amount, so
@@ -142,8 +144,17 @@ function isFontNoise(text, url) {
 function watch(p) {
   const { page, name } = p;
   p.ticks = 0;
+  p.sent = []; // every non-tick POST /api/act body this page sent (the keyboard steps count them)
   page.on('request', (req) => {
-    if (req.method() === 'POST' && req.url() === BASE + '/api/act' && /"type":"tick"/.test(req.postData() || '')) p.ticks++;
+    if (req.method() !== 'POST' || req.url() !== BASE + '/api/act') return;
+    if (/"type":"tick"/.test(req.postData() || '')) p.ticks++;
+    else {
+      try {
+        p.sent.push(JSON.parse(req.postData() || '{}'));
+      } catch {
+        /* not JSON */
+      }
+    }
   });
   page.on('pageerror', (e) => problems.push(`${name}: page error: ${e.message}`));
   page.on('console', (m) => {
@@ -436,6 +447,31 @@ step('review: an away player still gets show-your-cards and reveal-the-runout af
     await wouldSend(again.page, 'show');
     await again.done(mobile ? null : 'away-complete');
   }
+});
+
+step('review: a touch tablet in the desktop layout gets no keyboard hint; numpad navigation keys show nothing', async () => {
+  // iPad landscape: wide enough for the desktop bar, but a coarse pointer — no "or press 1 2"
+  const t = await preview('showdown-complete', { mobile: true, width: 1180, height: 820 });
+  assert(await t.page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'coarse pointer');
+  assert((await t.page.locator('.room-d').count()) === 1, 'desktop layout');
+  await waitText({ name: 'preview' }, t.bar, 'Show your hand?');
+  const sub = await t.bar.locator('.abar-sub').innerText();
+  assert(!/press/.test(sub) && /Tap a card to pick one\.$/.test(sub.trim()), 'no keyboard hint on touch: ' + JSON.stringify(sub));
+  await t.done();
+  // a mouse desktop keeps the hint
+  const d = await preview('showdown-complete');
+  await waitText({ name: 'preview' }, d.bar, 'Show your hand?');
+  const dsub = await d.bar.locator('.abar-sub').innerText();
+  assert(/or press 1 2\.$/.test(dsub.replace(/\s+/g, ' ').trim()), 'desktop hint: ' + JSON.stringify(dsub));
+  // NumLock off: Numpad1 / Numpad2 send End / ArrowDown — never a show
+  for (const [key, code] of [['End', 'Numpad1'], ['ArrowDown', 'Numpad2']]) {
+    await d.page.evaluate(([key, code]) => document.body.dispatchEvent(new KeyboardEvent('keydown', { key, code, bubbles: true })), [key, code]);
+  }
+  await sleep(400);
+  assert(!(await d.page.locator('.toast').allInnerTexts()).some((x) => x.includes('would send show')), 'a navigation key showed a card');
+  await d.page.evaluate(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '2', code: 'Numpad2', bubbles: true })));
+  await wouldSend(d.page, 'show {"cards":[1]}');
+  await d.done();
 });
 
 step('review: a joined player without a seat can reveal the runout', async () => {
@@ -1155,6 +1191,288 @@ step('host ends the game: everyone sees the final ledger', async () => {
   await shot('27-ended', H, C);
   // nothing in this run reloaded a page: every update above arrived over realtime
   for (const p of [H, B, C]) assert(await p.page.evaluate(() => window.__e2eLoaded === true), p.name + ' reloaded the page');
+});
+
+// ─── keyboard shortcuts and pre-actions: a second table ─────────────────────
+// Real key presses on the desktops (Maya, Ben) and taps on Cleo's phone. Seats 1 / 3 / 5 again, so
+// hand 1: button Maya, SB Ben, BB Cleo (Maya first preflop, Ben first after); hand 2: button Ben.
+
+/** Moves this page sent from now on (non-tick /api/act bodies with a move). */
+const movesSince = (p, n) => p.sent.slice(n).filter((b) => b.type === 'act').map((b) => b.move);
+const isPressed = async (p, name) => (await btn(bar(p), name).getAttribute('aria-pressed').catch(() => null)) === 'true';
+const pressedPre = async (p) => (await bar(p).locator('.pre-acts button[aria-pressed=true]').allInnerTexts()).map((t) => t.replace(/\s+[A-Z]$/, '').trim());
+
+async function hotShot(name, p) {
+  await sleep(450);
+  await p.page.screenshot({ path: path.join(SHOTS, `hotkeys-${name}.png`) });
+}
+
+/** Press a key and wait for the /api/act POST of `type` it causes. → the request body */
+async function keyAct(p, key, type = 'act') {
+  const isIt = (r) => r.url() === BASE + '/api/act' && r.request().method() === 'POST' && (() => {
+    try {
+      return JSON.parse(r.request().postData() || '{}').type === type;
+    } catch {
+      return false;
+    }
+  })();
+  const [res] = await Promise.all([p.page.waitForResponse(isIt, { timeout: T }), p.page.keyboard.press(key)]);
+  assert(res.status() === 200, `${p.name}: key ${key} → ${res.status()} ${await res.text().catch(() => '')}`);
+  return JSON.parse(res.request().postData());
+}
+
+/** Press a key and make sure nothing is sent. */
+async function keyIdle(p, key, why) {
+  const n = p.sent.length;
+  await p.page.keyboard.press(key);
+  await sleep(500);
+  assert(p.sent.length === n, `${p.name}: ${why} — key ${key} sent ${JSON.stringify(p.sent.slice(n))}`);
+}
+
+async function toastSeen(p, text) {
+  await until(`${p.name}: toast "${text}"`, async () => (await p.page.locator('.toast').allInnerTexts()).some((t) => t.includes(text)), 5000);
+}
+
+async function sitDown(p, seat, amount) {
+  await press(p, p.page.getByRole('button', { name: 'Sit in seat ' + seat }));
+  const d = dialog(p);
+  await d.getByRole('heading', { name: 'Take seat ' + seat }).waitFor();
+  await d.locator('#buyin-amt').fill(String(amount));
+  await act(p, d.getByRole('button', { name: /^Sit down/ }));
+  await d.waitFor({ state: 'detached' });
+}
+
+async function typedRaise(p, amount) {
+  await p.page.keyboard.press('r');
+  await until(`${p.name}: R focuses the amount`, async () => p.page.evaluate(() => document.activeElement && document.activeElement.classList.contains('raise-num')), 3000);
+  const body = await (async () => {
+    await p.page.keyboard.type(String(amount));
+    const [res] = await Promise.all([
+      p.page.waitForResponse((r) => r.url() === BASE + '/api/act' && /"move":"raise"/.test(r.request().postData() || '')),
+      p.page.keyboard.press('Enter'),
+    ]);
+    assert(res.status() === 200, `${p.name}: typed raise → ${res.status()}`);
+    return JSON.parse(res.request().postData());
+  })();
+  assert(body.to === amount, `${p.name}: raised to ${body.to}, typed ${amount}`);
+}
+
+step('keys: a second table — Maya creates it (no buy-in approval), pauses, all three sit down', async () => {
+  const pg = H.page;
+  await pg.goto(BASE + '/', { waitUntil: 'load' });
+  await pg.getByPlaceholder('e.g. Maya').fill('Maya');
+  await pg.getByPlaceholder('Friday Night Game').fill('E2E Keys');
+  await pg.getByLabel('Seats', { exact: true }).selectOption('6');
+  await pg.getByLabel('Action timer', { exact: true }).selectOption('120');
+  await pg.getByRole('switch', { name: 'Host approves buy-ins' }).uncheck();
+  await pg.getByRole('button', { name: 'Create table' }).click();
+  await pg.waitForURL(/\?room=[A-Z]{3}-\d{4}$/, { timeout: T });
+  CODE = new URL(pg.url()).searchParams.get('room');
+  log('keys room', CODE);
+  // paused, so nobody is dealt in until all three are seated
+  const dlg = await openHostTools();
+  await act(H, dlg.getByRole('button', { name: 'Pause', exact: true }));
+  await closeTop(H);
+  await sitDown(H, 1, 200);
+  for (const p of [B, C]) {
+    await p.page.goto(BASE + '/?room=' + CODE, { waitUntil: 'load' });
+    const d = dialog(p);
+    await d.getByRole('heading', { name: 'Join E2E Keys' }).waitFor();
+    await d.getByPlaceholder('What should the table call you?').fill(p.name);
+    await act(p, d.getByRole('button', { name: 'Join game' }), { route: '/api/join' });
+    await d.waitFor({ state: 'detached' });
+    await sitDown(p, p === B ? 3 : 5, 200);
+  }
+  await act(H, H.page.locator('.room-banner').getByRole('button', { name: 'Resume' }));
+  await advance(3200);
+  for (const p of [H, B, C]) await waitHand(p, 1);
+  const v = await viewOf(H);
+  assert(v.hand.players.length === 3 && v.hand.toAct === v.me.id, 'hand 1, 3-handed, Maya (button) first');
+});
+
+step('keys: preflop — Ben picks Call current (G), Cleo taps Call any; Maya: K is refused, R → 6 → Enter raises', async () => {
+  await waitTurn(H);
+  // Ben (small blind) is waiting: the pre-action row offers to call the 1 he owes
+  const bPre = bar(B).locator('.pre-acts');
+  await bPre.waitFor();
+  await waitText(B, bPre, 'Call 1');
+  assert((await pressedPre(B)).length === 0, 'nothing picked yet');
+  await B.page.keyboard.press('g');
+  await until('Ben: Call current picked', async () => isPressed(B, 'Call 1'));
+  assert((await bPre.locator('.pre-btn.on').count()) === 1, 'the picked button is highlighted');
+  await hotShot('waiting-desktop', B);
+  // a keycap on each pre-action button (desktop), none on the phone
+  assert((await bPre.locator('kbd.kc').count()) === 3, 'desktop pre-actions carry keycaps');
+  // Cleo (big blind, phone) taps Call any
+  const cPre = bar(C).locator('.pre-acts');
+  await cPre.waitFor();
+  assert((await cPre.locator('kbd').count()) === 0, 'no keycaps on the phone');
+  await press(C, btn(bar(C), 'Call any'));
+  await until('Cleo: Call any picked', async () => isPressed(C, 'Call any'));
+  await hotShot('waiting-mobile', C);
+  await noHorizontalScroll(C, 'pre-actions');
+  // Maya: keycaps on the turn buttons; K can't check facing the big blind — a toast, nothing sent
+  assert((await bar(H).locator('.act-fold kbd.kc').innerText()) === 'F', 'Fold shows F');
+  assert((await bar(H).locator('.act-call kbd.kc').innerText()) === 'C', 'Call shows C');
+  await keyIdle(H, 'k', 'K facing a bet');
+  await toastSeen(H, 'Can’t check — 2 to call');
+  await hotShot('turn-desktop', H);
+  const nC = C.sent.length;
+  await typedRaise(H, 6);
+  // Ben's Call current is dropped: the bet changed (a toast tells him); C calls on his own turn
+  await toastSeen(B, 'The bet changed — choose again');
+  await waitTurn(B);
+  const nB = B.sent.length;
+  const call = await keyAct(B, 'c');
+  assert(call.move === 'call', 'C calls: ' + JSON.stringify(call));
+  assert(movesSince(B, nB).length === 1, 'Ben sent exactly one move');
+  // Cleo's Call any fires on its own — once
+  await until('Cleo’s Call any fires', async () => movesSince(C, nC).length >= 1);
+  await until('the flop', async () => (await boardCount(H)) === 3);
+  assert(JSON.stringify(movesSince(C, nC)) === '["call"]', 'Cleo called exactly once: ' + JSON.stringify(movesSince(C, nC)));
+  const v = await viewOf(H);
+  assert(v.hand.players.every((x) => x.committed === 6), 'everyone has 6 in: ' + v.hand.players.map((x) => x.committed).join('/'));
+});
+
+step('keys: flop — Maya cycles A → I → I (off) → G; Cleo taps Check/Fold; Ben checks with K; both picks check', async () => {
+  await waitTurn(B);
+  await bar(H).locator('.pre-acts').waitFor();
+  await H.page.keyboard.press('a');
+  await until('Maya: Call any', async () => JSON.stringify(await pressedPre(H)) === '["Call any"]');
+  await H.page.keyboard.press('i');
+  await until('Maya: switched to Check/Fold', async () => JSON.stringify(await pressedPre(H)) === '["Check/Fold"]');
+  await H.page.keyboard.press('i');
+  await until('Maya: pressing I again turns it off', async () => (await pressedPre(H)).length === 0);
+  await H.page.keyboard.press('g');
+  await until('Maya: Call current reads "Check" with nothing bet', async () => isPressed(H, 'Check'));
+  await press(C, btn(bar(C), 'Check/Fold'));
+  await until('Cleo: Check/Fold', async () => isPressed(C, 'Check/Fold'));
+  const nH = H.sent.length;
+  const nC = C.sent.length;
+  const k = await keyAct(B, 'k');
+  assert(k.move === 'check', 'K checks: ' + JSON.stringify(k));
+  await until('the turn', async () => (await boardCount(H)) === 4);
+  assert(JSON.stringify(movesSince(C, nC)) === '["check"]', 'Cleo’s Check/Fold checked: ' + JSON.stringify(movesSince(C, nC)));
+  assert(JSON.stringify(movesSince(H, nH)) === '["check"]', 'Maya’s Call current checked: ' + JSON.stringify(movesSince(H, nH)));
+});
+
+step('keys: turn — Maya picks Call any; Ben bets 10 with R; Cleo taps Fold; Maya’s pick calls the bet', async () => {
+  await waitTurn(B);
+  await bar(H).locator('.pre-acts').waitFor();
+  await H.page.keyboard.press('a');
+  await until('Maya: Call any', async () => isPressed(H, 'Call any'));
+  const nH = H.sent.length;
+  await typedRaise(B, 10);
+  await waitText(H, seatOf(H, 'Ben'), 'Bet 10');
+  await waitTurn(C);
+  assert(H.sent.length === nH, 'Maya’s pick waits for her turn');
+  await act(C, btn(bar(C), 'Fold'));
+  await until('the river', async () => (await boardCount(H)) === 5);
+  assert(JSON.stringify(movesSince(H, nH)) === '["call"]', 'Maya’s Call any called once: ' + JSON.stringify(movesSince(H, nH)));
+});
+
+step('keys: river — Maya picks Check/Fold (I); Ben bets 20; it folds her; Ben wins', async () => {
+  await waitTurn(B);
+  await bar(H).locator('.pre-acts').waitFor();
+  await H.page.keyboard.press('i');
+  await until('Maya: Check/Fold', async () => isPressed(H, 'Check/Fold'));
+  const nH = H.sent.length;
+  // a tablet rotated to portrait: the phone layout mounts its own action bar — the pick survives it
+  const size = H.page.viewportSize();
+  await H.page.setViewportSize({ width: 820, height: 1180 });
+  await H.page.locator('.room-m').waitFor();
+  await until('Maya: Check/Fold still picked after the rotation', async () => isPressed(H, 'Check/Fold'));
+  await typedRaise(B, 20);
+  for (const p of [H, B]) await waitComplete(p);
+  assert(JSON.stringify(movesSince(H, nH)) === '["fold"]', 'Check/Fold folded to the bet: ' + JSON.stringify(movesSince(H, nH)));
+  await H.page.setViewportSize(size);
+  await H.page.locator('.room-d').waitFor();
+  const v = await viewOf(H);
+  assert(v.hand.results.endedBy === 'fold' && v.hand.players.find((x) => x.name === 'Ben').isWinner, 'Ben wins without a showdown');
+});
+
+step('keys: after the hand — Ben shows his second card with 2; Maya shows one with 1, then the rest with S', async () => {
+  await waitText(B, bar(B), 'You won');
+  assert((await bar(B).locator('kbd.kc').filter({ hasText: 'S' }).count()) === 1, 'Show both carries an S keycap');
+  const two = await keyAct(B, '2', 'show');
+  assert(JSON.stringify(two.cards) === '[1]', '2 shows the second card: ' + JSON.stringify(two));
+  await until('Maya sees one of Ben’s cards', async () => (await seatOf(H, 'Ben').locator('.seat-cards .card:not(.card-back)').count()) === 1);
+  await keyIdle(B, '2', 'the second card is already shown');
+  await waitText(H, bar(H), 'Show your hand?');
+  await hotShot('show-desktop', H);
+  // a slow network: 1, then S while the first show is still in flight — the second key isn't lost
+  const nH = H.sent.length;
+  const shows = () => H.sent.slice(nH).filter((b) => b.type === 'show').map((b) => JSON.stringify(b.cards));
+  const slow = async (route) => {
+    await sleep(400);
+    await route.continue().catch(() => {});
+  };
+  await H.page.route(BASE + '/api/act', slow);
+  await H.page.keyboard.press('1');
+  await sleep(120);
+  await H.page.keyboard.press('s');
+  await until('Ben sees both of Maya’s cards', async () => (await seatOf(B, 'Maya').locator('.seat-cards .card:not(.card-back)').count()) === 2);
+  await sleep(600);
+  await H.page.unroute(BASE + '/api/act', slow);
+  assert(JSON.stringify(shows()) === JSON.stringify(['[0]', '[1]']), '1 showed the first card, S the rest: ' + JSON.stringify(shows()));
+  await keyIdle(H, 's', 'nothing left to show');
+  const ben = (await viewOf(C)).hand.players.find((x) => x.name === 'Ben');
+  assert(ben.shown.join() === 'false,true', 'Ben showed only his second card: ' + ben.shown.join());
+});
+
+step('keys: hand 2 — F does nothing before my turn; Ben folds with F; Maya (big blind) checks with C; "?" opens the cheat sheet', async () => {
+  const v0 = await viewOf(H);
+  await advance(v0.deadline - v0.serverNow + 400);
+  for (const p of [H, B, C]) await waitHand(p, 2);
+  await waitTurn(B);
+  await keyIdle(H, 'f', 'F is never a pre-fold');
+  await keyIdle(H, 'c', 'C waits for my turn');
+  assert((await pressedPre(H)).length === 0, 'F / C pick nothing');
+  const f = await keyAct(B, 'f');
+  assert(f.move === 'fold', 'F folds');
+  await waitText(H, seatOf(H, 'Ben'), 'Folded');
+  await call(C);
+  await waitTurn(H);
+  assert((await bar(H).locator('.act-call kbd.kc').innerText()) === 'K', 'the Check button shows K');
+  // she touches the raise slider, then changes her mind: a slider isn't typing, the keys still work
+  await bar(H).locator('input.raise-range').click();
+  assert((await H.page.evaluate(() => document.activeElement && document.activeElement.type)) === 'range', 'the slider has focus');
+  const c = await keyAct(H, 'c');
+  assert(c.move === 'check', 'C checks the big blind’s option: ' + JSON.stringify(c));
+  await until('flop', async () => (await boardCount(H)) === 3);
+  // the cheat sheet: "?" (Shift+/) and the header's keyboard button
+  await H.page.keyboard.press('Shift+Slash');
+  const sheet = H.page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+  await sheet.getByText('Before your turn').waitFor();
+  for (const t of ['Fold', 'Call any', 'Call current', 'Check/Fold', 'Show all your cards']) await sheet.getByText(t, { exact: true }).first().waitFor();
+  await hotShot('cheatsheet-desktop', H);
+  await closeTop(H);
+  await H.page.getByRole('button', { name: 'Keyboard shortcuts' }).click();
+  await sheet.waitFor();
+  await closeTop(H);
+  // Cleo (small blind) acts first on the flop: shortcuts sleep while a sheet is open
+  await waitTurn(C);
+  await C.page.keyboard.press('Shift+Slash');
+  const cs = C.page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+  await cs.getByText('After the hand').waitFor();
+  await hotShot('cheatsheet-mobile', C);
+  await keyIdle(C, 'f', 'a sheet is open');
+  await closeTop(C);
+  await check(C);
+  // …and while typing: Maya writes "fold" in the chat on her turn — nothing is sent but the message
+  await waitTurn(H);
+  await H.page.getByRole('tab', { name: /^Chat/ }).click();
+  const input = H.page.locator('.side').getByRole('textbox', { name: 'Message' });
+  await input.click();
+  const n = H.sent.length;
+  await H.page.keyboard.type('fold');
+  await sleep(300);
+  assert(H.sent.length === n, 'typing in the chat sends no move: ' + JSON.stringify(H.sent.slice(n)));
+  await input.fill('');
+  await H.page.getByRole('tab', { name: 'Hand' }).click();
+  await H.page.evaluate(() => document.activeElement && document.activeElement.blur());
+  const k = await keyAct(H, 'k');
+  assert(k.move === 'check', 'K checks');
 });
 
 // ─── runner ──────────────────────────────────────────────────────────────────

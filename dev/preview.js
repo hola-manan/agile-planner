@@ -4,7 +4,7 @@
 //   /dev/preview.html?fixture=allin-vote                the real RoomLayout with that view
 //   /dev/preview.html?fixture=allin-vote&w=mobile       inside a 390×844 phone frame (on a wide screen)
 //   …&open=ledger|host|log|chat|players                 open a panel/sheet on load
-//   …&dialog=buyin|leave|menu|join                      open a dialog on load
+//   …&dialog=buyin|leave|menu|join|keys                 open a dialog on load
 //   …&stubs=all | stubs=table,side                      force stub modules (missing ones are stubbed anyway)
 //   /dev/preview.html?lobby=1                           the lobby
 //   /__dev/preview.html?app=1  (dev server)               the whole App against the real API, stubs for missing modules

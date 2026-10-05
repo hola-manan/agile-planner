@@ -478,6 +478,7 @@ const ICONS = {
   seat: html`${P('M7 4h10v8H7z')}${P('M5 12h14v3H5zM7 15v5M17 15v5')}`,
   home: P('M4 11l8-7 8 7v9h-5v-6H9v6H4z'),
   user: html`<circle cx="12" cy="8" r="4" />${P('M4 21c.8-4.2 4-6.5 8-6.5s7.2 2.3 8 6.5')}`,
+  keyboard: html`<rect x="2.5" y="6" width="19" height="12" rx="2.5" />${P('M6.5 10h.01M10 10h.01M14 10h.01M17.5 10h.01M8 14h8')}`,
   suits: P('M12 3c3 3.2 7 5.6 7 9.2a3.6 3.6 0 0 1-6.2 2.5L13.5 19h-3l.7-4.3A3.6 3.6 0 0 1 5 12.2C5 8.6 9 6.2 12 3z'),
 };
 

@@ -1,7 +1,9 @@
-// public/js/dialogs.js — BuyInDialog, LeaveDialog, JoinPrompt, ConfirmDialog (SPEC §6.5, §11, §12).
-import { html, useState, useEffect, useRef, useMemo } from './h.js';
+// public/js/dialogs.js — BuyInDialog, LeaveDialog, JoinPrompt, ConfirmDialog, ShortcutsDialog
+// (SPEC §6.5, §11, §12).
+import { html, useState, useEffect, useRef, useMemo, Fragment } from './h.js';
 import { useRoom } from './room.js';
 import { Modal, Button, Icon, Avatar, Pill, cx, fmt, fmtSigned, toast } from './ui.js';
+import { HOTKEYS } from './hotkeys.js';
 
 const VARIANT_NAME = { NLH: 'No-Limit Hold’em', PLO: 'Pot-Limit Omaha' };
 const toInt = (v) => {
@@ -471,6 +473,34 @@ export function ConfirmDialog({ open, title, body, confirmLabel = 'Confirm', can
         <${Button} onClick=${onClose}>${cancelLabel}<//>
         <${Button} kind=${danger ? 'leave' : 'primary'} disabled=${busy} onClick=${confirm} data-autofocus>${confirmLabel}<//>
       </div>
+    </div>
+  <//>`;
+}
+
+/** The keyboard cheat sheet ("?" or the header's keyboard button). Lists every key in hotkeys.js. */
+export function ShortcutsDialog({ open, onClose }) {
+  return html`<${Modal}
+    open=${open}
+    onClose=${onClose}
+    title="Keyboard shortcuts"
+    subtitle="They pause while you’re typing or a dialog is open."
+    class="keys-modal"
+  >
+    <div class="keys">
+      ${HOTKEYS.map(
+        (g) => html`<section class="keys-group" key=${g.title}>
+          <h3 class="label keys-title">${g.title}</h3>
+          ${g.note && html`<p class="muted keys-note">${g.note}</p>`}
+          <dl class="keys-list">
+            ${g.keys.map(
+              (k, i) => html`<${Fragment} key=${i}>
+                <dt>${k.keys.map((c, j) => html`<${Fragment} key=${c}>${j > 0 && html`<span class="keys-or">/</span>`}<kbd class="kc kc-lg">${c}</kbd><//>`)}</dt>
+                <dd><span class="keys-label">${k.label}</span>${k.note && html`<span class="muted keys-sub">${k.note}</span>`}</dd>
+              <//>`,
+            )}
+          </dl>
+        </section>`,
+      )}
     </div>
   <//>`;
 }
