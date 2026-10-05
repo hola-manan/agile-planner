@@ -1,0 +1,47 @@
+[
+  {
+    "name": "t-ran-twice-complete",
+    "title": "Ran twice — complete",
+    "description": "All-in on the flop, both ran it twice and split the runs; winning cards lifted per run."
+  },
+  {
+    "name": "t-three-runs",
+    "title": "Running it three times",
+    "description": "Three runs, run 2 dealing; hero is a spectator watching."
+  },
+  {
+    "name": "t-vote-watching",
+    "title": "Run-it vote (not a voter)",
+    "description": "Hero folded; the two all-in players are voting."
+  },
+  {
+    "name": "t-plo-showdown",
+    "title": "PLO showdown",
+    "description": "Pot-Limit Omaha river showdown, hero wins with a straight."
+  },
+  {
+    "name": "t-preflop-fold-ghosts",
+    "title": "Fold preflop — all ghosts",
+    "description": "Everyone folded preflop; the five would-have-come cards revealed as ghosts. Hero won."
+  },
+  {
+    "name": "t-won-uncontested",
+    "title": "Won uncontested — show?",
+    "description": "Hero bet the flop and everyone folded: “You won — show your cards?” and the reveal-runout button."
+  },
+  {
+    "name": "t-opening-bet-leaving",
+    "title": "Opening bet + leaving after hand",
+    "description": "Hero first to act on the flop (Bet), has asked to leave after this hand."
+  },
+  {
+    "name": "t-waiting-players",
+    "title": "Waiting for players",
+    "description": "Only one player with chips: no hand; hero just sat down."
+  },
+  {
+    "name": "t-spectator-requested",
+    "title": "Spectator with a seat request",
+    "description": "Hero asked for seat 6 and waits for the host (approve buy-ins on)."
+  }
+]

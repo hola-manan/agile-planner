@@ -1,0 +1,629 @@
+{
+ "name": "visitor",
+ "title": "Visitor (no session)",
+ "description": "Someone opened the invite link and has not joined yet: JoinPrompt over a live table.",
+ "view": {
+  "code": "RVR-4821",
+  "name": "Friday Night Game",
+  "version": 19,
+  "serverNow": 1790969582000,
+  "hostId": "maya",
+  "isHost": false,
+  "settings": {
+   "variant": "NLH",
+   "sb": 1,
+   "bb": 2,
+   "seats": 8,
+   "minBuyIn": 100,
+   "maxBuyIn": 600,
+   "approveBuyIns": false,
+   "maxRuns": 2,
+   "revealRunout": "anyone",
+   "showdownLosers": "choose",
+   "actionTime": 25,
+   "nextHandDelay": 8,
+   "autoAwayTimeouts": 2
+  },
+  "paused": false,
+  "pauseAfterHand": false,
+  "ended": false,
+  "endAfterHand": false,
+  "handNo": 1,
+  "button": 0,
+  "deadline": 1790969603000,
+  "deadlineKind": "action",
+  "me": null,
+  "players": [
+   {
+    "id": "maya",
+    "name": "Maya",
+    "seat": 0,
+    "stack": 406,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": true,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "dev",
+    "name": "Dev",
+    "seat": 1,
+    "stack": 267,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "ari",
+    "name": "Ari",
+    "seat": 2,
+    "stack": 524,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "alex",
+    "name": "Alex",
+    "seat": 3,
+    "stack": 452,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "kim",
+    "name": "Kim",
+    "seat": 4,
+    "stack": 184,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "leo",
+    "name": "Leo",
+    "seat": 5,
+    "stack": 327,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   }
+  ],
+  "seats": [
+   {
+    "seat": 0,
+    "pid": "maya",
+    "reservedBy": null
+   },
+   {
+    "seat": 1,
+    "pid": "dev",
+    "reservedBy": null
+   },
+   {
+    "seat": 2,
+    "pid": "ari",
+    "reservedBy": null
+   },
+   {
+    "seat": 3,
+    "pid": "alex",
+    "reservedBy": null
+   },
+   {
+    "seat": 4,
+    "pid": "kim",
+    "reservedBy": null
+   },
+   {
+    "seat": 5,
+    "pid": "leo",
+    "reservedBy": null
+   },
+   {
+    "seat": 6,
+    "pid": null,
+    "reservedBy": null
+   },
+   {
+    "seat": 7,
+    "pid": null,
+    "reservedBy": null
+   }
+  ],
+  "hand": {
+   "no": 1,
+   "phase": "betting",
+   "street": "flop",
+   "variant": "NLH",
+   "sb": 1,
+   "bb": 2,
+   "button": 0,
+   "sbSeat": 1,
+   "bbSeat": 2,
+   "board": [
+    "Kh",
+    "9c",
+    "4d"
+   ],
+   "runs": 1,
+   "currentRun": 0,
+   "runBoards": [],
+   "runResults": [],
+   "potTotal": 49,
+   "potCenter": 31,
+   "currentBet": 18,
+   "minRaise": 18,
+   "toAct": "kim",
+   "players": [
+    {
+     "pid": "maya",
+     "seat": 0,
+     "name": "Maya",
+     "bet": 0,
+     "committed": 6,
+     "stack": 406,
+     "folded": false,
+     "allIn": false,
+     "lastAction": null,
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    },
+    {
+     "pid": "dev",
+     "seat": 1,
+     "name": "Dev",
+     "bet": 0,
+     "committed": 1,
+     "stack": 267,
+     "folded": true,
+     "allIn": false,
+     "lastAction": {
+      "type": "fold",
+      "amount": 0
+     },
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    },
+    {
+     "pid": "ari",
+     "seat": 2,
+     "name": "Ari",
+     "bet": 0,
+     "committed": 6,
+     "stack": 524,
+     "folded": false,
+     "allIn": false,
+     "lastAction": {
+      "type": "check",
+      "amount": 0
+     },
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    },
+    {
+     "pid": "alex",
+     "seat": 3,
+     "name": "Alex",
+     "bet": 18,
+     "committed": 24,
+     "stack": 452,
+     "folded": false,
+     "allIn": false,
+     "lastAction": {
+      "type": "bet",
+      "amount": 18
+     },
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    },
+    {
+     "pid": "kim",
+     "seat": 4,
+     "name": "Kim",
+     "bet": 0,
+     "committed": 6,
+     "stack": 184,
+     "folded": false,
+     "allIn": false,
+     "lastAction": null,
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    },
+    {
+     "pid": "leo",
+     "seat": 5,
+     "name": "Leo",
+     "bet": 0,
+     "committed": 6,
+     "stack": 327,
+     "folded": false,
+     "allIn": false,
+     "lastAction": null,
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    }
+   ],
+   "legal": null,
+   "ritVote": null,
+   "results": null,
+   "runout": null,
+   "canShow": false,
+   "canRevealRunout": false,
+   "log": [
+    {
+     "street": "preflop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "posts small blind",
+     "amount": 1
+    },
+    {
+     "street": "preflop",
+     "pid": "ari",
+     "name": "Ari",
+     "text": "posts big blind",
+     "amount": 2
+    },
+    {
+     "street": "preflop",
+     "pid": "alex",
+     "name": "Alex",
+     "text": "raises to",
+     "amount": 6
+    },
+    {
+     "street": "preflop",
+     "pid": "kim",
+     "name": "Kim",
+     "text": "calls",
+     "amount": 6
+    },
+    {
+     "street": "preflop",
+     "pid": "leo",
+     "name": "Leo",
+     "text": "calls",
+     "amount": 6
+    },
+    {
+     "street": "preflop",
+     "pid": "maya",
+     "name": "Maya",
+     "text": "calls",
+     "amount": 6
+    },
+    {
+     "street": "preflop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "folds",
+     "amount": null
+    },
+    {
+     "street": "preflop",
+     "pid": "ari",
+     "name": "Ari",
+     "text": "calls",
+     "amount": 6
+    },
+    {
+     "street": "flop",
+     "pid": null,
+     "name": null,
+     "text": "Flop",
+     "amount": null,
+     "cards": [
+      "Kh",
+      "9c",
+      "4d"
+     ]
+    },
+    {
+     "street": "flop",
+     "pid": "ari",
+     "name": "Ari",
+     "text": "checks",
+     "amount": null
+    },
+    {
+     "street": "flop",
+     "pid": "alex",
+     "name": "Alex",
+     "text": "bets",
+     "amount": 18
+    }
+   ]
+  },
+  "lastHand": null,
+  "requests": [],
+  "ledger": {
+   "entries": [
+    {
+     "id": 15,
+     "t": 1790969551000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "leo",
+     "name": "Leo",
+     "amount": 333,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 13,
+     "t": 1790969551000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "kim",
+     "name": "Kim",
+     "amount": 190,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 11,
+     "t": 1790969551000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "alex",
+     "name": "Alex",
+     "amount": 476,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 9,
+     "t": 1790969551000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "ari",
+     "name": "Ari",
+     "amount": 530,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 7,
+     "t": 1790969551000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "dev",
+     "name": "Dev",
+     "amount": 268,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 5,
+     "t": 1790969551000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": "maya",
+     "hand": 0,
+     "type": "buyin",
+     "pid": "maya",
+     "name": "Maya",
+     "amount": 412,
+     "kind": "sit",
+     "byName": "Maya"
+    }
+   ],
+   "players": [
+    {
+     "pid": "alex",
+     "name": "Alex",
+     "seat": 3,
+     "seated": true,
+     "buyIns": 476,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 476,
+     "net": 0
+    },
+    {
+     "pid": "ari",
+     "name": "Ari",
+     "seat": 2,
+     "seated": true,
+     "buyIns": 530,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 530,
+     "net": 0
+    },
+    {
+     "pid": "dev",
+     "name": "Dev",
+     "seat": 1,
+     "seated": true,
+     "buyIns": 268,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 268,
+     "net": 0
+    },
+    {
+     "pid": "kim",
+     "name": "Kim",
+     "seat": 4,
+     "seated": true,
+     "buyIns": 190,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 190,
+     "net": 0
+    },
+    {
+     "pid": "leo",
+     "name": "Leo",
+     "seat": 5,
+     "seated": true,
+     "buyIns": 333,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 333,
+     "net": 0
+    },
+    {
+     "pid": "maya",
+     "name": "Maya",
+     "seat": 0,
+     "seated": true,
+     "buyIns": 412,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 412,
+     "net": 0
+    }
+   ],
+   "totals": {
+    "buyIns": 2209,
+    "chipsOnTable": 2209,
+    "cashedOut": 0,
+    "uncountedAdjust": 0,
+    "diff": 0,
+    "balanced": true,
+    "buyInCount": 6,
+    "players": 6,
+    "hands": 1,
+    "biggestWinner": null
+   },
+   "settlement": []
+  },
+  "chat": [
+   {
+    "id": 1,
+    "t": 1790969530000,
+    "pid": "dev",
+    "name": "Dev",
+    "text": "who brought the snacks"
+   },
+   {
+    "id": 2,
+    "t": 1790969542000,
+    "pid": "kim",
+    "name": "Kim",
+    "text": "Leo did. again. legend"
+   },
+   {
+    "id": 3,
+    "t": 1790969551000,
+    "pid": "leo",
+    "name": "Leo",
+    "text": "gl all 🍀"
+   }
+  ]
+ }
+}

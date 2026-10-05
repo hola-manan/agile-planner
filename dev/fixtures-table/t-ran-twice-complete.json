@@ -1,0 +1,774 @@
+{
+ "name": "t-ran-twice-complete",
+ "title": "Ran twice — complete",
+ "description": "All-in on the flop, both ran it twice and split the runs; winning cards lifted per run.",
+ "view": {
+  "code": "RVR-4821",
+  "name": "Friday Night Game",
+  "version": 21,
+  "serverNow": 1790969471700,
+  "hostId": "maya",
+  "isHost": false,
+  "settings": {
+   "variant": "NLH",
+   "sb": 1,
+   "bb": 2,
+   "seats": 8,
+   "minBuyIn": 100,
+   "maxBuyIn": 600,
+   "approveBuyIns": false,
+   "maxRuns": 3,
+   "revealRunout": "anyone",
+   "showdownLosers": "choose",
+   "actionTime": 25,
+   "nextHandDelay": 8,
+   "autoAwayTimeouts": 2
+  },
+  "paused": false,
+  "pauseAfterHand": false,
+  "ended": false,
+  "endAfterHand": false,
+  "handNo": 1,
+  "button": 0,
+  "deadline": 1790969479700,
+  "deadlineKind": "nextHand",
+  "me": {
+   "id": "alex",
+   "name": "Alex",
+   "seat": 3,
+   "stack": 237,
+   "pendingChips": 0,
+   "away": false,
+   "awayBy": null,
+   "waitForBB": false,
+   "awayAfterHand": false,
+   "leaveAfterHand": false,
+   "timeouts": 0,
+   "status": "seated",
+   "inHand": true,
+   "busted": false,
+   "hole": [
+    "Ah",
+    "Kh"
+   ],
+   "handName": "Flush, Ace high",
+   "request": null
+  },
+  "players": [
+   {
+    "id": "maya",
+    "name": "Maya",
+    "seat": 0,
+    "stack": 300,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": true,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "dev",
+    "name": "Dev",
+    "seat": 1,
+    "stack": 521,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "ari",
+    "name": "Ari",
+    "seat": 2,
+    "stack": 208,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "alex",
+    "name": "Alex",
+    "seat": 3,
+    "stack": 237,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "kim",
+    "name": "Kim",
+    "seat": 4,
+    "stack": 400,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   }
+  ],
+  "seats": [
+   {
+    "seat": 0,
+    "pid": "maya",
+    "reservedBy": null
+   },
+   {
+    "seat": 1,
+    "pid": "dev",
+    "reservedBy": null
+   },
+   {
+    "seat": 2,
+    "pid": "ari",
+    "reservedBy": null
+   },
+   {
+    "seat": 3,
+    "pid": "alex",
+    "reservedBy": null
+   },
+   {
+    "seat": 4,
+    "pid": "kim",
+    "reservedBy": null
+   },
+   {
+    "seat": 5,
+    "pid": null,
+    "reservedBy": null
+   },
+   {
+    "seat": 6,
+    "pid": null,
+    "reservedBy": null
+   },
+   {
+    "seat": 7,
+    "pid": null,
+    "reservedBy": null
+   }
+  ],
+  "hand": {
+   "no": 1,
+   "phase": "complete",
+   "street": "showdown",
+   "variant": "NLH",
+   "sb": 1,
+   "bb": 2,
+   "button": 0,
+   "sbSeat": 1,
+   "bbSeat": 2,
+   "board": [
+    "Qh",
+    "7h",
+    "2c"
+   ],
+   "runs": 2,
+   "currentRun": 1,
+   "runBoards": [
+    [
+     "Qh",
+     "7h",
+     "2c",
+     "5d",
+     "9s"
+    ],
+    [
+     "Qh",
+     "7h",
+     "2c",
+     "Th",
+     "Kc"
+    ]
+   ],
+   "runResults": [
+    {
+     "winners": [
+      "dev"
+     ],
+     "handName": "Three Queens"
+    },
+    {
+     "winners": [
+      "alex"
+     ],
+     "handName": "Flush, Ace high"
+    }
+   ],
+   "potTotal": 474,
+   "potCenter": 474,
+   "currentBet": 0,
+   "minRaise": 2,
+   "toAct": null,
+   "players": [
+    {
+     "pid": "maya",
+     "seat": 0,
+     "name": "Maya",
+     "bet": 0,
+     "committed": 0,
+     "stack": 300,
+     "folded": true,
+     "allIn": false,
+     "lastAction": {
+      "type": "fold",
+      "amount": 0
+     },
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    },
+    {
+     "pid": "dev",
+     "seat": 1,
+     "name": "Dev",
+     "bet": 0,
+     "committed": 236,
+     "stack": 521,
+     "folded": false,
+     "allIn": false,
+     "lastAction": null,
+     "cards": [
+      "Qs",
+      "Qd"
+     ],
+     "shown": [
+      true,
+      true
+     ],
+     "equity": null,
+     "won": 237,
+     "handName": "Three Queens",
+     "isWinner": true
+    },
+    {
+     "pid": "ari",
+     "seat": 2,
+     "name": "Ari",
+     "bet": 0,
+     "committed": 2,
+     "stack": 208,
+     "folded": true,
+     "allIn": false,
+     "lastAction": {
+      "type": "fold",
+      "amount": 0
+     },
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    },
+    {
+     "pid": "alex",
+     "seat": 3,
+     "name": "Alex",
+     "bet": 0,
+     "committed": 236,
+     "stack": 237,
+     "folded": false,
+     "allIn": true,
+     "lastAction": {
+      "type": "allin",
+      "amount": 230
+     },
+     "cards": [
+      "Ah",
+      "Kh"
+     ],
+     "shown": [
+      true,
+      true
+     ],
+     "equity": null,
+     "won": 237,
+     "handName": "Flush, Ace high",
+     "isWinner": true
+    },
+    {
+     "pid": "kim",
+     "seat": 4,
+     "name": "Kim",
+     "bet": 0,
+     "committed": 0,
+     "stack": 400,
+     "folded": true,
+     "allIn": false,
+     "lastAction": {
+      "type": "fold",
+      "amount": 0
+     },
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    }
+   ],
+   "legal": null,
+   "ritVote": null,
+   "results": {
+    "endedBy": "showdown",
+    "awards": {
+     "dev": 237,
+     "alex": 237
+    },
+    "runs": [
+     {
+      "board": [
+       "Qh",
+       "7h",
+       "2c",
+       "5d",
+       "9s"
+      ],
+      "winners": [
+       "dev"
+      ],
+      "handName": "Three Queens",
+      "amount": 237,
+      "awards": {
+       "dev": 237
+      }
+     },
+     {
+      "board": [
+       "Qh",
+       "7h",
+       "2c",
+       "Th",
+       "Kc"
+      ],
+      "winners": [
+       "alex"
+      ],
+      "handName": "Flush, Ace high",
+      "amount": 237,
+      "awards": {
+       "alex": 237
+      }
+     }
+    ],
+    "pots": [
+     {
+      "amount": 474,
+      "eligible": [
+       "dev",
+       "alex"
+      ],
+      "winnersByRun": [
+       [
+        "dev"
+       ],
+       [
+        "alex"
+       ]
+      ],
+      "returned": false
+     }
+    ],
+    "winners": [
+     "dev",
+     "alex"
+    ]
+   },
+   "runout": null,
+   "canShow": false,
+   "canRevealRunout": false,
+   "log": [
+    {
+     "street": "preflop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "posts small blind",
+     "amount": 1
+    },
+    {
+     "street": "preflop",
+     "pid": "ari",
+     "name": "Ari",
+     "text": "posts big blind",
+     "amount": 2
+    },
+    {
+     "street": "preflop",
+     "pid": "alex",
+     "name": "Alex",
+     "text": "raises to",
+     "amount": 6
+    },
+    {
+     "street": "preflop",
+     "pid": "kim",
+     "name": "Kim",
+     "text": "folds",
+     "amount": null
+    },
+    {
+     "street": "preflop",
+     "pid": "maya",
+     "name": "Maya",
+     "text": "folds",
+     "amount": null
+    },
+    {
+     "street": "preflop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "calls",
+     "amount": 6
+    },
+    {
+     "street": "preflop",
+     "pid": "ari",
+     "name": "Ari",
+     "text": "folds",
+     "amount": null
+    },
+    {
+     "street": "flop",
+     "pid": null,
+     "name": null,
+     "text": "Flop",
+     "amount": null,
+     "cards": [
+      "Qh",
+      "7h",
+      "2c"
+     ]
+    },
+    {
+     "street": "flop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "bets",
+     "amount": 12
+    },
+    {
+     "street": "flop",
+     "pid": "alex",
+     "name": "Alex",
+     "text": "all-in",
+     "amount": 230
+    },
+    {
+     "street": "flop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "calls",
+     "amount": 230
+    },
+    {
+     "street": "flop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "shows",
+     "amount": null,
+     "cards": [
+      "Qs",
+      "Qd"
+     ]
+    },
+    {
+     "street": "flop",
+     "pid": "alex",
+     "name": "Alex",
+     "text": "shows",
+     "amount": null,
+     "cards": [
+      "Ah",
+      "Kh"
+     ]
+    },
+    {
+     "street": "flop",
+     "pid": null,
+     "name": null,
+     "text": "Running it twice",
+     "amount": null
+    },
+    {
+     "street": "turn",
+     "pid": null,
+     "name": null,
+     "text": "Run 1 · Turn",
+     "amount": null,
+     "cards": [
+      "5d"
+     ],
+     "run": 0
+    },
+    {
+     "street": "river",
+     "pid": null,
+     "name": null,
+     "text": "Run 1 · River",
+     "amount": null,
+     "cards": [
+      "9s"
+     ],
+     "run": 0
+    },
+    {
+     "street": "turn",
+     "pid": null,
+     "name": null,
+     "text": "Run 2 · Turn",
+     "amount": null,
+     "cards": [
+      "Th"
+     ],
+     "run": 1
+    },
+    {
+     "street": "river",
+     "pid": null,
+     "name": null,
+     "text": "Run 2 · River",
+     "amount": null,
+     "cards": [
+      "Kc"
+     ],
+     "run": 1
+    },
+    {
+     "street": "showdown",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "wins run 1 with Three Queens",
+     "amount": 237,
+     "run": 0,
+     "handName": "Three Queens"
+    },
+    {
+     "street": "showdown",
+     "pid": "alex",
+     "name": "Alex",
+     "text": "wins run 2 with Flush, Ace high",
+     "amount": 237,
+     "run": 1,
+     "handName": "Flush, Ace high"
+    }
+   ]
+  },
+  "lastHand": null,
+  "requests": [],
+  "ledger": {
+   "entries": [
+    {
+     "id": 10,
+     "t": 1790969440000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "kim",
+     "name": "Kim",
+     "amount": 400,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 8,
+     "t": 1790969440000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "alex",
+     "name": "Alex",
+     "amount": 236,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 6,
+     "t": 1790969440000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "ari",
+     "name": "Ari",
+     "amount": 210,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 4,
+     "t": 1790969440000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "dev",
+     "name": "Dev",
+     "amount": 520,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 2,
+     "t": 1790969440000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": "maya",
+     "hand": 0,
+     "type": "buyin",
+     "pid": "maya",
+     "name": "Maya",
+     "amount": 300,
+     "kind": "sit",
+     "byName": "Maya"
+    }
+   ],
+   "players": [
+    {
+     "pid": "alex",
+     "name": "Alex",
+     "seat": 3,
+     "seated": true,
+     "buyIns": 236,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 237,
+     "net": 1
+    },
+    {
+     "pid": "dev",
+     "name": "Dev",
+     "seat": 1,
+     "seated": true,
+     "buyIns": 520,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 521,
+     "net": 1
+    },
+    {
+     "pid": "kim",
+     "name": "Kim",
+     "seat": 4,
+     "seated": true,
+     "buyIns": 400,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 400,
+     "net": 0
+    },
+    {
+     "pid": "maya",
+     "name": "Maya",
+     "seat": 0,
+     "seated": true,
+     "buyIns": 300,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 300,
+     "net": 0
+    },
+    {
+     "pid": "ari",
+     "name": "Ari",
+     "seat": 2,
+     "seated": true,
+     "buyIns": 210,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 208,
+     "net": -2
+    }
+   ],
+   "totals": {
+    "buyIns": 1666,
+    "chipsOnTable": 1666,
+    "cashedOut": 0,
+    "uncountedAdjust": 0,
+    "diff": 0,
+    "balanced": true,
+    "buyInCount": 5,
+    "players": 5,
+    "hands": 1,
+    "biggestWinner": {
+     "pid": "alex",
+     "name": "Alex",
+     "net": 1
+    }
+   },
+   "settlement": [
+    {
+     "key": "ari>alex:1",
+     "from": "ari",
+     "fromName": "Ari",
+     "to": "alex",
+     "toName": "Alex",
+     "amount": 1,
+     "paid": false
+    },
+    {
+     "key": "ari>dev:1",
+     "from": "ari",
+     "fromName": "Ari",
+     "to": "dev",
+     "toName": "Dev",
+     "amount": 1,
+     "paid": false
+    }
+   ]
+  },
+  "chat": []
+ }
+}

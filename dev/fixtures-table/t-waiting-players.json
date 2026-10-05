@@ -1,0 +1,180 @@
+{
+ "name": "t-waiting-players",
+ "title": "Waiting for players",
+ "description": "Only one player with chips: no hand; hero just sat down.",
+ "view": {
+  "code": "RVR-4821",
+  "name": "Friday Night Game",
+  "version": 2,
+  "serverNow": 1790969420000,
+  "hostId": "maya",
+  "isHost": false,
+  "settings": {
+   "variant": "NLH",
+   "sb": 1,
+   "bb": 2,
+   "seats": 6,
+   "minBuyIn": 100,
+   "maxBuyIn": 600,
+   "approveBuyIns": false,
+   "maxRuns": 2,
+   "revealRunout": "anyone",
+   "showdownLosers": "choose",
+   "actionTime": 25,
+   "nextHandDelay": 8,
+   "autoAwayTimeouts": 2
+  },
+  "paused": false,
+  "pauseAfterHand": false,
+  "ended": false,
+  "endAfterHand": false,
+  "handNo": 0,
+  "button": null,
+  "deadline": null,
+  "deadlineKind": null,
+  "me": {
+   "id": "alex",
+   "name": "Alex",
+   "seat": 3,
+   "stack": 200,
+   "pendingChips": 0,
+   "away": false,
+   "awayBy": null,
+   "waitForBB": false,
+   "awayAfterHand": false,
+   "leaveAfterHand": false,
+   "timeouts": 0,
+   "status": "seated",
+   "inHand": false,
+   "busted": false,
+   "hole": null,
+   "handName": null,
+   "request": null
+  },
+  "players": [
+   {
+    "id": "alex",
+    "name": "Alex",
+    "seat": 3,
+    "stack": 200,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": false,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "maya",
+    "name": "Maya",
+    "seat": null,
+    "stack": 0,
+    "pendingChips": 0,
+    "status": "spectator",
+    "away": false,
+    "awayBy": null,
+    "isHost": true,
+    "inHand": false,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "dev",
+    "name": "Dev",
+    "seat": null,
+    "stack": 0,
+    "pendingChips": 0,
+    "status": "spectator",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": false,
+    "busted": false,
+    "leaveAfterHand": false
+   }
+  ],
+  "seats": [
+   {
+    "seat": 0,
+    "pid": null,
+    "reservedBy": null
+   },
+   {
+    "seat": 1,
+    "pid": null,
+    "reservedBy": null
+   },
+   {
+    "seat": 2,
+    "pid": null,
+    "reservedBy": null
+   },
+   {
+    "seat": 3,
+    "pid": "alex",
+    "reservedBy": null
+   },
+   {
+    "seat": 4,
+    "pid": null,
+    "reservedBy": null
+   },
+   {
+    "seat": 5,
+    "pid": null,
+    "reservedBy": null
+   }
+  ],
+  "hand": null,
+  "lastHand": null,
+  "requests": [],
+  "ledger": {
+   "entries": [
+    {
+     "id": 2,
+     "t": 1790969420000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "alex",
+     "name": "Alex",
+     "amount": 200,
+     "kind": "sit",
+     "byName": null
+    }
+   ],
+   "players": [
+    {
+     "pid": "alex",
+     "name": "Alex",
+     "seat": 3,
+     "seated": true,
+     "buyIns": 200,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 200,
+     "net": 0
+    }
+   ],
+   "totals": {
+    "buyIns": 200,
+    "chipsOnTable": 200,
+    "cashedOut": 0,
+    "uncountedAdjust": 0,
+    "diff": 0,
+    "balanced": true,
+    "buyInCount": 1,
+    "players": 1,
+    "hands": 0,
+    "biggestWinner": null
+   },
+   "settlement": []
+  },
+  "chat": []
+ }
+}

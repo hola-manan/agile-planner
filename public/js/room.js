@@ -19,21 +19,46 @@ export function useRoom() {
 
 // ─── server clock ────────────────────────────────────────────────────────────
 // offset = serverTime − localTime, estimated from view.serverNow at the request midpoint.
-// Low-latency samples win; a sample older than 60 s may be replaced by any newer one.
+// The true offset lies within ±rtt/2 of a sample, so:
+//   - a sample whose round trip took longer than MAX_RTT is ignored (a request that was in flight
+//     while the device slept or its clock was changed measures nothing useful);
+//   - low-latency samples win; a best sample older than 60 s may be replaced by any newer one;
+//   - a sample that proves the current estimate wrong (outside both error bars) replaces it at
+//     once — the device clock jumped (sleep, NTP, manual change).
+// When the estimate moves noticeably, subscribers (the deadline timer) re-arm.
 
+const MAX_RTT = 5000;
 let clockOffset = 0;
 let bestRtt = Infinity;
 let bestAt = 0;
+const clockSubs = new Set();
 
 function sampleClock(serverTime, t0, t1) {
   if (!Number.isFinite(serverTime) || !Number.isFinite(t0) || !Number.isFinite(t1)) return;
-  const rtt = Math.max(0, t1 - t0);
+  const rtt = t1 - t0;
+  if (rtt < 0 || rtt > MAX_RTT) return;
+  const offset = serverTime - (t0 + t1) / 2;
   const now = Date.now();
-  if (rtt <= bestRtt || now - bestAt > 60000) {
-    clockOffset = serverTime - (t0 + t1) / 2;
+  const stale = now - bestAt > 60000;
+  const wrong = bestRtt !== Infinity && Math.abs(offset - clockOffset) > rtt / 2 + bestRtt / 2 + 250;
+  if (rtt <= bestRtt || stale || wrong) {
+    const moved = Math.abs(offset - clockOffset);
+    clockOffset = offset;
     bestRtt = rtt;
     bestAt = now;
+    if (moved > 500) clockSubs.forEach((fn) => fn());
   }
+}
+
+/** Re-render when the server-clock estimate jumps (returns a counter usable as an effect dep). */
+function useClockEpoch() {
+  const [epoch, setEpoch] = useState(0);
+  useEffect(() => {
+    const fn = () => setEpoch((e) => e + 1);
+    clockSubs.add(fn);
+    return () => clockSubs.delete(fn);
+  }, []);
+  return epoch;
 }
 
 /** Current time on the server's clock (ms). */
@@ -276,8 +301,10 @@ export function useRoomData(rawCode) {
     [code, accept],
   );
 
-  // ONE timeout for the next server-side transition. Re-armed whenever view.deadline changes.
+  // ONE timeout for the next server-side transition. Re-armed whenever view.deadline changes (or
+  // the server-clock estimate jumps, so a corrected clock never leaves it armed for the wrong time).
   const deadline = view && !view.ended ? view.deadline : null;
+  const clockEpoch = useClockEpoch();
   useEffect(() => {
     if (!deadline) return undefined;
     let cancelled = false;
@@ -298,7 +325,7 @@ export function useRoomData(rawCode) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [deadline, act]);
+  }, [deadline, act, clockEpoch]);
 
   const joined = view ? !!view.me : !!session;
   return { code, view, error, loading, act, refresh, joined, join, session, acting: acting > 0 };

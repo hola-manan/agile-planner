@@ -1,0 +1,92 @@
+[
+  {
+    "name": "visitor",
+    "title": "Visitor (no session)",
+    "description": "Someone opened the invite link and has not joined yet: JoinPrompt over a live table."
+  },
+  {
+    "name": "spectator",
+    "title": "Spectator (joined, no seat)",
+    "description": "Joined but not seated — watching a hand on the flop. Empty seats show “Sit”."
+  },
+  {
+    "name": "seated-waiting",
+    "title": "Seated, waiting",
+    "description": "In the hand on the flop; someone else is deciding."
+  },
+  {
+    "name": "my-turn-preflop",
+    "title": "My turn — preflop",
+    "description": "Hero in the big blind faces a raise and a call preflop (NLH). Countdown running."
+  },
+  {
+    "name": "my-turn-facing-bet",
+    "title": "My turn — facing a bet (NLH)",
+    "description": "Turn: Dev bets 60, Ari calls, hero to act with top pair."
+  },
+  {
+    "name": "my-turn-facing-bet-plo",
+    "title": "My turn — facing a bet (PLO)",
+    "description": "Pot-Limit Omaha flop: hero faces a pot bet; raise capped at pot."
+  },
+  {
+    "name": "allin-vote",
+    "title": "All-in — run it vote",
+    "description": "Hero all-in on the flop against Dev; Dev voted twice, hero has not voted yet."
+  },
+  {
+    "name": "runout-2-boards",
+    "title": "Running it twice",
+    "description": "Both voted twice: run 1 finished, run 2 mid-deal; equity shown under each player."
+  },
+  {
+    "name": "showdown-complete",
+    "title": "Showdown complete",
+    "description": "River showdown: Dev wins with a set, hero lost and may show; next-hand countdown."
+  },
+  {
+    "name": "fold-ending-runout-revealed",
+    "title": "Fold ending — runout revealed",
+    "description": "Everyone folded to Dev’s turn bet; hero revealed the cards that would have come."
+  },
+  {
+    "name": "away",
+    "title": "Away",
+    "description": "Hero is away; the table keeps playing without them."
+  },
+  {
+    "name": "busted",
+    "title": "Busted",
+    "description": "Hero lost their whole stack; the next hand runs without them. Request a buy-in."
+  },
+  {
+    "name": "host-with-requests",
+    "title": "Host with pending requests",
+    "description": "Hero is the host; a seat request and a rebuy are waiting for approval."
+  },
+  {
+    "name": "ledger-after-session",
+    "title": "Ledger after a long session",
+    "description": "41 hands with rebuys, an adjustment and a cash-out; hero is the host (open the Ledger)."
+  },
+  {
+    "name": "ended",
+    "title": "Game ended",
+    "description": "The host ended the game: everyone cashed out; read-only ledger and settle-up."
+  },
+  {
+    "name": "9-handed",
+    "title": "9-handed",
+    "description": "Full ring: nine players, bets out on the flop, one away, one folded."
+  },
+  {
+    "name": "heads-up",
+    "title": "Heads-up",
+    "description": "Two players; hero is on the button (small blind) and acts first preflop."
+  },
+  {
+    "name": "paused-between-hands",
+    "title": "Paused",
+    "description": "Host paused the game between hands; hero is seated."
+  }
+]

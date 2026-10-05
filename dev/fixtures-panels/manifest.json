@@ -1,0 +1,17 @@
+[
+  {
+    "name": "p-host-busy",
+    "title": "Host — busy table (panels)",
+    "description": "Hero hosts mid-hand: sit + rebuy requests, a player away by host, one leaving, adjustments, chat."
+  },
+  {
+    "name": "p-player-chat",
+    "title": "Player — chat & last hand (panels)",
+    "description": "Hero (Alex) is seated in a hand, will go away after it; lots of chat; previous hand in the log."
+  },
+  {
+    "name": "p-leaving",
+    "title": "Player — leaving after hand (panels)",
+    "description": "Hero (Alex) asked to stand up after this hand."
+  }
+]

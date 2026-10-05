@@ -1,0 +1,611 @@
+// public/js/actionbar.js — the bar under the table (desktop) / bottom dock (phone). SPEC §11.
+//
+//   <ActionBar onBuyIn={() => …} onLeave={() => …} onSit={(seat|null) => …} />
+//
+// One component, one state at a time (first match wins):
+//   visitor → spectator (pick a seat / seat request pending) → away → my turn → run-it vote →
+//   runout → hand complete (show cards, reveal runout, next-hand countdown) → busted →
+//   waiting (someone else's turn / sitting out / no hand yet).
+// A "leaving / going away after this hand" notice is stacked on top of any state.
+// Keyboard on my turn: F fold, C check/call, R focus the raise amount (ignored while typing).
+import { html, useState, useEffect, useRef, useMemo, Fragment } from './h.js';
+import { useRoom, useClock, serverNow } from './room.js';
+import { Button, Avatar, Icon, cx, fmt, cardText, countdownText, useIsMobile } from './ui.js';
+import { useShowPick, runWord } from './table.js';
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const VOTE_LABEL = { 1: 'Once', 2: 'Twice', 3: '3×' };
+
+function nameOf(view, pid) {
+  if (view.me && pid === view.me.id) return 'You';
+  const p = (view.players || []).find((x) => x.id === pid);
+  return p ? p.name : 'Someone';
+}
+
+function seatOf(view, pid) {
+  const p = (view.players || []).find((x) => x.id === pid);
+  return p ? p.seat : null;
+}
+
+/** CSS-driven drain (width) for a timer bar, computed once per deadline. */
+function useDrainStyle(deadline, total) {
+  return useMemo(() => {
+    if (!deadline || !total) return null;
+    const left = clamp(deadline - serverNow(), 0, total);
+    return { animationDuration: total + 'ms', animationDelay: -(total - left) + 'ms' };
+  }, [deadline, total]);
+}
+
+function TimerBar({ deadline, total, thin }) {
+  const style = useDrainStyle(deadline, total);
+  return html`<div class=${cx('timer', thin && 'timer-thin')} aria-hidden="true">
+    ${style && html`<div key=${deadline} class="timer-fill" style=${style}></div>`}
+  </div>`;
+}
+
+function isTyping(el) {
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+
+// ─── my turn ─────────────────────────────────────────────────────────────────
+
+function TurnControls({ view, act, busy, mobile, now }) {
+  const hand = view.hand;
+  const me = view.me;
+  const legal = hand.legal;
+  const hp = hand.players.find((p) => p.pid === me.id);
+  const myBet = hp ? hp.bet : 0;
+  const allInTo = myBet + me.stack;
+  const canRaise = !!legal.raise && legal.maxTo > 0;
+  const onlyAllIn = canRaise && legal.minTo === legal.maxTo;
+  const opening = hand.currentBet === 0;
+  const plo = hand.variant === 'PLO';
+
+  const resetKey = hand.no + '|' + hand.street + '|' + legal.minTo + '|' + legal.maxTo;
+  const [amt, setAmt] = useState(legal.minTo);
+  const [text, setText] = useState(String(legal.minTo));
+  useEffect(() => {
+    setAmt(legal.minTo);
+    setText(String(legal.minTo));
+  }, [resetKey]);
+  const inputRef = useRef(null);
+
+  const setTo = (v) => {
+    const x = clamp(Math.round(Number(v) || 0), legal.minTo, legal.maxTo);
+    setAmt(x);
+    setText(String(x));
+  };
+
+  // presets: fraction of the pot after calling, as a "raise to" total
+  const realCall = Math.max(0, hand.currentBet - myBet);
+  const potAfterCall = hand.potTotal + realCall;
+  const frac = (f) => clamp(Math.round(hand.currentBet + f * potAfterCall), legal.minTo, legal.maxTo);
+  const maxLabel = legal.maxTo >= allInTo ? 'All-in' : plo ? 'Max' : 'All-in';
+  const potPreset = plo ? legal.potTo : frac(1);
+  const presetsAll = canRaise && !onlyAllIn
+    ? (mobile
+        ? [['Min', legal.minTo], ['½ pot', frac(0.5)], ['Pot', plo ? legal.potTo : frac(1)], [maxLabel, legal.maxTo]]
+        : [['Min', legal.minTo], ['½ pot', frac(0.5)], ['¾ pot', frac(0.75)], ['Pot', plo ? legal.potTo : frac(1)], [maxLabel, legal.maxTo]])
+    : [];
+  // PLO: the max raise is usually the pot — don't show the same number twice
+  const presets = presetsAll.filter(([label, v]) => !(plo && label === 'Max' && v === potPreset));
+
+  const to = clamp(Math.round(amt) || legal.minTo, legal.minTo, legal.maxTo);
+  const isAllIn = to >= allInTo;
+  const raiseWord = isAllIn ? 'All-in' : opening ? 'Bet' : 'Raise';
+
+  const fold = () => !busy && act('act', { move: 'fold' });
+  const checkCall = () => !busy && act('act', legal.check ? { move: 'check' } : { move: 'call' });
+  const raise = () => !busy && canRaise && act('act', { move: 'raise', to });
+
+  // keyboard: F / C / R
+  const keys = useRef({});
+  keys.current = { fold, checkCall, focus: () => inputRef.current && (inputRef.current.focus(), inputRef.current.select && inputRef.current.select()) };
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+      if (isTyping(e.target) || document.documentElement.classList.contains('modal-open')) return;
+      const k = e.key.toLowerCase();
+      if (k === 'f') keys.current.fold();
+      else if (k === 'c') keys.current.checkCall();
+      else if (k === 'r') keys.current.focus();
+      else return;
+      e.preventDefault();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  const deadline = view.deadlineKind === 'action' ? view.deadline : null;
+  const total = (view.settings.actionTime || 25) * 1000;
+  const secs = countdownText(deadline, now);
+  const low = deadline && deadline - now < 5000;
+
+  const callLabel = legal.check
+    ? 'Check'
+    : html`${legal.call >= me.stack ? 'Call all-in' : 'Call'} <span class="mono">${fmt(legal.call)}</span>`;
+
+  const onIdx = presets.findIndex(([, v]) => v === to);
+  const presetBtns = presets.map(
+    ([label, v], i) => html`<button
+      type="button"
+      key=${label}
+      class=${cx('preset', i === onIdx && 'on')}
+      aria-pressed=${i === onIdx}
+      disabled=${busy}
+      onClick=${() => setTo(v)}
+    >${label}${!mobile && html` <span class="mono">${fmt(v)}</span>`}</button>`,
+  );
+
+  const slider = canRaise && !onlyAllIn
+    ? html`<input
+        type="range"
+        class="raise-range"
+        min=${legal.minTo}
+        max=${legal.maxTo}
+        step="1"
+        value=${to}
+        aria-label=${(opening ? 'Bet' : 'Raise to') + ' amount'}
+        onInput=${(e) => setTo(e.target.value)}
+        onChange=${(e) => setTo(e.target.value)}
+      />`
+    : null;
+
+  const numInput = html`<input
+    ref=${inputRef}
+    class="raise-num mono"
+    type="text"
+    inputmode="numeric"
+    aria-label=${(opening ? 'Bet' : 'Raise to') + ' amount'}
+    value=${text}
+    disabled=${onlyAllIn}
+    onInput=${(e) => {
+      const raw = e.target.value.replace(/[^0-9]/g, '');
+      setText(raw);
+      if (raw) setAmt(Number(raw));
+    }}
+    onBlur=${() => setTo(text || legal.minTo)}
+    onKeyDown=${(e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        setTo(text || legal.minTo);
+        raise();
+      } else if (e.key === 'Escape') {
+        e.currentTarget.blur();
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setTo(to + (e.key === 'ArrowUp' ? 1 : -1) * (e.shiftKey ? hand.bb * 5 : hand.bb));
+      }
+    }}
+  />`;
+
+  if (mobile) {
+    return html`<div class="abar-body">
+      <div class="abar-mline">
+        <span class="abar-me"><b>You</b> · <span class="mono brass">${fmt(me.stack)}</span>${me.handName && html` · ${me.handName}`}</span>
+        <span class=${cx('mono', 'muted', low && 'abar-low')}>${secs}</span>
+      </div>
+      <${TimerBar} deadline=${deadline} total=${total} thin />
+      ${presetBtns.length > 0 && html`<div class="presets presets-m">${presetBtns}</div>`}
+      ${slider && html`<div class="raise-m">${slider}${numInput}</div>`}
+      <div class="abar-grid">
+        <${Button} kind="danger" disabled=${busy} onClick=${fold}>Fold<//>
+        <${Button} disabled=${busy} onClick=${checkCall}>${callLabel}<//>
+        <${Button} kind="primary" disabled=${busy || !canRaise} onClick=${raise}>
+          ${canRaise ? html`${raiseWord} <span class="mono">${fmt(to)}</span>` : 'Raise'}
+        <//>
+      </div>
+    </div>`;
+  }
+
+  return html`<div class="abar-body">
+    <div class="abar-top">
+      <div class="abar-turn">
+        <span class="abar-title">Your turn</span>
+        <${TimerBar} deadline=${deadline} total=${total} />
+        <span class=${cx('mono', 'muted', 'abar-secs', low && 'abar-low')}>${secs}</span>
+      </div>
+      ${presetBtns.length > 0 && html`<div class="presets">${presetBtns}</div>`}
+    </div>
+    <div class="abar-acts">
+      <${Button} kind="danger" class="act-btn act-fold" disabled=${busy} onClick=${fold} title="Fold (F)">Fold<//>
+      <${Button} class="act-btn act-call" disabled=${busy} onClick=${checkCall} title=${(legal.check ? 'Check' : 'Call') + ' (C)'}>${callLabel}<//>
+      ${canRaise
+        ? html`<div class="raise-box">
+            <span class="label raise-label">${opening ? 'Bet' : 'Raise to'}</span>
+            ${slider || html`<span class="raise-only muted">Only an all-in raise is possible</span>`}
+            ${numInput}
+            <${Button} kind="primary" class="raise-go" disabled=${busy} onClick=${raise} title="Focus amount (R) · Enter to confirm">${raiseWord}<//>
+          </div>`
+        : html`<div class="raise-box raise-box-off"><span class="muted">${hand.players.some((p) => p.pid !== me.id && !p.folded && !p.allIn) ? 'You can’t re-raise a short all-in' : 'Everyone else is all-in — call or fold'}</span></div>`}
+    </div>
+  </div>`;
+}
+
+// ─── run-it vote ─────────────────────────────────────────────────────────────
+
+function VoteControls({ view, act, busy, mobile, now }) {
+  const hand = view.hand;
+  const rv = hand.ritVote;
+  const me = view.me;
+  const voter = !!(me && rv.voters.includes(me.id));
+  const mine = voter ? rv.votes[me.id] : null;
+  const opts = [1, 2, 3].filter((n) => n <= (rv.maxRuns || 1));
+  const others = rv.voters.filter((pid) => !me || pid !== me.id);
+  const secs = countdownText(rv.deadline, now);
+
+  const votes = html`<div class="votes">
+    ${others.map((pid) => {
+      const v = rv.votes[pid];
+      return html`<span key=${pid} class=${cx('vote-chip', v != null && 'vote-in')}>
+        <${Avatar} name=${nameOf(view, pid)} seed=${seatOf(view, pid)} size=${22} />
+        <span>${nameOf(view, pid)}</span>
+        <b>${v != null ? VOTE_LABEL[v] || v + '×' : '…'}</b>
+      </span>`;
+    })}
+  </div>`;
+
+  return html`<div class="abar-body">
+    <div class="abar-top">
+      <div class="abar-turn">
+        <span class="abar-title">${voter ? 'Run it how many times?' : 'All-in — the players are voting'}</span>
+        ${!mobile && html`<${TimerBar} deadline=${rv.deadline} total=${12000} />`}
+        <span class="mono muted abar-secs">${secs}</span>
+      </div>
+      ${!mobile && votes}
+    </div>
+    ${mobile && html`<${TimerBar} deadline=${rv.deadline} total=${12000} thin />`}
+    <div class="muted abar-sub">${opts.length > 1 ? 'Everyone all-in must pick the same number — otherwise it runs once.' : 'Running it once.'}</div>
+    ${voter &&
+    html`<div class=${cx('vote-opts', mobile && 'abar-grid')}>
+      ${opts.map(
+        (n) => html`<button
+          type="button"
+          key=${n}
+          class=${cx('btn', 'vote-btn', mine === n && 'btn-primary')}
+          aria-pressed=${mine === n}
+          disabled=${busy}
+          onClick=${() => act('vote', { runs: n })}
+        >${VOTE_LABEL[n]}</button>`,
+      )}
+    </div>`}
+    ${mobile && others.length > 0 && votes}
+  </div>`;
+}
+
+// ─── hand complete ───────────────────────────────────────────────────────────
+
+function resultLine(view) {
+  const hand = view.hand;
+  const winners = hand.players.filter((p) => p.isWinner);
+  if (!winners.length) return 'Hand over';
+  const me = view.me;
+  const runs = (hand.results && hand.results.runs) || [];
+  const hn = hand.results && hand.results.endedBy === 'showdown' && runs.length === 1 ? runs[0].handName : null;
+  if (winners.length === 1) {
+    const w = winners[0];
+    const who = me && w.pid === me.id ? 'You win' : w.name + ' wins';
+    return html`${who} <span class="mono brass">${fmt(w.won)}</span>${hn ? ' with ' + hn.charAt(0).toLowerCase() + hn.slice(1) : hand.results && hand.results.endedBy === 'fold' ? ' — everyone else folded' : ''}`;
+  }
+  const names = winners.map((w) => (me && w.pid === me.id ? 'You' : w.name));
+  const total = winners.reduce((s, w) => s + (w.won || 0), 0);
+  return html`${names.slice(0, -1).join(', ')} & ${names[names.length - 1]} split <span class="mono brass">${fmt(total)}</span>${runs.length > 1 ? ' over ' + runs.length + ' runs' : ''}`;
+}
+
+function CompleteControls({ view, act, busy, mobile, now }) {
+  const hand = view.hand;
+  const me = view.me;
+  const pick = useShowPick(view.code + ':' + hand.no);
+  const hp = me ? hand.players.find((p) => p.pid === me.id) : null;
+  const hole = (me && me.hole) || [];
+  const unshown = hp ? hole.map((_, i) => i).filter((i) => !hp.shown[i]) : [];
+  const showPrompt = !!(hand.canShow && hp && !pick.hidden && unshown.length);
+  const sel = pick.sel.filter((i) => unshown.includes(i));
+  const won = !!(hp && hp.isWinner);
+  const nextIn = view.deadlineKind === 'nextHand' ? countdownText(view.deadline, now) : '';
+  const after = view.endAfterHand ? 'Game ends after this hand' : view.pauseAfterHand ? 'Pausing after this hand' : null;
+
+  const show = (idx) => {
+    if (busy || !idx.length) return;
+    act('show', { cards: idx });
+    pick.clear();
+  };
+  const allWord = hole.length === 2 ? 'both' : 'all';
+  const selText = sel.map((i) => cardText(hole[i])).join(' ');
+
+  const reveal = hand.canRevealRunout
+    ? html`<${Button} class=${cx('reveal-btn', mobile && 'btn-block btn-ghost reveal-m')} disabled=${busy} onClick=${() => act('revealRunout')}>
+        <${Icon} name="eye" size=${18} />Reveal the runout${mobile && nextIn ? html` · <span class="mono">${nextIn}</span>` : ''}
+      <//>`
+    : null;
+
+  const next = html`<div class="next-hand">
+    ${after ? html`<span class="muted">${after}</span>` : nextIn ? html`<span class="muted">Next hand</span><span class="mono next-secs">${nextIn}</span>` : null}
+  </div>`;
+
+  if (mobile) {
+    return html`<div class="abar-body">
+      ${showPrompt
+        ? html`<div class="abar-mline">
+              <span class="abar-title">${won && hand.results && hand.results.endedBy === 'fold' ? 'You won · show your cards?' : 'Show your hand?'}</span>
+              <span class="muted abar-hint">${sel.length ? 'Tap cards to change' : 'Tap a card to pick one'}</span>
+            </div>
+            <div class=${cx('abar-grid', !sel.length && 'abar-grid-2')}>
+              <${Button} class="btn-ghost-outline" disabled=${busy} onClick=${() => pick.hide()}>Hide<//>
+              <${Button} kind=${sel.length ? 'default' : 'primary'} disabled=${busy} onClick=${() => show(unshown)}>${allWord === 'both' ? 'Both' : 'All'}<//>
+              ${sel.length > 0 && html`<${Button} kind="primary" disabled=${busy} onClick=${() => show(sel)}>${selText} only<//>`}
+            </div>`
+        : html`<div class="abar-mline">
+            <span class="abar-result">${resultLine(view)}</span>
+            ${nextIn && !after ? html`<span class="mono muted">${nextIn}</span>` : after && html`<span class="muted abar-hint">${after}</span>`}
+          </div>`}
+      ${reveal}
+    </div>`;
+  }
+
+  return html`<div class="abar-body abar-row">
+    <div class="abar-grow">
+      ${showPrompt
+        ? html`<div class="abar-title">${won && hand.results && hand.results.endedBy === 'fold' ? 'You won — show your cards?' : 'Show your hand?'}</div>
+            <div class="muted abar-sub">
+              ${won && hand.results && hand.results.endedBy === 'fold'
+                ? 'Nobody called, so you don’t have to. Tap a card to pick one.'
+                : 'Anyone can show once the hand is over, even after folding. Tap a card to pick one.'}
+            </div>`
+        : html`<div class="abar-title abar-result">${resultLine(view)}</div>
+            ${hand.runout
+              ? html`<div class="muted abar-sub">Revealed by ${hand.runout.name || 'a player'} — those cards never counted.</div>`
+              : hand.canRevealRunout
+                ? html`<div class="muted abar-sub">Curious? See the cards that would have come.</div>`
+                : null}`}
+    </div>
+    ${showPrompt &&
+    html`<div class="abar-btns">
+      <${Button} disabled=${busy} onClick=${() => pick.hide()}>Keep hidden<//>
+      <${Button} kind=${sel.length ? 'default' : 'primary'} disabled=${busy} onClick=${() => show(unshown)}>Show ${allWord}<//>
+      ${sel.length > 0 && html`<${Button} kind="primary" disabled=${busy} onClick=${() => show(sel)}>Show ${selText}<//>`}
+    </div>`}
+    ${reveal}
+    ${(nextIn || after) && html`<div class="abar-sep"></div>`}
+    ${next}
+  </div>`;
+}
+
+// ─── the bar ─────────────────────────────────────────────────────────────────
+
+function Notice({ icon, children, action }) {
+  return html`<div class="abar-notice">
+    <${Icon} name=${icon} size=${16} />
+    <span class="abar-notice-text">${children}</span>
+    ${action}
+  </div>`;
+}
+
+function Waiting({ view, mobile, now, title, sub, children, icon }) {
+  const hand = view.hand;
+  const me = view.me;
+  const toAct = hand && hand.phase === 'betting' ? hand.toAct : null;
+  const deadline = toAct && view.deadlineKind === 'action' ? view.deadline : null;
+  const total = (view.settings.actionTime || 25) * 1000;
+  const hp = me && hand ? hand.players.find((p) => p.pid === me.id) : null;
+  const secs = deadline ? countdownText(deadline, now) : '';
+  const actorName = toAct ? nameOf(view, toAct) : null;
+
+  // Default headline: whoever is acting, with their clock. With a custom title, the acting
+  // player shrinks to a small chip so the clock never reads as *your* deadline.
+  let line = title;
+  let main = false;
+  if (!line && toAct) {
+    main = true;
+    line = html`<span class="abar-who"><${Avatar} name=${actorName} seed=${seatOf(view, toAct)} size=${mobile ? 22 : 26} />${actorName} is thinking</span>`;
+  }
+  const chip = !main && toAct
+    ? html`<span class="actor-chip" title=${actorName + ' to act'}>
+        <${Avatar} name=${actorName} seed=${seatOf(view, toAct)} size=${20} />
+        <span class="actor-name">${actorName}</span>
+        ${secs && html`<span class="mono muted">${secs}</span>`}
+      </span>`
+    : null;
+  const quiet = hand && (hand.phase === 'ritVote' || hand.phase === 'runout');
+  const meBits = me && me.seat != null && hp
+    ? html`<span class="abar-me">${hp.folded
+        ? 'You folded'
+        : html`<b>You</b> · <span class="mono brass">${fmt(me.stack)}</span>${me.handName && !quiet ? html` · ${me.handName}` : ''}`}</span>`
+    : null;
+
+  return html`<div class="abar-body">
+    <div class="abar-top">
+      <div class="abar-turn">
+        ${icon && html`<span class="abar-icon"><${Icon} name=${icon} size=${mobile ? 18 : 20} /></span>`}
+        <span class="abar-title abar-title-soft">${line}</span>
+        ${main && !mobile && html`<${TimerBar} deadline=${deadline} total=${total} />`}
+        ${main && secs && html`<span class="mono muted abar-secs">${secs}</span>`}
+      </div>
+      ${!mobile && chip}
+      ${!mobile && meBits}
+      ${!mobile && children}
+    </div>
+    ${main && deadline && mobile && html`<${TimerBar} deadline=${deadline} total=${total} thin />`}
+    ${sub && html`<div class=${cx('muted', 'abar-sub', icon && 'abar-sub-indent')}>${sub}</div>`}
+    ${mobile && children && html`<div class="abar-mactions">${children}</div>`}
+    ${mobile && (meBits || chip) && html`<div class="abar-mline">${meBits || html`<span></span>`}${chip}</div>`}
+  </div>`;
+}
+
+function AwayControls({ view, act, busy, mobile, onLeave }) {
+  const me = view.me;
+  const [waitBB, setWaitBB] = useState(true);
+  const why =
+    me.awayBy === 'host'
+      ? 'The host set you away.'
+      : me.awayBy === 'timeout'
+        ? 'You timed out, so we set you away.'
+        : null;
+  const check = html`<label class="abar-check">
+    <input type="checkbox" checked=${waitBB} onChange=${(e) => setWaitBB(e.target.checked)} />
+    <span>Wait for the big blind when I’m back</span>
+  </label>`;
+  const back = () => !busy && act('away', { on: false, waitForBB: waitBB });
+  if (mobile) {
+    return html`<div class="abar-body">
+      <div class="abar-away-head">
+        <span class="abar-away-icon"><${Icon} name="clock" size=${20} /></span>
+        <div>
+          <div class="abar-title">You’re away</div>
+          <div class="muted abar-hint">${why || 'Seat held until you’re back · skipping blinds'}</div>
+        </div>
+      </div>
+      ${check}
+      <div class="abar-grid abar-grid-away">
+        <${Button} kind="danger" disabled=${busy} onClick=${onLeave}>Leave seat<//>
+        <${Button} kind="primary" disabled=${busy} onClick=${back}>I’m back<//>
+      </div>
+    </div>`;
+  }
+  return html`<div class="abar-body abar-row">
+    <div class="abar-away-head abar-grow">
+      <span class="abar-away-icon"><${Icon} name="clock" size=${24} /></span>
+      <div>
+        <div class="abar-title">You’re away</div>
+        <div class="muted abar-sub">
+          ${why ? why + ' ' : ''}You’re not dealt in and skip the blinds. Your seat and <span class="mono">${fmt(me.stack + (me.pendingChips || 0))}</span> chips stay here until you come back or the host removes you.
+        </div>
+        ${check}
+      </div>
+    </div>
+    <div class="abar-btns">
+      <${Button} kind="danger" disabled=${busy} onClick=${onLeave}>Leave seat<//>
+      <${Button} kind="primary" class="btn-back" disabled=${busy} onClick=${back}>I’m back<//>
+    </div>
+  </div>`;
+}
+
+export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
+  const room = useRoom();
+  const mobile = useIsMobile();
+  const view = room && room.view;
+  const now = useClock(view);
+  if (!view || view.ended) return null;
+  const act = room.act;
+  const busy = !!room.acting;
+  const me = view.me;
+  const hand = view.hand;
+  const hp = me && hand ? hand.players.find((p) => p.pid === me.id) : null;
+  const props = { view, act, busy, mobile, now };
+
+  let tone = null;
+  let body;
+  const notices = [];
+
+  if (me && me.seat != null && me.leaveAfterHand) {
+    notices.push(html`<${Notice}
+      key="leave"
+      icon="leave"
+      action=${html`<${Button} size="sm" disabled=${busy} onClick=${() => act('cancelLeave')}>Stay seated<//>`}
+    >You’ll cash out and leave the table when this hand ends.<//>`);
+  } else if (me && me.seat != null && me.awayAfterHand && !me.away) {
+    notices.push(html`<${Notice}
+      key="away"
+      icon="clock"
+      action=${html`<${Button} size="sm" disabled=${busy} onClick=${() => act('away', { on: false })}>Cancel<//>`}
+    >You’ll be set away when this hand ends.<//>`);
+  }
+
+  if (!me) {
+    body = html`<${Waiting} ...${props} icon="eye" title="You’re watching" sub=${mobile ? null : 'Join the game to take a seat and get dealt in.'}>
+      ${room.openJoin && html`<${Button} kind="primary" onClick=${() => room.openJoin()}>Join this game<//>`}
+    <//>`;
+  } else if (me.seat == null) {
+    const req = me.request;
+    if (req) {
+      body = html`<${Waiting}
+        ...${props}
+        icon="clock"
+        title=${html`Seat request sent${req.seat != null ? html` · seat <span class="mono">${req.seat + 1}</span>` : ''} · <span class="mono brass">${fmt(req.amount)}</span>`}
+        sub="Waiting for the host to approve it."
+      >
+        <${Button} size=${mobile ? 'sm' : 'md'} disabled=${busy} onClick=${() => act('cancelRequest', { id: req.id })}>Cancel request<//>
+      <//>`;
+    } else {
+      const open = view.seats.filter((s) => !s.pid && !s.reservedBy).length;
+      body = html`<${Waiting}
+        ...${props}
+        icon="seat"
+        title=${open ? 'Pick an empty seat to sit down' : 'The table is full'}
+        sub=${open ? (mobile ? 'Tap Sit on any open seat.' : 'Tap “Sit” on any open seat to choose your buy-in.') : 'You can watch and chat until a seat opens up.'}
+      >
+        ${open > 0 && !mobile && html`<${Button} kind="primary" onClick=${() => onSit && onSit(null)}>Take a seat<//>`}
+      <//>`;
+    }
+  } else if (me.away) {
+    tone = 'away';
+    body = html`<${AwayControls} ...${props} onLeave=${onLeave} />`;
+  } else if (hand && hand.phase === 'betting' && hand.toAct === me.id && hand.legal) {
+    tone = 'turn';
+    body = html`<${TurnControls} key=${hand.no} ...${props} />`;
+  } else if (hand && hand.phase === 'ritVote' && hand.ritVote) {
+    tone = hand.ritVote.voters.includes(me.id) && hand.ritVote.votes[me.id] == null ? 'turn' : null;
+    body = html`<${VoteControls} ...${props} />`;
+  } else if (hand && hand.phase === 'runout') {
+    const runsText = hand.runs > 1 ? 'Running it ' + runWord(hand.runs) + ' · run ' + (hand.currentRun + 1) : 'All-in · running it out';
+    const eq = hp && hp.equity != null && !hp.folded ? hp.equity : null;
+    body = html`<${Waiting}
+      ...${props}
+      icon="suits"
+      title=${runsText}
+      sub=${eq != null ? html`You have <span class="mono brass">${eq}%</span> on this board.` : null}
+    />`;
+  } else if (hand && hand.phase === 'complete') {
+    body = html`<${CompleteControls} ...${props} />`;
+  } else if (me.busted) {
+    const req = me.request;
+    body = req
+      ? html`<${Waiting} ...${props} icon="chips" title=${html`Buy-in of <span class="mono brass">${fmt(req.amount)}</span> requested`} sub="Waiting for the host to approve it.">
+          <${Button} size=${mobile ? 'sm' : 'md'} disabled=${busy} onClick=${() => act('cancelRequest', { id: req.id })}>Cancel request<//>
+        <//>`
+      : html`<${Waiting} ...${props} icon="chips" title="You’re out of chips" sub=${mobile ? null : 'Request a buy-in to get back in, or leave your seat to cash out.'}>
+          <div class="abar-btns">
+            ${!mobile && html`<${Button} kind="danger" onClick=${onLeave}>Leave seat<//>`}
+            <${Button} kind="primary" onClick=${onBuyIn}>Request a buy-in<//>
+          </div>
+        <//>`;
+  } else if (hand) {
+    // a hand is being played; either I'm in it and waiting, or I'm sitting this one out
+    const sub = !hp
+      ? me.waitForBB
+        ? 'You’ll be dealt in when the big blind reaches you.'
+        : 'You’re in from the next hand.'
+      : null;
+    body = html`<${Waiting} ...${props} sub=${sub} />`;
+  } else {
+    // no hand
+    let title;
+    let sub = null;
+    let icon = 'clock';
+    if (view.paused) {
+      title = view.isHost ? 'You paused the game' : 'Paused by the host';
+      sub = 'No new hands until the game resumes.';
+      icon = 'pause';
+    } else if (view.deadlineKind === 'nextHand' && view.deadline) {
+      title = html`Next hand in <span class="mono brass">${countdownText(view.deadline, now)}</span>`;
+    } else {
+      title = 'Waiting for players';
+      const ready = (view.players || []).filter((p) => p.seat != null && p.stack > 0 && !p.away).length;
+      sub = ready < 2 ? 'The next hand deals as soon as two players have chips.' : null;
+    }
+    body = html`<${Waiting} ...${props} icon=${icon} title=${title} sub=${me.waitForBB ? 'You’ll be dealt in when the big blind reaches you.' : sub} />`;
+  }
+
+  return html`<section
+    class=${cx('abar', mobile ? 'abar-m' : 'abar-d panel', tone && 'abar-tone-' + tone)}
+    aria-label="Your actions"
+    aria-live=${tone === 'turn' ? 'polite' : undefined}
+  >
+    ${notices}
+    ${body}
+  </section>`;
+}
+
+export default ActionBar;

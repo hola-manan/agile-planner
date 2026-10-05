@@ -1,0 +1,745 @@
+{
+ "name": "busted",
+ "title": "Busted",
+ "description": "Hero lost their whole stack; the next hand runs without them. Request a buy-in.",
+ "view": {
+  "code": "RVR-4821",
+  "name": "Friday Night Game",
+  "version": 19,
+  "serverNow": 1790969525600,
+  "hostId": "maya",
+  "isHost": false,
+  "settings": {
+   "variant": "NLH",
+   "sb": 1,
+   "bb": 2,
+   "seats": 8,
+   "minBuyIn": 100,
+   "maxBuyIn": 600,
+   "approveBuyIns": false,
+   "maxRuns": 1,
+   "revealRunout": "anyone",
+   "showdownLosers": "choose",
+   "actionTime": 25,
+   "nextHandDelay": 8,
+   "autoAwayTimeouts": 2
+  },
+  "paused": false,
+  "pauseAfterHand": false,
+  "ended": false,
+  "endAfterHand": false,
+  "handNo": 2,
+  "button": 1,
+  "deadline": 1790969546600,
+  "deadlineKind": "action",
+  "me": {
+   "id": "alex",
+   "name": "Alex",
+   "seat": 3,
+   "stack": 0,
+   "pendingChips": 0,
+   "away": false,
+   "awayBy": null,
+   "waitForBB": false,
+   "awayAfterHand": false,
+   "leaveAfterHand": false,
+   "timeouts": 0,
+   "status": "seated",
+   "inHand": false,
+   "busted": true,
+   "hole": null,
+   "handName": null,
+   "request": null
+  },
+  "players": [
+   {
+    "id": "maya",
+    "name": "Maya",
+    "seat": 0,
+    "stack": 298,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": true,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "dev",
+    "name": "Dev",
+    "seat": 1,
+    "stack": 642,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "ari",
+    "name": "Ari",
+    "seat": 2,
+    "stack": 207,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "alex",
+    "name": "Alex",
+    "seat": 3,
+    "stack": 0,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": false,
+    "busted": true,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "kim",
+    "name": "Kim",
+    "seat": 4,
+    "stack": 398,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   }
+  ],
+  "seats": [
+   {
+    "seat": 0,
+    "pid": "maya",
+    "reservedBy": null
+   },
+   {
+    "seat": 1,
+    "pid": "dev",
+    "reservedBy": null
+   },
+   {
+    "seat": 2,
+    "pid": "ari",
+    "reservedBy": null
+   },
+   {
+    "seat": 3,
+    "pid": "alex",
+    "reservedBy": null
+   },
+   {
+    "seat": 4,
+    "pid": "kim",
+    "reservedBy": null
+   },
+   {
+    "seat": 5,
+    "pid": null,
+    "reservedBy": null
+   },
+   {
+    "seat": 6,
+    "pid": null,
+    "reservedBy": null
+   },
+   {
+    "seat": 7,
+    "pid": null,
+    "reservedBy": null
+   }
+  ],
+  "hand": {
+   "no": 2,
+   "phase": "betting",
+   "street": "preflop",
+   "variant": "NLH",
+   "sb": 1,
+   "bb": 2,
+   "button": 1,
+   "sbSeat": 2,
+   "bbSeat": 4,
+   "board": [],
+   "runs": 1,
+   "currentRun": 0,
+   "runBoards": [],
+   "runResults": [],
+   "potTotal": 5,
+   "potCenter": 0,
+   "currentBet": 2,
+   "minRaise": 2,
+   "toAct": "dev",
+   "players": [
+    {
+     "pid": "maya",
+     "seat": 0,
+     "name": "Maya",
+     "bet": 2,
+     "committed": 2,
+     "stack": 298,
+     "folded": false,
+     "allIn": false,
+     "lastAction": {
+      "type": "call",
+      "amount": 2
+     },
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    },
+    {
+     "pid": "dev",
+     "seat": 1,
+     "name": "Dev",
+     "bet": 0,
+     "committed": 0,
+     "stack": 642,
+     "folded": false,
+     "allIn": false,
+     "lastAction": null,
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    },
+    {
+     "pid": "ari",
+     "seat": 2,
+     "name": "Ari",
+     "bet": 1,
+     "committed": 1,
+     "stack": 207,
+     "folded": false,
+     "allIn": false,
+     "lastAction": null,
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    },
+    {
+     "pid": "kim",
+     "seat": 4,
+     "name": "Kim",
+     "bet": 2,
+     "committed": 2,
+     "stack": 398,
+     "folded": false,
+     "allIn": false,
+     "lastAction": null,
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    }
+   ],
+   "legal": null,
+   "ritVote": null,
+   "results": null,
+   "runout": null,
+   "canShow": false,
+   "canRevealRunout": false,
+   "log": [
+    {
+     "street": "preflop",
+     "pid": "ari",
+     "name": "Ari",
+     "text": "posts small blind",
+     "amount": 1
+    },
+    {
+     "street": "preflop",
+     "pid": "kim",
+     "name": "Kim",
+     "text": "posts big blind",
+     "amount": 2
+    },
+    {
+     "street": "preflop",
+     "pid": "maya",
+     "name": "Maya",
+     "text": "calls",
+     "amount": 2
+    }
+   ]
+  },
+  "lastHand": {
+   "no": 1,
+   "log": [
+    {
+     "street": "preflop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "posts small blind",
+     "amount": 1
+    },
+    {
+     "street": "preflop",
+     "pid": "ari",
+     "name": "Ari",
+     "text": "posts big blind",
+     "amount": 2
+    },
+    {
+     "street": "preflop",
+     "pid": "alex",
+     "name": "Alex",
+     "text": "raises to",
+     "amount": 6
+    },
+    {
+     "street": "preflop",
+     "pid": "kim",
+     "name": "Kim",
+     "text": "folds",
+     "amount": null
+    },
+    {
+     "street": "preflop",
+     "pid": "maya",
+     "name": "Maya",
+     "text": "folds",
+     "amount": null
+    },
+    {
+     "street": "preflop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "calls",
+     "amount": 6
+    },
+    {
+     "street": "preflop",
+     "pid": "ari",
+     "name": "Ari",
+     "text": "folds",
+     "amount": null
+    },
+    {
+     "street": "flop",
+     "pid": null,
+     "name": null,
+     "text": "Flop",
+     "amount": null,
+     "cards": [
+      "Jh",
+      "8c",
+      "3s"
+     ]
+    },
+    {
+     "street": "flop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "bets",
+     "amount": 10
+    },
+    {
+     "street": "flop",
+     "pid": "alex",
+     "name": "Alex",
+     "text": "all-in",
+     "amount": 114
+    },
+    {
+     "street": "flop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "calls",
+     "amount": 114
+    },
+    {
+     "street": "flop",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "shows",
+     "amount": null,
+     "cards": [
+      "Js",
+      "Jd"
+     ]
+    },
+    {
+     "street": "flop",
+     "pid": "alex",
+     "name": "Alex",
+     "text": "shows",
+     "amount": null,
+     "cards": [
+      "Ac",
+      "Qc"
+     ]
+    },
+    {
+     "street": "turn",
+     "pid": null,
+     "name": null,
+     "text": "Turn",
+     "amount": null,
+     "cards": [
+      "5d"
+     ],
+     "run": 0
+    },
+    {
+     "street": "river",
+     "pid": null,
+     "name": null,
+     "text": "River",
+     "amount": null,
+     "cards": [
+      "2h"
+     ],
+     "run": 0
+    },
+    {
+     "street": "showdown",
+     "pid": "dev",
+     "name": "Dev",
+     "text": "wins with Three Jacks",
+     "amount": 242,
+     "run": 0,
+     "handName": "Three Jacks"
+    }
+   ],
+   "results": {
+    "endedBy": "showdown",
+    "awards": {
+     "dev": 242
+    },
+    "runs": [
+     {
+      "board": [
+       "Jh",
+       "8c",
+       "3s",
+       "5d",
+       "2h"
+      ],
+      "winners": [
+       "dev"
+      ],
+      "handName": "Three Jacks",
+      "amount": 242,
+      "awards": {
+       "dev": 242
+      }
+     }
+    ],
+    "pots": [
+     {
+      "amount": 242,
+      "eligible": [
+       "dev",
+       "alex"
+      ],
+      "winnersByRun": [
+       [
+        "dev"
+       ]
+      ],
+      "returned": false
+     }
+    ],
+    "winners": [
+     "dev"
+    ]
+   },
+   "boards": [
+    [
+     "Jh",
+     "8c",
+     "3s",
+     "5d",
+     "2h"
+    ]
+   ],
+   "runout": null,
+   "players": [
+    {
+     "pid": "dev",
+     "name": "Dev",
+     "seat": 1,
+     "cards": [
+      "Js",
+      "Jd"
+     ],
+     "folded": false,
+     "won": 242,
+     "handName": "Three Jacks"
+    },
+    {
+     "pid": "ari",
+     "name": "Ari",
+     "seat": 2,
+     "cards": [
+      null,
+      null
+     ],
+     "folded": true,
+     "won": 0,
+     "handName": null
+    },
+    {
+     "pid": "alex",
+     "name": "Alex",
+     "seat": 3,
+     "cards": [
+      "Ac",
+      "Qc"
+     ],
+     "folded": false,
+     "won": 0,
+     "handName": "Ace high"
+    },
+    {
+     "pid": "kim",
+     "name": "Kim",
+     "seat": 4,
+     "cards": [
+      null,
+      null
+     ],
+     "folded": true,
+     "won": 0,
+     "handName": null
+    },
+    {
+     "pid": "maya",
+     "name": "Maya",
+     "seat": 0,
+     "cards": [
+      null,
+      null
+     ],
+     "folded": true,
+     "won": 0,
+     "handName": null
+    }
+   ]
+  },
+  "requests": [],
+  "ledger": {
+   "entries": [
+    {
+     "id": 10,
+     "t": 1790969480000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "kim",
+     "name": "Kim",
+     "amount": 400,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 8,
+     "t": 1790969480000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "alex",
+     "name": "Alex",
+     "amount": 120,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 6,
+     "t": 1790969480000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "ari",
+     "name": "Ari",
+     "amount": 210,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 4,
+     "t": 1790969480000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "dev",
+     "name": "Dev",
+     "amount": 520,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 2,
+     "t": 1790969480000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": "maya",
+     "hand": 0,
+     "type": "buyin",
+     "pid": "maya",
+     "name": "Maya",
+     "amount": 300,
+     "kind": "sit",
+     "byName": "Maya"
+    }
+   ],
+   "players": [
+    {
+     "pid": "dev",
+     "name": "Dev",
+     "seat": 1,
+     "seated": true,
+     "buyIns": 520,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 642,
+     "net": 122
+    },
+    {
+     "pid": "kim",
+     "name": "Kim",
+     "seat": 4,
+     "seated": true,
+     "buyIns": 400,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 400,
+     "net": 0
+    },
+    {
+     "pid": "maya",
+     "name": "Maya",
+     "seat": 0,
+     "seated": true,
+     "buyIns": 300,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 300,
+     "net": 0
+    },
+    {
+     "pid": "ari",
+     "name": "Ari",
+     "seat": 2,
+     "seated": true,
+     "buyIns": 210,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 208,
+     "net": -2
+    },
+    {
+     "pid": "alex",
+     "name": "Alex",
+     "seat": 3,
+     "seated": true,
+     "buyIns": 120,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 0,
+     "net": -120
+    }
+   ],
+   "totals": {
+    "buyIns": 1550,
+    "chipsOnTable": 1550,
+    "cashedOut": 0,
+    "uncountedAdjust": 0,
+    "diff": 0,
+    "balanced": true,
+    "buyInCount": 5,
+    "players": 5,
+    "hands": 2,
+    "biggestWinner": {
+     "pid": "dev",
+     "name": "Dev",
+     "net": 122
+    }
+   },
+   "settlement": [
+    {
+     "key": "alex>dev:120",
+     "from": "alex",
+     "fromName": "Alex",
+     "to": "dev",
+     "toName": "Dev",
+     "amount": 120,
+     "paid": false
+    },
+    {
+     "key": "ari>dev:2",
+     "from": "ari",
+     "fromName": "Ari",
+     "to": "dev",
+     "toName": "Dev",
+     "amount": 2,
+     "paid": false
+    }
+   ]
+  },
+  "chat": []
+ }
+}

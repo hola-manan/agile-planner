@@ -1,0 +1,303 @@
+{
+ "name": "heads-up",
+ "title": "Heads-up",
+ "description": "Two players; hero is on the button (small blind) and acts first preflop.",
+ "view": {
+  "code": "RVR-4821",
+  "name": "Friday Night Game",
+  "version": 5,
+  "serverNow": 1790969428000,
+  "hostId": "maya",
+  "isHost": false,
+  "settings": {
+   "variant": "NLH",
+   "sb": 1,
+   "bb": 2,
+   "seats": 6,
+   "minBuyIn": 100,
+   "maxBuyIn": 600,
+   "approveBuyIns": false,
+   "maxRuns": 2,
+   "revealRunout": "anyone",
+   "showdownLosers": "choose",
+   "actionTime": 25,
+   "nextHandDelay": 8,
+   "autoAwayTimeouts": 2
+  },
+  "paused": false,
+  "pauseAfterHand": false,
+  "ended": false,
+  "endAfterHand": false,
+  "handNo": 1,
+  "button": 0,
+  "deadline": 1790969451000,
+  "deadlineKind": "action",
+  "me": {
+   "id": "alex",
+   "name": "Alex",
+   "seat": 4,
+   "stack": 418,
+   "pendingChips": 0,
+   "away": false,
+   "awayBy": null,
+   "waitForBB": false,
+   "awayAfterHand": false,
+   "leaveAfterHand": false,
+   "timeouts": 0,
+   "status": "seated",
+   "inHand": true,
+   "busted": false,
+   "hole": [
+    "Qc",
+    "Jc"
+   ],
+   "handName": null,
+   "request": null
+  },
+  "players": [
+   {
+    "id": "maya",
+    "name": "Maya",
+    "seat": 0,
+    "stack": 378,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": true,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   },
+   {
+    "id": "alex",
+    "name": "Alex",
+    "seat": 4,
+    "stack": 418,
+    "pendingChips": 0,
+    "status": "seated",
+    "away": false,
+    "awayBy": null,
+    "isHost": false,
+    "inHand": true,
+    "busted": false,
+    "leaveAfterHand": false
+   }
+  ],
+  "seats": [
+   {
+    "seat": 0,
+    "pid": "maya",
+    "reservedBy": null
+   },
+   {
+    "seat": 1,
+    "pid": null,
+    "reservedBy": null
+   },
+   {
+    "seat": 2,
+    "pid": null,
+    "reservedBy": null
+   },
+   {
+    "seat": 3,
+    "pid": null,
+    "reservedBy": null
+   },
+   {
+    "seat": 4,
+    "pid": "alex",
+    "reservedBy": null
+   },
+   {
+    "seat": 5,
+    "pid": null,
+    "reservedBy": null
+   }
+  ],
+  "hand": {
+   "no": 1,
+   "phase": "betting",
+   "street": "preflop",
+   "variant": "NLH",
+   "sb": 1,
+   "bb": 2,
+   "button": 0,
+   "sbSeat": 0,
+   "bbSeat": 4,
+   "board": [],
+   "runs": 1,
+   "currentRun": 0,
+   "runBoards": [],
+   "runResults": [],
+   "potTotal": 4,
+   "potCenter": 0,
+   "currentBet": 2,
+   "minRaise": 2,
+   "toAct": "alex",
+   "players": [
+    {
+     "pid": "maya",
+     "seat": 0,
+     "name": "Maya",
+     "bet": 2,
+     "committed": 2,
+     "stack": 378,
+     "folded": false,
+     "allIn": false,
+     "lastAction": {
+      "type": "call",
+      "amount": 2
+     },
+     "cards": [
+      null,
+      null
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    },
+    {
+     "pid": "alex",
+     "seat": 4,
+     "name": "Alex",
+     "bet": 2,
+     "committed": 2,
+     "stack": 418,
+     "folded": false,
+     "allIn": false,
+     "lastAction": null,
+     "cards": [
+      "Qc",
+      "Jc"
+     ],
+     "shown": [
+      false,
+      false
+     ],
+     "equity": null,
+     "won": 0,
+     "handName": null,
+     "isWinner": false
+    }
+   ],
+   "legal": {
+    "fold": true,
+    "check": true,
+    "call": 0,
+    "raise": true,
+    "minTo": 4,
+    "maxTo": 420,
+    "potTo": 6
+   },
+   "ritVote": null,
+   "results": null,
+   "runout": null,
+   "canShow": false,
+   "canRevealRunout": false,
+   "log": [
+    {
+     "street": "preflop",
+     "pid": "maya",
+     "name": "Maya",
+     "text": "posts small blind",
+     "amount": 1
+    },
+    {
+     "street": "preflop",
+     "pid": "alex",
+     "name": "Alex",
+     "text": "posts big blind",
+     "amount": 2
+    },
+    {
+     "street": "preflop",
+     "pid": "maya",
+     "name": "Maya",
+     "text": "calls",
+     "amount": 2
+    }
+   ]
+  },
+  "lastHand": null,
+  "requests": [],
+  "ledger": {
+   "entries": [
+    {
+     "id": 4,
+     "t": 1790969420000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": null,
+     "hand": 0,
+     "type": "buyin",
+     "pid": "alex",
+     "name": "Alex",
+     "amount": 420,
+     "kind": "sit",
+     "byName": null
+    },
+    {
+     "id": 2,
+     "t": 1790969420000,
+     "countAsBuyIn": true,
+     "reason": null,
+     "by": "maya",
+     "hand": 0,
+     "type": "buyin",
+     "pid": "maya",
+     "name": "Maya",
+     "amount": 380,
+     "kind": "sit",
+     "byName": "Maya"
+    }
+   ],
+   "players": [
+    {
+     "pid": "alex",
+     "name": "Alex",
+     "seat": 4,
+     "seated": true,
+     "buyIns": 420,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 420,
+     "net": 0
+    },
+    {
+     "pid": "maya",
+     "name": "Maya",
+     "seat": 0,
+     "seated": true,
+     "buyIns": 380,
+     "buyInCount": 1,
+     "cashOuts": 0,
+     "adjustments": 0,
+     "stack": 380,
+     "net": 0
+    }
+   ],
+   "totals": {
+    "buyIns": 800,
+    "chipsOnTable": 800,
+    "cashedOut": 0,
+    "uncountedAdjust": 0,
+    "diff": 0,
+    "balanced": true,
+    "buyInCount": 2,
+    "players": 2,
+    "hands": 1,
+    "biggestWinner": null
+   },
+   "settlement": []
+  },
+  "chat": []
+ }
+}
