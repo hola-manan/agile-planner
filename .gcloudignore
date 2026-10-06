@@ -1,0 +1,11 @@
+# Only the production server + app assets are needed in the Cloud Run build context.
+.git/
+.claude/
+node_modules/
+dev/
+test/
+design/
+plans/
+*.md
+*.log
+render.yaml

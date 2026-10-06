@@ -39,8 +39,12 @@ plans/                     implementation plans (current.md)
 ```
 
 ## Commands
-- Production server (what Render runs): `npm start` → `node --import ./server/register.mjs server/index.mjs`
+- Production server: `npm start` → `node --import ./server/register.mjs server/index.mjs`
   (binds HOST 0.0.0.0 + PORT from env; in-memory store, optional FELT_DB_FILE JSON persistence)
+- LIVE on GCP Cloud Run (project hackathon-501513, us-central1, single instance, scale-to-zero):
+  https://felt-117670887733.us-central1.run.app — redeploy with
+  `gcloud run deploy felt --source . --region us-central1 --allow-unauthenticated --min-instances 0 --max-instances 1 --timeout 3600 --quiet`
+  (`.gcloudignore` keeps dev/test/design/plans out of the build. max-instances MUST stay 1: rooms + realtime are in-memory.)
 - Unit tests: `node --test test/*.test.js`
 - End-to-end (3 Playwright browsers on a local dev server it starts itself): `node test/e2e.mjs`
 - Dev server: `npm run dev` → http://127.0.0.1:8787 (`FELT_DEV_TIME=1` enables POST /__dev/time {advance})
