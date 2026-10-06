@@ -245,7 +245,7 @@ function Backs({ count, mobile }) {
   </div>`;
 }
 
-function SeatCards({ hp, mobile, holeWin }) {
+function SeatCards({ hp, handNo, mobile, holeWin }) {
   const four = hp.cards.length > 2;
   return html`<div class=${cx('seat-cards', four && 'seat-cards-4')}>
     ${hp.cards.map((c, i) =>
@@ -258,7 +258,7 @@ function SeatCards({ hp, mobile, holeWin }) {
             class=${mobile ? 'c-mseat' : 'c-seat'}
             lift=${holeWin && holeWin.has(c)}
           />`
-        : html`<${Card} key=${'b' + i} faceDown size="sm" class=${mobile ? 'c-mseat' : 'c-seat'} />`,
+        : html`<${Card} key=${handNo + '-' + i} faceDown size="sm" class=${cx(mobile ? 'c-mseat' : 'c-seat', 'card-deal')} style=${{ animationDelay: (i * 120) + 'ms' }} />`,
     )}
   </div>`;
 }
@@ -272,8 +272,8 @@ export function equityPhase(hand) {
   return !!hand && hand.phase === 'runout';
 }
 
-function Tag({ tone, children, title }) {
-  return html`<span class=${cx('tag', tone && 'tag-' + tone)} title=${title}>${children}</span>`;
+function Tag({ tone, children, title, class: klass }) {
+  return html`<span class=${cx('tag', tone && 'tag-' + tone, klass)} title=${title}>${children}</span>`;
 }
 
 function EmptySeat({ seat, pos, canSit, reservedName, mine, onSit, mobile }) {
@@ -303,12 +303,12 @@ function EmptySeat({ seat, pos, canSit, reservedName, mine, onSit, mobile }) {
 function statusTags(pp, hp, hand, view) {
   const out = [];
   if (!pp) return out;
-  if (pp.away) out.push(html`<${Tag} key="away" tone="brass">Away<//>`);
-  else if (pp.busted) out.push(html`<${Tag} key="busted" tone="muted">Busted<//>`);
-  if (pp.leaveAfterHand) out.push(html`<${Tag} key="leave" tone="danger">Leaving<//>`);
+  if (pp.away) out.push(html`<${Tag} key="away" tone="brass" class="tag-in">Away<//>`);
+  else if (pp.busted) out.push(html`<${Tag} key="busted" tone="muted" class="tag-in">Busted<//>`);
+  if (pp.leaveAfterHand) out.push(html`<${Tag} key="leave" tone="danger" class="tag-in">Leaving<//>`);
   const rebuy = pp.pendingChips > 0 || (view.requests || []).some((r) => r.pid === pp.id && r.kind === 'rebuy');
-  if (rebuy) out.push(html`<${Tag} key="rebuy" tone="brass">Rebuy pending<//>`);
-  if (hand && hand.phase !== 'complete' && !hp && !pp.away && !pp.busted) out.push(html`<${Tag} key="next" tone="muted">Next hand<//>`);
+  if (rebuy) out.push(html`<${Tag} key="rebuy" tone="brass" class="tag-in">Rebuy pending<//>`);
+  if (hand && hand.phase !== 'complete' && !hp && !pp.away && !pp.busted) out.push(html`<${Tag} key="next" tone="muted" class="tag-in">Next hand<//>`);
   return out;
 }
 
@@ -343,9 +343,9 @@ function Seat({ pos, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin 
   // tags
   const tags = [];
   const wp = winPill(hand, hp);
-  if (wp) tags.push(html`<${Tag} key="win" tone="gold">${wp}<//>`);
+  if (wp) tags.push(html`<${Tag} key=${'win-' + wp} tone="gold" class="tag-in">${wp}<//>`);
   // With several runs a single hand name would describe one board only; the run labels say it.
-  if (complete && hp && hp.handName && !(hand.runs > 1)) tags.push(html`<${Tag} key="hn">${hp.handName}<//>`);
+  if (complete && hp && hp.handName && !(hand.runs > 1)) tags.push(html`<${Tag} key=${'hn-' + hp.handName} class="tag-in">${hp.handName}<//>`);
   if (hp && !complete) {
     const pre = positionPrefix(hand, hp);
     let act = acting ? 'Thinking…' : actionLabel(hp.lastAction);
@@ -355,9 +355,10 @@ function Seat({ pos, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin 
       else if (hp.lastAction.type === 'allin') act = 'All-in ' + fmt(hp.bet);
     }
     const text = [pre, act].filter(Boolean).join(' · ');
-    if (text) tags.push(html`<${Tag} key="act" tone=${acting ? 'acting' : hp.lastAction && MONEY_ACTIONS.has(hp.lastAction.type) ? 'hot' : null}>${text}<//>`);
+    if (text) tags.push(html`<${Tag} key=${'act-' + text} tone=${acting ? 'acting' : hp.lastAction && MONEY_ACTIONS.has(hp.lastAction.type) ? 'hot' : null} class="tag-in">${text}<//>`);
   } else if (hp && complete && folded) {
-    tags.push(html`<${Tag} key="act">${anyShown ? 'Folded · showed' : 'Folded'}<//>`);
+    const foldedText = anyShown ? 'Folded · showed' : 'Folded';
+    tags.push(html`<${Tag} key=${'act-' + foldedText} class="tag-in">${foldedText}<//>`);
   }
   tags.push(...statusTags(pp, hp, hand, view));
 
@@ -365,7 +366,7 @@ function Seat({ pos, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin 
   const avSize = mobile ? 30 : 38;
 
   let above = null;
-  if (hp && anyShown) above = html`<${SeatCards} hp=${hp} mobile=${mobile} holeWin=${holeWin} />`;
+  if (hp && anyShown) above = html`<${SeatCards} hp=${hp} handNo=${hand ? hand.no : 0} mobile=${mobile} holeWin=${holeWin} />`;
   else if (hp && !folded && !complete) above = html`<${Backs} count=${hp.cards.length} mobile=${mobile} />`;
 
   const label = [pp.name, fmt(pp.stack) + ' chips', ...(hp && hp.cards.some(Boolean) ? [hp.cards.map((c) => (c ? cardText(c) : 'hidden')).join(' ')] : [])].join(', ');
@@ -379,7 +380,7 @@ function Seat({ pos, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin 
       </div>
       <div class="pod-txt">
         <span class="pod-name">${pp.name}</span>
-        <span class="pod-stack mono">${fmt(pp.stack)}</span>
+        <span key=${'stack-' + pp.stack} class="pod-stack mono num-bump">${fmt(pp.stack)}</span>
       </div>
     </div>
     ${(eq != null || tags.length > 0) &&
@@ -399,20 +400,24 @@ function Hero({ me, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin, 
   const allIn = !!(hp && hp.allIn && !folded);
   const canPick = !!(hand && hand.canShow && !pick.hidden);
   const four = inHand && me.hole.length > 2;
+  const handNo = hand ? hand.no : 0;
 
   // pills inside the pod
   const pills = [];
   const wp = winPill(hand, hp);
-  if (wp) pills.push(html`<${Tag} key="win" tone="gold">${wp}<//>`);
-  if (inHand && folded) pills.push(html`<${Tag} key="fold">${complete ? 'Folded · only you see these' : 'Folded'}<//>`);
+  if (wp) pills.push(html`<${Tag} key=${'win-' + wp} tone="gold" class="tag-in">${wp}<//>`);
+  if (inHand && folded) {
+    const text = complete ? 'Folded · only you see these' : 'Folded';
+    pills.push(html`<${Tag} key=${'fold-' + text} class="tag-in">${text}<//>`);
+  }
   else if (inHand && me.handName && !equityPhase(hand) && !(complete && hand.runs > 1)) {
-    pills.push(html`<${Tag} key="hn" tone=${complete && !winner ? null : 'gold'}>${me.handName}<//>`);
+    pills.push(html`<${Tag} key=${'hn-' + me.handName} tone=${complete && !winner ? null : 'gold'} class="tag-in">${me.handName}<//>`);
   }
   if (inHand && !complete && !folded) {
     const pre = positionPrefix(hand, hp);
     const act = acting ? null : actionLabel(hp.lastAction);
     const text = [pre, act].filter(Boolean).join(' · ');
-    if (text) pills.push(html`<${Tag} key="act" tone=${hp.lastAction && MONEY_ACTIONS.has(hp.lastAction.type) ? 'hot' : null}>${text}<//>`);
+    if (text) pills.push(html`<${Tag} key=${'act-' + text} tone=${hp.lastAction && MONEY_ACTIONS.has(hp.lastAction.type) ? 'hot' : null} class="tag-in">${text}<//>`);
   }
   pills.push(...statusTags(pp, hp, hand, view));
   const eq = hp && !folded && hp.equity != null ? hp.equity : null;
@@ -426,20 +431,21 @@ function Hero({ me, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin, 
           const picked = pick.sel.includes(i);
           const lift = !!(holeWin && holeWin.has(c));
           const size = mobile ? (four ? 'md' : 'xl') : four ? 'lg' : 'xl';
-          const klass = cx(mobile && (four ? 'c-mhero4' : 'c-mhero'), picked && 'card-picked', pick.sel.length > 0 && !picked && canPick && !shown && 'card-unpicked');
-          const card = html`<${Card} card=${c} size=${size} class=${klass} lift=${lift} style=${{ rotate: rot + 'deg' }} />`;
+          const klass = cx(mobile && (four ? 'c-mhero4' : 'c-mhero'), picked && 'card-picked', pick.sel.length > 0 && !picked && canPick && !shown && 'card-unpicked', 'card-deal');
+          const dealStyle = { rotate: rot + 'deg', animationDelay: (i * 120) + 'ms' };
+          const card = html`<${Card} card=${c} size=${size} class=${klass} lift=${lift} style=${dealStyle} />`;
           const badge = shown ? html`<span class="hero-shown" title="Everyone can see this card"><${Icon} name="eye" size=${12} /></span>` : null;
           if (canPick && !shown) {
             return html`<button
               type="button"
-              key=${i}
+              key=${handNo + '-' + i}
               class="hero-card-btn"
               aria-pressed=${picked}
               aria-label=${(picked ? 'Unselect ' : 'Pick ') + cardText(c) + ' to show'}
               onClick=${() => pick.toggle(i)}
             >${card}</button>`;
           }
-          return html`<div key=${i} class="hero-card">${card}${badge}</div>`;
+          return html`<div key=${handNo + '-' + i} class="hero-card">${card}${badge}</div>`;
         })}
       </div>`
     : null;
@@ -452,7 +458,7 @@ function Hero({ me, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin, 
     </div>
     <div class="pod-txt">
       <span class="pod-name">You</span>
-      <span class="pod-stack mono">${fmt(me.stack)}</span>
+      <span key=${'stack-' + me.stack} class="pod-stack mono num-bump">${fmt(me.stack)}</span>
     </div>
     ${!mobile && (eq != null || pills.length > 0) && html`<div class="pod-pills">${eq != null && html`<span class="eq mono" style=${{ color: hueFor(me.seat) }}>${eq}%</span>`}${pills}</div>`}
   </div>`;
@@ -484,7 +490,8 @@ function Board({ cards, size, klass, win, dimRest, ghosts }) {
     const c = cards[i];
     if (c) {
       const lifted = !!(win && win.has(c));
-      slots.push(html`<${Card} key=${'c' + i} card=${c} size=${size} class=${klass} lift=${lifted} dim=${dimRest && !lifted} />`);
+      const dealStyle = i < 3 ? { animationDelay: (i * 140) + 'ms' } : undefined;
+      slots.push(html`<${Card} key=${'c' + i} card=${c} size=${size} class=${cx(klass, 'card-deal')} style=${dealStyle} lift=${lifted} dim=${dimRest && !lifted} />`);
     } else if (ghosts && ghosts[i - cards.length]) {
       slots.push(html`<${Card} key=${'g' + i} card=${ghosts[i - cards.length]} size=${size} class=${klass} ghost flip />`);
     } else slots.push(html`<${Card} key=${'s' + i} size=${size} class=${klass} />`);
@@ -525,7 +532,7 @@ function Center({ view, hand, mobile, win }) {
   // Before any street completes nothing is in the middle yet: keep the pill's space, hide it.
   const potPill = html`<div class=${cx('pot', hand.phase === 'betting' && pot === 0 && 'pot-empty')} aria-hidden=${hand.phase === 'betting' && pot === 0 ? 'true' : undefined}>
     <span class="pot-label">Pot</span>
-    <span class="pot-amt mono">${fmt(pot)}</span>
+    <span key=${'pot-' + pot} class="pot-amt mono num-bump">${fmt(pot)}</span>
     ${runNote && html`<span class="pot-note">${runNote}</span>`}
   </div>`;
 

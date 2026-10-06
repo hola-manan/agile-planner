@@ -218,7 +218,7 @@
   align-items: center;
   gap: 6px;
   z-index: 2;
-  animation: bet-in 0.25s ease-out;
+  animation: bet-in 0.4s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 .chip {
   width: 22px;
@@ -239,7 +239,7 @@
 @keyframes bet-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -30%);
+    transform: translate(-50%, -30%) scale(0.6);
   }
 }
 .dealer {
@@ -337,7 +337,7 @@
   border-radius: 999px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
   min-width: 132px;
-  transition: opacity 0.25s, border-color 0.2s, box-shadow 0.2s;
+  transition: box-shadow 0.3s, border-color 0.3s, background-color 0.3s, opacity 0.3s, transform 0.3s;
 }
 .pod-av {
   position: relative;
@@ -1001,7 +1001,7 @@
   transform: translateX(-50%);
   z-index: 6;
   box-shadow: 0 0 0 3px rgba(230, 184, 92, 0.25), 0 4px 12px rgba(0, 0, 0, 0.4);
-  animation: bet-in 0.3s ease-out;
+  animation: bet-in 0.4s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 /* my pod on the rail (not dealt in): tags side by side, so they stay above the dock */
 .tbl-m .seat-hero-m .seat-below {
@@ -1946,8 +1946,35 @@
   }
 }
 
+@keyframes num-bump {
+  0% { transform: scale(1); color: inherit; text-shadow: none; }
+  30% { transform: scale(1.12); color: var(--brass); text-shadow: 0 0 8px var(--brass); }
+  100% { transform: scale(1); color: inherit; text-shadow: none; }
+}
+
+.num-bump {
+  display: inline-block;
+  animation: num-bump 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+
+@keyframes slide-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.tag-in, .abar-in {
+  animation: slide-fade-in 0.25s ease-out backwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pod-acting {
     animation: none;
+  }
+  .bet, .tag-in, .abar-in {
+    animation-name: fade-in !important;
+    animation-duration: 0.2s !important;
+  }
+  .num-bump {
+    animation: none !important;
   }
 }

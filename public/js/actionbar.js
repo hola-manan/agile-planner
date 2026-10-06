@@ -187,9 +187,9 @@ function TurnControls({ view, act, busy, mobile, now, focusRef }) {
   />`;
 
   if (mobile) {
-    return html`<div class="abar-body" ref=${rootRef}>
+    return html`<div class="abar-body abar-in" ref=${rootRef}>
       <div class="abar-mline">
-        <span class="abar-me"><b>You</b> · <span class="mono brass">${fmt(me.stack)}</span>${me.handName && html` · ${me.handName}`}</span>
+        <span class="abar-me"><b>You</b> · <span key=${'stack-' + me.stack} class="mono brass num-bump">${fmt(me.stack)}</span>${me.handName && html` · ${me.handName}`}</span>
         <span class=${cx('mono', 'muted', low && 'abar-low')}>${secs}</span>
       </div>
       <${TimerBar} deadline=${deadline} total=${total} thin />
@@ -205,7 +205,7 @@ function TurnControls({ view, act, busy, mobile, now, focusRef }) {
     </div>`;
   }
 
-  return html`<div class="abar-body" ref=${rootRef}>
+  return html`<div class="abar-body abar-in" ref=${rootRef}>
     <div class="abar-top">
       <div class="abar-turn">
         <span class="abar-title">Your turn</span>
@@ -252,7 +252,7 @@ function VoteControls({ view, act, busy, mobile, now }) {
     })}
   </div>`;
 
-  return html`<div class="abar-body">
+  return html`<div class="abar-body abar-in">
     <div class="abar-top">
       <div class="abar-turn">
         <span class="abar-title">${voter ? 'Run it how many times?' : 'All-in — the players are voting'}</span>
@@ -352,7 +352,7 @@ function CompleteControls({ view, act, busy, mobile, now }) {
   </div>`;
 
   if (mobile) {
-    return html`<div class="abar-body">
+    return html`<div class="abar-body abar-in">
       ${showPrompt
         ? html`<div class="abar-mline">
               <span class="abar-title">${won && hand.results && hand.results.endedBy === 'fold' ? 'You won · show your cards?' : 'Show your hand?'}</span>
@@ -371,7 +371,7 @@ function CompleteControls({ view, act, busy, mobile, now }) {
     </div>`;
   }
 
-  return html`<div class="abar-body abar-row">
+  return html`<div class="abar-body abar-in abar-row">
     <div class="abar-grow">
       ${showPrompt
         ? html`<div class="abar-title">${won && hand.results && hand.results.endedBy === 'fold' ? 'You won — show your cards?' : 'Show your hand?'}</div>
@@ -439,10 +439,10 @@ function Waiting({ view, mobile, now, title, sub, children, icon, pre }) {
   const meBits = me && me.seat != null && hp
     ? html`<span class="abar-me">${hp.folded
         ? 'You folded'
-        : html`<b>You</b> · <span class="mono brass">${fmt(me.stack)}</span>${me.handName && !quiet ? html` · ${me.handName}` : ''}`}</span>`
+        : html`<b>You</b> · <span key=${'stack-' + me.stack} class="mono brass num-bump">${fmt(me.stack)}</span>${me.handName && !quiet ? html` · ${me.handName}` : ''}`}</span>`
     : null;
 
-  return html`<div class="abar-body">
+  return html`<div class="abar-body abar-in">
     <div class="abar-top">
       <div class="abar-turn">
         ${icon && html`<span class="abar-icon"><${Icon} name=${icon} size=${mobile ? 18 : 20} /></span>`}
@@ -645,7 +645,7 @@ function AwayControls({ view, act, busy, mobile, onLeave }) {
   </label>`;
   const back = () => !busy && act('away', { on: false, waitForBB: waitBB });
   if (mobile) {
-    return html`<div class="abar-body">
+    return html`<div class="abar-body abar-in">
       <div class="abar-away-head">
         <span class="abar-away-icon"><${Icon} name="clock" size=${20} /></span>
         <div>
@@ -660,7 +660,7 @@ function AwayControls({ view, act, busy, mobile, onLeave }) {
       </div>
     </div>`;
   }
-  return html`<div class="abar-body abar-row">
+  return html`<div class="abar-body abar-in abar-row">
     <div class="abar-away-head abar-grow">
       <span class="abar-away-icon"><${Icon} name="clock" size=${24} /></span>
       <div>
@@ -707,6 +707,8 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
   let body;
   const notices = [];
 
+  let stateKind = '';
+
   if (me && me.seat != null && me.leaveAfterHand && me.removedByHost) {
     // The host's removal can't be undone by the player — no "Stay seated" here.
     notices.push(html`<${Notice} key="leave" icon="leave">The host removed you — you’ll be cashed out when this hand ends.<//>`);
@@ -725,11 +727,13 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
   }
 
   if (!me) {
-    body = html`<${Waiting} ...${props} icon="eye" title="You’re watching" sub=${mobile ? null : 'Join the game to take a seat and get dealt in.'}>
+    stateKind = 'spectator';
+    body = html`<${Waiting} key=${stateKind} ...${props} icon="eye" title="You’re watching" sub=${mobile ? null : 'Join the game to take a seat and get dealt in.'}>
       ${room.openJoin && html`<${Button} kind="primary" onClick=${() => room.openJoin()}>Join this game<//>`}
     <//>`;
   } else if (me.seat == null) {
     const req = me.request;
+    stateKind = req ? 'req-spectator' : 'pick-seat';
     // Joined but not seated (spectator, or a host running the game without sitting): the runout
     // reveal is still theirs when the setting allows it.
     const reveal = hand && hand.phase === 'complete' && hand.canRevealRunout ? html`<${RevealButton} key="reveal" ...${props} />` : null;
@@ -739,6 +743,7 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
     };
     if (req) {
       body = html`<${Waiting}
+        key=${stateKind}
         ...${props}
         icon="clock"
         title=${html`Seat request sent${req.seat != null ? html` · seat <span class="mono">${req.seat + 1}</span>` : ''} · <span class="mono brass">${fmt(req.amount)}</span>`}
@@ -751,6 +756,7 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
     } else {
       const open = view.seats.filter((s) => !s.pid && !s.reservedBy).length;
       body = html`<${Waiting}
+        key=${stateKind}
         ...${props}
         icon="seat"
         title=${open ? 'Pick an empty seat to sit down' : 'The table is full'}
@@ -762,24 +768,30 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
       />`;
     }
   } else if (me.away && !(hand && hand.phase === 'complete' && (hand.canShow || hand.canRevealRunout))) {
+    stateKind = 'away';
     tone = 'away';
-    body = html`<${AwayControls} ...${props} onLeave=${onLeave} />`;
+    body = html`<${AwayControls} key=${stateKind} ...${props} onLeave=${onLeave} />`;
   } else if (hand && hand.phase === 'betting' && hand.toAct === me.id && hand.legal) {
+    stateKind = 'turn';
     tone = 'turn';
-    body = html`<${TurnControls} key=${hand.no} ...${props} focusRef=${focusRef} />`;
+    body = html`<${TurnControls} key=${stateKind + '-' + hand.no} ...${props} focusRef=${focusRef} />`;
   } else if (hand && hand.phase === 'ritVote' && hand.ritVote) {
+    stateKind = 'vote';
     tone = hand.ritVote.voters.includes(me.id) && hand.ritVote.votes[me.id] == null ? 'turn' : null;
-    body = html`<${VoteControls} ...${props} />`;
+    body = html`<${VoteControls} key=${stateKind} ...${props} />`;
   } else if (hand && hand.phase === 'runout') {
+    stateKind = 'runout';
     const runsText = hand.runs > 1 ? 'Running it ' + runWord(hand.runs) + ' · run ' + (hand.currentRun + 1) : 'All-in · running it out';
     const eq = hp && hp.equity != null && !hp.folded ? hp.equity : null;
     body = html`<${Waiting}
+      key=${stateKind}
       ...${props}
       icon="suits"
       title=${runsText}
       sub=${eq != null ? html`You have <span class="mono brass">${eq}%</span> on this board.` : null}
     />`;
   } else if (hand && hand.phase === 'complete') {
+    stateKind = 'complete';
     if (me.away) {
       // Away players keep the after-hand choices (show my cards / reveal the runout).
       tone = 'away';
@@ -789,20 +801,22 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
         action=${html`<${Button} size="sm" kind="primary" disabled=${busy} onClick=${() => act('away', { on: false, waitForBB: waitBB })}>I’m back<//>`}
       >You’re away — you won’t be dealt in until you’re back.<//>`);
     }
-    body = html`<${CompleteControls} ...${props} />`;
+    body = html`<${CompleteControls} key=${stateKind} ...${props} />`;
   } else if (me.busted) {
     const req = me.request;
+    stateKind = req ? 'req-busted' : 'busted';
     body = req
-      ? html`<${Waiting} ...${props} icon="chips" title=${html`Buy-in of <span class="mono brass">${fmt(req.amount)}</span> requested`} sub="Waiting for the host to approve it.">
+      ? html`<${Waiting} key=${stateKind} ...${props} icon="chips" title=${html`Buy-in of <span class="mono brass">${fmt(req.amount)}</span> requested`} sub="Waiting for the host to approve it.">
           <${Button} size=${mobile ? 'sm' : 'md'} disabled=${busy} onClick=${() => act('cancelRequest', { id: req.id })}>Cancel request<//>
         <//>`
-      : html`<${Waiting} ...${props} icon="chips" title="You’re out of chips" sub=${mobile ? null : 'Request a buy-in to get back in, or leave your seat to cash out.'}>
+      : html`<${Waiting} key=${stateKind} ...${props} icon="chips" title="You’re out of chips" sub=${mobile ? null : 'Request a buy-in to get back in, or leave your seat to cash out.'}>
           <div class="abar-btns">
             ${!mobile && html`<${Button} kind="danger" onClick=${onLeave}>Leave seat<//>`}
             <${Button} kind="primary" onClick=${onBuyIn}>Request a buy-in<//>
           </div>
         <//>`;
   } else if (hand) {
+    stateKind = 'playing-waiting';
     // a hand is being played; either I'm in it and waiting, or I'm sitting this one out
     const sub = !hp
       ? me.waitForBB
@@ -810,8 +824,9 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
         : 'You’re in from the next hand.'
       : null;
     const preBar = canPreAct(view) ? html`<${PreActions} view=${view} pre=${pre} onToggle=${togglePre} mobile=${mobile} />` : null;
-    body = html`<${Waiting} ...${props} sub=${sub} pre=${preBar} />`;
+    body = html`<${Waiting} key=${stateKind} ...${props} sub=${sub} pre=${preBar} />`;
   } else {
+    stateKind = 'no-hand-waiting';
     // no hand
     let title;
     let sub = null;
@@ -827,7 +842,7 @@ export function ActionBar({ onBuyIn, onLeave, onSit } = {}) {
       const ready = (view.players || []).filter((p) => p.seat != null && p.stack > 0 && !p.away).length;
       sub = ready < 2 ? 'The next hand deals as soon as two players have chips.' : null;
     }
-    body = html`<${Waiting} ...${props} icon=${icon} title=${title} sub=${me.waitForBB ? 'You’ll be dealt in when the big blind reaches you.' : sub} />`;
+    body = html`<${Waiting} key=${stateKind} ...${props} icon=${icon} title=${title} sub=${me.waitForBB ? 'You’ll be dealt in when the big blind reaches you.' : sub} />`;
   }
 
   return html`<section

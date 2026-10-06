@@ -101,3 +101,32 @@ shape, or hotkeys. Applies to desktop and phone.
   `showdown-complete`, and `&w=mobile` variants. Confirm nothing is permanently invisible (fill-mode bugs)
   and cards still end up in their normal positions/rotations.
 - Report every selector/keyframe added and every key/class change in JS.
+
+## Fixes (round 2) — apply exactly, change nothing else
+Review found these problems in round 1. Fix only these:
+
+F1. **Opponents' hole cards don't animate (plan error).** During a hand, other seats render the `Backs`
+    component (`public/js/table.js` ~L240–246, the mini face-down cards mapped from `spread` with
+    `key={i}` and inline `style={{ rotate: r + 'deg' }}`), NOT `SeatCards`. Add the deal animation THERE:
+    give each mini back `Card` `class` including `'card-deal'` (keep the existing `c-mback` class on mobile)
+    and merge the stagger into its style: `style={{ rotate: r + 'deg', animationDelay: i * 120 + 'ms' }}`.
+    `Backs` already unmounts between hands, so `key={i}` can stay.
+
+F2. **Revert the `SeatCards` change.** `SeatCards` only renders at showdown when a player has revealed
+    a card; animating its face-down cards makes them "re-deal" at showdown. Restore the face-down card
+    exactly as before round 1: `key={'b' + i}`, class `mobile ? 'c-mseat' : 'c-seat'`, no `card-deal`, no
+    style. Remove the now-unused `handNo` prop from `SeatCards` and from its call site in `Seat`.
+
+F3. **Hero cards re-deal when the hand completes.** In `Hero`, when `canPick` becomes true at hand end
+    the wrapper switches `<div>` ↔ `<button>` with the same key, React remounts it, and the `card-deal`
+    animation replays. Only apply the deal animation while the hand is NOT complete: add `'card-deal'` to
+    `klass` only when `!complete`, and only include `animationDelay` in the style when `!complete` (keep
+    `rotate` always). Keep the per-hand keys (`handNo + '-' + i`).
+
+F4. **`num-bump` overrides the element's own color.** In `public/css/table.css` `@keyframes num-bump`,
+    remove `color` and `text-shadow` from the `0%` and `100%` keyframes (keep only `transform: scale(1)`
+    there) so the element's own color (e.g. brass) is used at the ends; keep the `30%` keyframe as is
+    (`scale(1.12)`, brass color, glow).
+
+Then: `node --check` the changed JS files, run `node --test test/*.test.js`, and report the exact diff of
+these four fixes. Do NOT commit/push/deploy.
