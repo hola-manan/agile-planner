@@ -241,11 +241,11 @@ function Backs({ count, mobile }) {
   const n = count || 2;
   const spread = n === 2 ? [-6, 6] : [-12, -4, 4, 12];
   return html`<div class=${cx('backs', n > 2 && 'backs-4')}>
-    ${spread.slice(0, n).map((r, i) => html`<${Card} key=${i} faceDown size="xs" class=${mobile ? 'c-mback' : null} style=${{ rotate: r + 'deg' }} />`)}
+    ${spread.slice(0, n).map((r, i) => html`<${Card} key=${i} faceDown size="xs" class=${cx(mobile ? 'c-mback' : null, 'card-deal')} style=${{ rotate: r + 'deg', animationDelay: i * 120 + 'ms' }} />`)}
   </div>`;
 }
 
-function SeatCards({ hp, handNo, mobile, holeWin }) {
+function SeatCards({ hp, mobile, holeWin }) {
   const four = hp.cards.length > 2;
   return html`<div class=${cx('seat-cards', four && 'seat-cards-4')}>
     ${hp.cards.map((c, i) =>
@@ -258,7 +258,7 @@ function SeatCards({ hp, handNo, mobile, holeWin }) {
             class=${mobile ? 'c-mseat' : 'c-seat'}
             lift=${holeWin && holeWin.has(c)}
           />`
-        : html`<${Card} key=${handNo + '-' + i} faceDown size="sm" class=${cx(mobile ? 'c-mseat' : 'c-seat', 'card-deal')} style=${{ animationDelay: (i * 120) + 'ms' }} />`,
+        : html`<${Card} key=${'b' + i} faceDown size="sm" class=${mobile ? 'c-mseat' : 'c-seat'} />`,
     )}
   </div>`;
 }
@@ -366,7 +366,7 @@ function Seat({ pos, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin 
   const avSize = mobile ? 30 : 38;
 
   let above = null;
-  if (hp && anyShown) above = html`<${SeatCards} hp=${hp} handNo=${hand ? hand.no : 0} mobile=${mobile} holeWin=${holeWin} />`;
+  if (hp && anyShown) above = html`<${SeatCards} hp=${hp} mobile=${mobile} holeWin=${holeWin} />`;
   else if (hp && !folded && !complete) above = html`<${Backs} count=${hp.cards.length} mobile=${mobile} />`;
 
   const label = [pp.name, fmt(pp.stack) + ' chips', ...(hp && hp.cards.some(Boolean) ? [hp.cards.map((c) => (c ? cardText(c) : 'hidden')).join(' ')] : [])].join(', ');
@@ -431,8 +431,8 @@ function Hero({ me, pp, hp, hand, view, mobile, actDeadline, actTotal, holeWin, 
           const picked = pick.sel.includes(i);
           const lift = !!(holeWin && holeWin.has(c));
           const size = mobile ? (four ? 'md' : 'xl') : four ? 'lg' : 'xl';
-          const klass = cx(mobile && (four ? 'c-mhero4' : 'c-mhero'), picked && 'card-picked', pick.sel.length > 0 && !picked && canPick && !shown && 'card-unpicked', 'card-deal');
-          const dealStyle = { rotate: rot + 'deg', animationDelay: (i * 120) + 'ms' };
+          const klass = cx(mobile && (four ? 'c-mhero4' : 'c-mhero'), picked && 'card-picked', pick.sel.length > 0 && !picked && canPick && !shown && 'card-unpicked', !complete && 'card-deal');
+          const dealStyle = complete ? { rotate: rot + 'deg' } : { rotate: rot + 'deg', animationDelay: (i * 120) + 'ms' };
           const card = html`<${Card} card=${c} size=${size} class=${klass} lift=${lift} style=${dealStyle} />`;
           const badge = shown ? html`<span class="hero-shown" title="Everyone can see this card"><${Icon} name="eye" size=${12} /></span>` : null;
           if (canPick && !shown) {
