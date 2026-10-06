@@ -1,181 +1,138 @@
-# Plan: move chat to the bottom-left + `M` shortcut
+# Plan: production hosting shim for Render (git-push deploy)
 
-## Goal (owner's words)
-"chat doesnt show up on the right like this, it shows up on bottom left. with a m as a message shortcut key."
-Reference look: PokerNow — chat box in the bottom-left corner under the table, action buttons bottom-right.
+## Goal
+Make Felt deployable to **Render** as a single Node web service (git-push auto-deploy), WITHOUT
+changing any app logic. Today the only production host is Hatchable (`import { db, events } from 'hatchable'`).
+`dev/server.mjs` is already a full stand-in for that host but is explicitly "never deployed" and carries
+dev-only extras. This task adds a **deployed** production server under a new `server/` directory that
+reproduces exactly the two platform capabilities the app uses — the `hatchable` SDK (`db`, `events`) and
+the browser realtime shim at `/__hatchable/events.js` — and a `render.yaml` so Render builds and runs it.
 
-## Rules for this run
-- Implement exactly this plan. Do not touch anything outside the project directory; if you discover an
-  out-of-repo need, list it at the end of your response instead of doing it. Do not commit, push or deploy.
-- No destructured exports anywhere (Hatchable's deploy parser rejects `export const { a } = x`).
-- Reuse the existing `Chat` component (public/js/side.js) and existing `.chat*` styles — don't fork it.
-- Keep every existing test passing; update tests that relied on the Chat tab (listed below).
+First deploy is **in-memory** (zero npm dependencies, matches the project's no-deps rule). Durable Postgres
+is explicitly OUT OF SCOPE for this task (it would require adding the `pg` package — a deliberate future
+exception). Realtime events are in-process, so the service runs as a **single instance**; this is fine for
+private home games and is enforced at the Render layer, not in code.
 
-## 1. Desktop (≥ 900px): chat dock bottom-left, action bar bottom-right
+## Hard constraints (read before writing anything)
+- **Only ADD files under a new `server/` directory, plus `render.yaml` and `.node-version` at the repo
+  root, and ADD one line (`"start"`) to `package.json`'s `scripts`.** Do NOT modify any existing file
+  except `package.json`. In particular do NOT touch `dev/`, `lib/`, `api/`, `public/`, `test/`, `SPEC.md`.
+- **No npm packages, no build step.** Plain ES modules only. Node >= 22 built-ins only (`node:http`,
+  `node:fs`, `node:crypto`, etc.). Do NOT add a `pg`/Postgres client or any dependency.
+- **No destructured exports** (`export const { a } = x`). One `export const name = …` per name.
+- The production `hatchable` SDK must honor the SPEC §9 contract EXACTLY as the dev fake does: the same
+  three SQL statements, the same JSONB semantics, the same events contract (`publish`, `grant`). When in
+  doubt, mirror `dev/fake-hatchable.mjs` behavior precisely — it is the reference.
+- Do NOT git commit, push, or deploy. Do NOT touch anything outside this project directory. If you discover
+  an out-of-repo need, list it at the END of your response instead of doing it.
+- The dev workflow (`npm run dev`, `node --test test/*.test.js`, `node test/e2e.mjs`) must keep working
+  unchanged. You are adding a parallel production path, not replacing the dev one.
 
-### public/js/main.js — RoomLayout desktop branch
-Today `.room-play` renders `<Table/>` then `<ActionBar/>` stacked. Change the non-ended branch to:
+## Files to create
+
+### 1. `server/hatchable.mjs` — production platform SDK (in-memory)
+A self-contained production implementation of the `hatchable` module. It is the deployed analogue of
+`dev/fake-hatchable.mjs`; reproduce that file's behavior, keeping it standalone (do not import from `dev/`).
+Export exactly:
+- `export const db` — `{ async query(sql, params = []) }` implementing EXACTLY the three SPEC §9 statements
+  over an in-memory `Map` (code → `{ state: <json text>, version, created_at, updated_at }`) with the same
+  JSONB semantics as the fake (store canonical JSON text; return fresh deep clones; `yieldTick()` before
+  each query so concurrent requests interleave and exercise the optimistic-retry path). Accept the
+  migration `CREATE TABLE IF NOT EXISTS rooms …` as a no-op. Duplicate-key INSERT throws a pg-shaped error
+  with `code === '23505'` and the `rooms_pkey` message. Mismatched-version UPDATE returns `rowCount: 0`.
+  Any other SQL throws (only SPEC §9 statements are supported).
+- `export const events` — `{ async publish(channel, event, payload), async grant(channels) }` identical in
+  behavior to the fake: per-channel contiguous integer ids as strings, bounded history for replay
+  (200/channel), 64KB payload cap, name validation regex `^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$`, in-process
+  delivery to subscribers, grant tokens with a 120s TTL.
+- `export const server` — the server-side helpers the HTTP layer needs (named `server`, NOT `__dev`):
+  `verifyGrant(token, channel)`, `subscribe(channel, fn) → unsubscribe`, and
+  `since(channel, lastId) → { events, gap }` — same semantics as the fake's `__dev.verifyGrant/subscribe/since`.
+- **Optional file persistence (no new deps):** if `process.env.FELT_DB_FILE` is set, load rooms from that
+  JSON file on boot and debounce-save on writes (same mechanism as the fake's `FELT_DEV_DB`). Default off
+  (pure in-memory). This is only to support a future Render persistent disk; do not wire anything else to it.
+
+### 2. `server/events-shim.js` — browser realtime shim (served at `/__hatchable/events.js`)
+A production copy of the browser shim. Behavior MUST match `dev/events-shim.js` exactly (same
+`window.hatchable.events.connect({ authUrl })` contract, EventSource-per-channel, Last-Event-ID replay,
+`$reset` handling, token refetch + backoff reconnect). The ONLY change: the SSE endpoint URL constant is
+`'/__events/sse'` (not `'/__dev/sse'`). `DEFAULT_AUTH_URL` stays `'/api/events-token'`. Mark it with a
+distinct sentinel (e.g. a `__prod: true` style marker) rather than `__dev`.
+
+### 3. `server/loader.mjs` — module resolve hook (production)
+A `module.register()` resolve hook that maps the Hatchable bare specifiers for the DEPLOYED server:
+- `'hatchable'` → `server/hatchable.mjs`
+- `'lib/<path>'` → `<repo-root>/lib/<path>`
+- relative imports from inside `lib/` resolve normally.
+No stub-engine fallback (that was a dev bootstrap aid). Model it on `dev/loader.mjs` minus the stub logic.
+
+### 4. `server/register.mjs`
+`import { register } from 'node:module'; register('./loader.mjs', import.meta.url);` — the production analogue
+of `dev/register.mjs`.
+
+### 5. `server/index.mjs` — production HTTP server
+A `node:http` server. Reuse the proven request/response plumbing from `dev/server.mjs` (MIME map,
+`safeJoin`, `fileIfExists`, `streamFile`, `serveStatic` with SPA fallback, `readBody` with a 1MB cap,
+`parseQuery`, `parseBody`, the Express-shaped `makeRes`, and the `/api` routing in `serveApi` incl. the
+`access`/`methods` guards). Routes, in order:
+- `GET/HEAD /__hatchable/events.js` → serve `server/events-shim.js` as `text/javascript; charset=utf-8`.
+- `/__events/sse` → SSE endpoint: read `channel` + `token` query params, reject with 401 if
+  `server.verifyGrant(token, channel)` is false, else stream events (same framing as `dev/server.mjs`'s
+  `serveSse`: `retry:`, `id:`/`data:` lines, Last-Event-ID replay via `server.since` with `$reset` on gap,
+  20s `: ping`, subscribe via `server.subscribe`, clean up on `req.on('close')`).
+- `/api/<path>` → `serveApi` against the repo `api/` dir (all Felt routes export `access = 'public'`;
+  keep the same behavior as dev: non-public → 401, bad method → 405, missing route → 404).
+- everything else → static from `public/` with SPA fallback (extension-less misses → `public/index.html`).
+- DROP all dev-only routes: `/__dev/*`, `/__dev/sse`, `/__dev/time`, `/__design/*`, the stub fallback, and
+  the request logger unless `FELT_QUIET` is unset (keep logging cheap; honor `FELT_QUIET=1` to silence).
+- Bind `HOST = process.env.HOST || '0.0.0.0'` and `PORT = process.env.PORT ? Number(process.env.PORT) : 8787`
+  (Render injects `PORT`). Log the listening URL on boot.
+- Handle `SIGINT`/`SIGTERM` gracefully (close connections, exit), as `dev/server.mjs` does.
+- Import the platform helpers via `import { server as hatch } from 'hatchable';` (resolved by the loader).
+
+### 6. `render.yaml` — Render blueprint (repo root)
+```yaml
+services:
+  - type: web
+    name: felt
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: node --import ./server/register.mjs server/index.mjs
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: FELT_QUIET
+        value: "1"
 ```
-<Table onSit=.../>
-<div class="room-bottom">
-  <${ChatDock} />
-  <div class="room-bottom-act"><${ActionBar} onBuyIn=... onLeave=... onSit=... /></div>
-</div>
+(There are no runtime dependencies, so `npm install` is a near-no-op but keeps Render's Node detection happy.
+Render supplies `PORT` automatically — do NOT hard-code it.)
+
+### 7. `.node-version` — pin Node for Render
+A single line: `22`.
+
+### 8. `package.json` — add a start script
+Add to `scripts` (do not remove or change the existing `dev`, `dev:watch`, `test`):
+```json
+"start": "node --import ./server/register.mjs server/index.mjs"
 ```
-- Import `ChatDock` from './side.js' (new export, below).
-- The ended branch (EndedBanner + Ledger) is unchanged and shows no chat dock.
-- Update the `<aside class="room-side" aria-label=…>` label to "Hand log, players and your session".
-- `effectivePanel` logic: on desktop 'chat' is still mapped to null (no modal); keep it.
 
-### public/js/side.js
-1. Remove the `chat` entry from `TABS` (desktop side panel becomes tabs **Hand / Players** only), remove the
-   unread-chat state/dot logic from `SidePanel`, and if `store.get('felt:sideTab')` returns 'chat' fall back
-   to 'hand' (the existing `TABS.some(...)` check already does this — keep it).
-2. `Chat` gets an optional `inputRef` prop (a React ref object). Pass it to the `<input>` as `ref=${inputRef}`.
-   Also give the input `data-chat-input="1"`. Add an `onKeyDown` on the input: Escape → `e.currentTarget.blur()`
-   (and `e.stopPropagation()` so a surrounding Modal doesn't also close when on desktop; on mobile inside the
-   sheet let Escape behave as today, i.e. do NOT stop propagation when `inModal` prop is true — simplest:
-   add prop `escBlurs` default false; ChatDock passes `escBlurs=${true}`).
-   Change the placeholder to "Message the table (M)" only when a new optional prop `hint` is true (ChatDock
-   passes it; desktop only).
-3. New export `ChatDock()`:
-   - Markup: `<section class="panel chat-dock" aria-label="Chat">` with a compact header row
-     (`<div class="chat-dock-head">` → chat Icon + "Chat" title + muted count "N messages" on the right)
-     and the existing `<Chat inputRef=${ref} escBlurs=${true} hint=${true} />` below.
-   - It registers the focus function for the `M` key: `const room = useRoom();` and in an effect set
-     `room.registerChatFocus && room.registerChatFocus(() => { ref.current && ref.current.focus(); })`,
-     unregistering (passing null) on unmount.
-   - Unread: none needed on desktop (the dock is always visible).
-4. Keep `HandLog`, `PlayersList`, `SessionBox`, `Chat` exports unchanged otherwise (test/static.test.js checks
-   `['SidePanel', 'HandLog', 'Chat', 'PlayersList', 'SessionBox']`; add `'ChatDock'` to that list).
+## Self-check before finishing (do NOT commit)
+1. `node --check` every new `.mjs`/`.js` file you create.
+2. Boot smoke test: start the prod server on an ephemeral port and confirm the full happy path, e.g.
+   ```
+   PORT=8910 HOST=127.0.0.1 FELT_QUIET=1 node --import ./server/register.mjs server/index.mjs &
+   ```
+   then: `GET /` returns 200 HTML; `GET /__hatchable/events.js` returns 200 JS; a `POST /api/create`
+   with `{"hostName":"Ann"}` returns a JSON body containing `code`, `pid`, `token`, `view`; and
+   `GET /api/events-token?code=<that code>` returns a JSON `{ token, channels: ["room:<code>"] }`.
+   Kill the server afterward. Report the observed outputs.
+3. Confirm you did NOT modify any file other than `package.json` and the new files listed above
+   (`git status` should show only additions + the one-line package.json edit).
 
-### Layout CSS (public/css/lobby.css — room shell section, next to `.room-play`)
-```
-.room-bottom { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 18px; align-items: stretch; }
-.room-bottom-act { min-width: 0; display: flex; flex-direction: column; }
-.room-bottom-act > * { flex: 1; }          /* the action bar fills the right cell's height */
-@media (max-width: 1099px) { .room-bottom { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); } }
-```
-### Chat dock CSS (public/css/panels.css, in the chat section)
-```
-.chat-dock { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; height: 260px; min-height: 0; }
-.chat-dock-head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
-.chat-dock-head .muted { margin-left: auto; font-weight: 500; font-size: 12px; }
-.chat-dock .chat { gap: 8px; }
-.chat-dock .chat-msg { padding-top: 6px; }
-.chat-dock .chat-msg.is-cont { padding-top: 2px; }
-.chat-dock .chat-text { font-size: 13px; padding: 5px 10px; }
-.chat-dock .chat-form .field { height: 38px; }
-.chat-dock .side-empty { padding: 8px 0; }   /* keep the empty state compact */
-```
-The dock must not make the page taller than today at 1440×1000: the table area above it keeps its size;
-the action bar on the right keeps its existing look. Check with screenshots (section 5) and adjust the
-dock height (between 220 and 280px) so nothing overflows.
-
-## 2. Phone (< 900px): floating chat button bottom-left
-
-There is no room for a second bottom panel, so:
-- In the mobile branch of `RoomLayout` (main.js), add inside `.room-m-table`, after `<Table/>`:
-  `<${ChatFab} onOpen=${() => openPanel('chat')} />` (new export from side.js), unless `view.ended`.
-- `ChatFab({ onOpen })`: a round 44×44 button, `class="chat-fab"`, `aria-label="Chat"` (plus
-  ", N unread" when unread), chat Icon, and a brass dot `<span class="chat-fab-dot">` when there are unread
-  messages. Unread = messages from others with id greater than the last id seen while the chat sheet was
-  open. Track "seen" in module-level state shared with the sheet: when the mobile chat sheet is open
-  (`panel === 'chat'`), mark seen = last id. Simplest: ChatFab reads `useRoom()`; RoomLayout passes
-  `chatOpen=${effectivePanel === 'chat'}` to ChatFab; ChatFab keeps `seen` in state and sets it to the last
-  id whenever `chatOpen` is true (effect on [chatOpen, lastId]).
-- CSS (panels.css): `.room-m-table { position: relative; }` (if not already) and
-  `.chat-fab { position: absolute; left: 12px; bottom: 12px; z-index: 5; width: 44px; height: 44px; border-radius: 50%; background: var(--panel); border: 1px solid var(--btn-border); color: var(--text); display: grid; place-items: center; box-shadow: 0 6px 16px rgba(0,0,0,.45); }`
-  `.chat-fab-dot { position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--brass); border: 2px solid var(--panel); }`
-  Make sure it doesn't cover the hero's cards or seats at 390×844 and 360×740 — the hero cards are bottom
-  center; bottom-left corner of the table area should be free. Verify with screenshots and nudge
-  `bottom`/`left` if needed.
-- The mobile menu sheet keeps its existing "Chat" item (unchanged).
-- When the chat sheet opens on mobile via the FAB, the input should be focused: pass
-  `autoFocus=${true}` to `<Chat/>` in the `effectivePanel === 'chat'` panelBody (main.js) — Chat already
-  supports `autoFocus`.
-
-## 3. `M` shortcut
-
-### public/js/main.js
-- Add a ref `chatFocusRef = useRef(null)` in RoomLayout and a stable callback
-  `registerChatFocus = useCallback((fn) => { chatFocusRef.current = fn; }, [])`.
-- Add `openChat = useCallback(() => { if (chatFocusRef.current) chatFocusRef.current(); else setPanel('chat'); }, [])`.
-  (Desktop: the dock registered its focus fn → focus the input. Mobile: no dock → open the chat sheet.)
-- Add `registerChatFocus` and `openChat` to the RoomContext `value` object (and its deps array).
-
-### public/js/actionbar.js — `useHotkeys`
-- Pass `openChat: room && room.openChat` in the `useHotkeys({...})` call.
-- In `onKey`, right after the `'?'` branch and BEFORE the `view.me` check, add:
-  ```
-  if (key === 'm') {
-    if (L.openChat && L.view && L.view.me && !L.view.ended) { e.preventDefault(); L.openChat(); }
-    return;
-  }
-  ```
-  `preventDefault` stops the "m" being typed into the input that just got focus.
-- `ignoreKeyEvent` already ignores keys while typing and while a modal is open, so `M` typed inside the chat
-  input is just a letter, and Esc (blur) returns to the poker shortcuts.
-
-### public/js/hotkeys.js
-- In `HOTKEYS`, group "Anywhere", add before '?': `{ keys: ['M'], label: 'Message the table', note: 'Esc to leave the chat box' }`.
-- `decideTurnKey('m', view)` must keep returning null (it does — don't add 'm' anywhere else).
-
-### Keycap hint
-- Desktop only: in the ChatDock header, after the title, add the existing keycap element style used by the
-  action bar hints (find the keycap class used for "F"/"C" in actionbar.js, e.g. `kc`) showing `M`, hidden
-  on touch like the other keycaps.
-
-## 4. SPEC.md
-- §11 desktop room: replace "right side panel (tabs Hand / Chat / Players …)" with: side panel tabs
-  Hand / Players + session box; chat dock bottom-left under the table beside the action bar (bottom-right).
-- §11 mobile: chat via the menu sheet or the floating chat button (bottom-left of the table, unread dot).
-- §11 keyboard shortcuts: add `M` = focus the chat box (desktop) / open the chat sheet (phone); Esc leaves it.
-- §12: side.js exports add `ChatDock`, `ChatFab`; RoomContext adds `openChat`, `registerChatFocus`.
-
-## 5. Tests
-
-### test/static.test.js
-- Add `'ChatDock'` and `'ChatFab'` to the side.js expected exports.
-
-### test/hotkeys.test.js
-- Add `'M'` to the list of keys asserted present in `HOTKEYS` (line ~473).
-- Add a test: `decideTurnKey('m', v)` is null on my turn (a real engine view, like neighbouring tests).
-
-### test/e2e.mjs (these steps used the removed Chat tab)
-- Step "chat between the three players (realtime)" (~line 637): Ben (desktop) now types in the dock:
-  `B.page.locator('.chat-dock').getByRole('textbox', { name: 'Message' })`, send with the dock's Send button;
-  assert with `B.page.locator('.chat-dock .chat-list')`. Cleo (phone) opens chat via the floating button
-  `C.page.getByRole('button', { name: /^Chat/ })` inside `.room-m-table` (instead of the menu) — keep one
-  assertion that the menu "Chat" item still works too, OR leave the menu path and add a separate assertion
-  that the FAB shows an unread dot (`.chat-fab-dot`) after Ben's message and opens the sheet. Maya (desktop):
-  replace the old "unread dot on the Chat tab, then click the tab" with: her dock shows the message
-  (`H.page.locator('.chat-dock .chat-list')`).
-- Step around line 1491 ("…and while typing: Maya writes 'fold' in the chat"): remove the tab clicks; use
-  `H.page.locator('.chat-dock').getByRole('textbox', { name: 'Message' })`. Then add: press Escape → the input
-  is blurred (`document.activeElement` is not the input), then press `m` → the chat input is focused and its
-  value is still '' (the "m" wasn't typed), then Escape again before `keyAct(H, 'k')`.
-- Add to the cheat-sheet check (search for `'After the hand'` in the keys steps) that the sheet lists
-  "Message the table".
-- Any other `getByRole('tab', { name: /^Chat/ })` uses → replace with the dock equivalents
-  (`grep -n "Chat" test/e2e.mjs`).
-
-### Screenshots (do these and look at them)
-Use the dev preview harness (`npm run dev`, then `/__dev/preview.html?fixture=<name>` and `&w=mobile`) with
-Playwright (global module; on this machine use the default `chromium.launch()`), and save to `dev/shots/chat-*.png`:
-`my-turn-facing-bet` and `seated-waiting` and `showdown-complete` at 1440×1000 and 1180×820; the same three
-with `&w=mobile` at 390×844 and 360×740. Check: chat dock bottom-left, action bar bottom-right, nothing
-overlaps or overflows, no horizontal scroll, the FAB doesn't cover the hero cards or a seat.
-
-## 6. Done when
-- `node --test test/*.test.js` passes.
-- `node test/e2e.mjs` passes (run it twice).
-- `grep -rnE "^export (const|let|var) [\{\[]" public/js lib api` finds nothing.
-- Report: files changed, test results, and anything you could not do.
-
-## Fixes (round 1)
-- `test/e2e.mjs` line ~1501: `assert.equal(await input.inputValue(), '', 'm was not typed into the input');`
-  crashes — in this file `assert` is a plain function `assert(cond, msg)` (line ~64), it has no `.equal`.
-  Replace it with `assert((await input.inputValue()) === '', 'm was not typed into the input');`.
-  Search `test/e2e.mjs` for any other `assert.` member calls you added and convert them the same way.
-  Change nothing else.
+## Out of scope (do NOT do — Claude handles these outside the repo)
+- Durable Postgres / the `pg` dependency.
+- `git commit` / `git push`.
+- Creating the Render service / connecting the GitHub repo (browser step).
