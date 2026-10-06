@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: felt
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: node --import ./server/register.mjs server/index.mjs
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: FELT_QUIET
+        value: "1"

@@ -31,11 +31,16 @@ public/js/                 h.js (htm/React bindings), api.js, room.js (data hook
                            ChatDock bottom-left on desktop, ChatFab on phones, players, session box), host.js, ledger.js, dialogs.js, csv.js
 public/css/                base.css (tokens/primitives), lobby.css (lobby + room shell), table.css, panels.css
 dev/                       local dev server, fakes, preview harness + fixtures (not deployed)
+server/                    DEPLOYED production host shim for Render: hatchable.mjs (in-memory db+events SDK),
+                           events-shim.js (browser realtime, /__events/sse), loader/register, index.mjs (HTTP server)
+render.yaml                Render blueprint (web service, node, free plan; git-push auto-deploy)
 test/                      node:test suites, e2e.mjs (3 browsers), live-smoke.mjs (deployed site)
 plans/                     implementation plans (current.md)
 ```
 
 ## Commands
+- Production server (what Render runs): `npm start` → `node --import ./server/register.mjs server/index.mjs`
+  (binds HOST 0.0.0.0 + PORT from env; in-memory store, optional FELT_DB_FILE JSON persistence)
 - Unit tests: `node --test test/*.test.js`
 - End-to-end (3 Playwright browsers on a local dev server it starts itself): `node test/e2e.mjs`
 - Dev server: `npm run dev` → http://127.0.0.1:8787 (`FELT_DEV_TIME=1` enables POST /__dev/time {advance})
