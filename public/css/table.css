@@ -24,8 +24,8 @@
 .tbl-d .tbl-rail {
   aspect-ratio: 2.05 / 1;
   padding: 16px;
-  /* never taller than the window leaves room for (header + action bar ≈ 470px) */
-  max-width: max(520px, calc((100vh - 470px) * 2.05));
+  /* never taller than the window leaves room for (header + action bar ≈ 330px) */
+  max-width: max(640px, calc((100vh - 330px) * 2.05));
   margin: 0 auto;
   container-type: inline-size;
 }
@@ -1024,8 +1024,8 @@
   gap: 14px;
 }
 .abar-d {
-  padding: 18px;
-  min-height: 82px;
+  padding: 10px 16px;
+  min-height: 52px;
   justify-content: center;
 }
 .abar-d.abar-tone-turn {
@@ -1034,6 +1034,43 @@
 .abar-d.abar-tone-away {
   border-color: var(--brass-tint-border);
 }
+
+/* Compact desktop overrides */
+.abar-d .abar-body {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.abar-d .abar-body > .abar-sub {
+  margin-top: 0;
+}
+.abar-d .abar-top {
+  flex: 1 1 auto;
+}
+.abar-d .abar-icon {
+  width: 32px;
+  height: 32px;
+}
+.abar-d .abar-sub-indent {
+  padding-left: 44px;
+}
+.abar-d .act-btn,
+.abar-d .raise-box {
+  height: 44px;
+}
+.abar-d .raise-go,
+.abar-d .raise-num {
+  height: 36px;
+}
+.abar-d .vote-btn {
+  height: 44px;
+}
+.abar-d .preset {
+  height: 32px;
+}
+
 .abar-body {
   display: flex;
   flex-direction: column;
